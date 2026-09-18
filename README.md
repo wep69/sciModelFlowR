@@ -6,6 +6,13 @@
 
 Version 1.0.1 releases the 22 documented corrections from the local validation campaign of the frozen 1.0.0 source tree (see `DERIVED_PATCH_NOTES.md`). The **246-symbol public API** is unchanged; the 1.0.0 freeze, hashes and release metadata remain the historical reference.
 
+## Installation
+
+```r
+# Installs the vignettes, and pays the full rebuild locally.
+remotes::install_github("wep69/sciModelFlowR", build_vignettes = TRUE, dependencies=TRUE, upgrade="ask")
+```
+
 ```r
 library(sciModelFlowR)
 smf_doctor()

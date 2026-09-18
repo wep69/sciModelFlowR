@@ -53,7 +53,13 @@
 <p><strong>Version 1.0.1 - patch release of the Consolidated Scientific Release</strong></p>
 <p><code>sciModelFlowR</code> is a design-aware scientific modeling framework for explicit data/design declarations, leakage-safe preprocessing and resampling, deterministic and probabilistic ML, tuning, benchmarking, explainability, Deep Learning, Bayesian and conformal inference, typed uncertainty, experiment tracking, safe persistence, scalable inference, protected external validation, and scientific reporting.</p>
 <p>Version 1.0.1 releases the 22 documented corrections from the local validation campaign of the frozen 1.0.0 source tree (see <code>DERIVED_PATCH_NOTES.md</code>). The <strong>246-symbol public API</strong> is unchanged; the 1.0.0 freeze, hashes and release metadata remain the historical reference.</p>
+<div class="section level2">
+<h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
+</h2>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Installs the vignettes, and pays the full rebuild locally.</span></span>
+<span><span class="fu">remotes</span><span class="fu">::</span><span class="fu"><a href="https://remotes.r-lib.org/reference/install_github.html" class="external-link">install_github</a></span><span class="op">(</span><span class="st">"wep69/sciModelFlowR"</span>, build_vignettes <span class="op">=</span> <span class="cn">TRUE</span>, dependencies<span class="op">=</span><span class="cn">TRUE</span>, upgrade<span class="op">=</span><span class="st">"ask"</span><span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/wep69/sciModelFlowR" class="external-link">sciModelFlowR</a></span><span class="op">)</span></span>
 <span><span class="fu"><a href="reference/smf_core_api.html">smf_doctor</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="fu"><a href="reference/smf_core_api.html">smf_list_datasets</a></span><span class="op">(</span><span class="op">)</span></span>
@@ -62,6 +68,7 @@
 <p>Recommended scientific sequence:</p>
 <p><strong>question -&gt; design -&gt; audit -&gt; protected domains -&gt; design-aware resampling -&gt; training-only learning -&gt; baseline -&gt; justified complexity -&gt; diagnostics -&gt; typed uncertainty -&gt; explanation stability -&gt; external validation -&gt; reporting -&gt; reproducibility manifest</strong></p>
 <p>The distributed Gold datasets are synthetic software-validation and teaching fixtures. They are not empirical field evidence.</p>
+</div>
 <div class="section level2">
 <h2 id="certification-status">Certification status<a class="anchor" aria-label="anchor" href="#certification-status"></a>
 </h2>
