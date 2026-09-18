@@ -1,10 +1,10 @@
 # sciModelFlowR
 
-**Version 1.0.0 - Consolidated Scientific Release source tree**
+**Version 1.0.1 - patch release of the Consolidated Scientific Release**
 
 `sciModelFlowR` is a design-aware scientific modeling framework for explicit data/design declarations, leakage-safe preprocessing and resampling, deterministic and probabilistic ML, tuning, benchmarking, explainability, Deep Learning, Bayesian and conformal inference, typed uncertainty, experiment tracking, safe persistence, scalable inference, protected external validation, and scientific reporting.
 
-The 1.0.0 source tree preserves the **246-symbol public API frozen at 0.9.0**. This release phase is consolidation rather than algorithm expansion: stable contracts, Gold/reference evidence, cross-language fixtures, compatibility metadata, security review, release manifests, migration material, and final certification entry points are synchronized around one 1.x grammar.
+Version 1.0.1 releases the 22 documented corrections from the local validation campaign of the frozen 1.0.0 source tree (see `DERIVED_PATCH_NOTES.md`). The **246-symbol public API** is unchanged; the 1.0.0 freeze, hashes and release metadata remain the historical reference.
 
 ```r
 library(sciModelFlowR)
@@ -22,14 +22,31 @@ The distributed Gold datasets are synthetic software-validation and teaching fix
 
 ## Certification status
 
-The source implementation is consolidated for 1.0.0, but runtime certification is reported separately. In this environment no R executable is available, so `testthat`, numerical/reference tolerances, optional-backend certification, CPU/GPU execution, rendered Quarto/Jupyter documentation, pkgdown, `R CMD build`, and `R CMD check --as-cran` are **not claimed as passed**. They are reserved for the final local validation campaign.
+Local validation campaign (Windows 11, R 4.6.0, Quarto 1.11.0, 2026-09-18):
+`testthat` 61 files / 299 pass / 0 fail, Gold 25/25, cross-language 25/25,
+reference tolerances ~1e-15, 28/28 vignettes rendered, 27/27 notebooks executed
+in clean IR kernels, and `R CMD build` + `R CMD check --as-cran` completed with
+**0 ERROR / 0 WARNING / 2 NOTEs** (new-submission metadata; intentional
+top-level release documents). The 2 NOTEs are reviewed and accepted.
 
-The package must not be described as CRAN-ready until the actual build/check artifacts and logs exist. Optional backends remain quarantined until their rows in the final compatibility matrix are certified.
+The package is **not claimed CRAN-ready**. Optional backends are exercised by
+the frozen test suite where installed but are not formally certified; GPU/CUDA
+was unavailable (`SKIP`); ONNX remains `QUARANTINED`; the historical 0.1.0–0.9.0
+campaigns require their own snapshots and remain `NOT RUN` in this environment.
+Full evidence: `outputs/final-reports/VALIDATION_RECORD_1.0.1.md`.
 
 ## Stable API
 
-`inst/metadata/API_FREEZE_1.0.0.csv` contains the stable 1.x export contract. `inst/metadata/API_DIFF_0.9.0_TO_1.0.0.csv` records that no public symbol or signature was intentionally changed during consolidation. Any future 1.x deprecation follows `DEPRECATION_POLICY.md`.
+`inst/metadata/API_FREEZE_1.0.0.csv` contains the stable 1.x export contract
+(the 1.0.0 freeze point; preserved unchanged in 1.0.1).
+`inst/metadata/API_DIFF_0.9.0_TO_1.0.0.csv` records that no public symbol or
+signature was intentionally changed during consolidation. Any future 1.x
+deprecation follows `DEPRECATION_POLICY.md`.
 
 ## Release evidence
 
-Key release evidence is stored under `inst/metadata/`: final compatibility matrix, Gold release manifest, benchmark baselines, security review, API freeze/diff, bibliography ledger, and the 1.0.0 release manifest. The final local validation campaign will update certification status without redefining scientific semantics.
+Key release evidence is stored under `inst/metadata/`: final compatibility
+matrix, Gold release manifest, benchmark baselines, security review, API
+freeze/diff, bibliography ledger, and the 1.0.0/1.0.1 release manifests.
+`inst/metadata/RELEASE_MANIFEST_1.0.1.json` records the patch-release
+corrections and validation outcomes without redefining scientific semantics.

@@ -1,0 +1,608 @@
+# sciModelFlowR 1.0.1 static audit (patch release of the 1.0.0 freeze)
+
+**Result:** 600/600 checks passed.
+
+This audit validates the definitive frozen source/release structure only. Runtime, numerical, optional-backend, documentation-rendering and CRAN-style certification remain pending actual local execution.
+
+## Checks
+
+- [x] API freeze contains 246 exports in both 0.9.0 and 1.0.0
+- [x] 0.9.0 -> 1.0.0 export names unchanged
+- [x] 0.9.0 -> 1.0.0 signature prefixes unchanged
+- [x] API smf_ale: exported
+- [x] API smf_ale: source definition matches freeze
+- [x] API smf_api_catalog: exported
+- [x] API smf_api_catalog: source definition matches freeze
+- [x] API smf_apply_calibration: exported
+- [x] API smf_apply_calibration: source definition matches freeze
+- [x] API smf_apply_imbalance: exported
+- [x] API smf_apply_imbalance: source definition matches freeze
+- [x] API smf_apply_preprocessor: exported
+- [x] API smf_apply_preprocessor: source definition matches freeze
+- [x] API smf_apply_representation: exported
+- [x] API smf_apply_representation: source definition matches freeze
+- [x] API smf_audit_data: exported
+- [x] API smf_audit_data: source definition matches freeze
+- [x] API smf_autoencoder: exported
+- [x] API smf_autoencoder: source definition matches freeze
+- [x] API smf_available_model_adapters: exported
+- [x] API smf_available_model_adapters: source definition matches freeze
+- [x] API smf_backend_capabilities: exported
+- [x] API smf_backend_capabilities: source definition matches freeze
+- [x] API smf_backend_matrix: exported
+- [x] API smf_backend_matrix: source definition matches freeze
+- [x] API smf_backend_object: exported
+- [x] API smf_backend_object: source definition matches freeze
+- [x] API smf_bart_fit: exported
+- [x] API smf_bart_fit: source definition matches freeze
+- [x] API smf_bart_predict: exported
+- [x] API smf_bart_predict: source definition matches freeze
+- [x] API smf_batch_predict: exported
+- [x] API smf_batch_predict: source definition matches freeze
+- [x] API smf_bayes_compare: exported
+- [x] API smf_bayes_compare: source definition matches freeze
+- [x] API smf_bayes_diagnose: exported
+- [x] API smf_bayes_diagnose: source definition matches freeze
+- [x] API smf_bayes_diagnostic_flags: exported
+- [x] API smf_bayes_diagnostic_flags: source definition matches freeze
+- [x] API smf_bayes_draws: exported
+- [x] API smf_bayes_draws: source definition matches freeze
+- [x] API smf_bayes_epred: exported
+- [x] API smf_bayes_epred: source definition matches freeze
+- [x] API smf_bayes_fit: exported
+- [x] API smf_bayes_fit: source definition matches freeze
+- [x] API smf_bayes_loo: exported
+- [x] API smf_bayes_loo: source definition matches freeze
+- [x] API smf_bayes_pp_check: exported
+- [x] API smf_bayes_pp_check: source definition matches freeze
+- [x] API smf_bayes_predict: exported
+- [x] API smf_bayes_predict: source definition matches freeze
+- [x] API smf_bayes_prior: exported
+- [x] API smf_bayes_prior: source definition matches freeze
+- [x] API smf_bayes_prior_predictive: exported
+- [x] API smf_bayes_prior_predictive: source definition matches freeze
+- [x] API smf_bayes_stacking: exported
+- [x] API smf_bayes_stacking: source definition matches freeze
+- [x] API smf_bayes_summary: exported
+- [x] API smf_bayes_summary: source definition matches freeze
+- [x] API smf_bayesian_spec: exported
+- [x] API smf_bayesian_spec: source definition matches freeze
+- [x] API smf_benchmark: exported
+- [x] API smf_benchmark: source definition matches freeze
+- [x] API smf_benchmark_spec: exported
+- [x] API smf_benchmark_spec: source definition matches freeze
+- [x] API smf_blocked_cv: exported
+- [x] API smf_blocked_cv: source definition matches freeze
+- [x] API smf_bootstrap: exported
+- [x] API smf_bootstrap: source definition matches freeze
+- [x] API smf_bootstrap_interval: exported
+- [x] API smf_bootstrap_interval: source definition matches freeze
+- [x] API smf_bootstrap_spec: exported
+- [x] API smf_bootstrap_spec: source definition matches freeze
+- [x] API smf_bootstrap_stability: exported
+- [x] API smf_bootstrap_stability: source definition matches freeze
+- [x] API smf_build_representation: exported
+- [x] API smf_build_representation: source definition matches freeze
+- [x] API smf_bundle_info: exported
+- [x] API smf_bundle_info: source definition matches freeze
+- [x] API smf_calibrate: exported
+- [x] API smf_calibrate: source definition matches freeze
+- [x] API smf_calibration_report: exported
+- [x] API smf_calibration_report: source definition matches freeze
+- [x] API smf_calibration_spec: exported
+- [x] API smf_calibration_spec: source definition matches freeze
+- [x] API smf_capabilities: exported
+- [x] API smf_capabilities: source definition matches freeze
+- [x] API smf_check_pseudoreplication: exported
+- [x] API smf_check_pseudoreplication: source definition matches freeze
+- [x] API smf_chunk_plan: exported
+- [x] API smf_chunk_plan: source definition matches freeze
+- [x] API smf_cnn1d: exported
+- [x] API smf_cnn1d: source definition matches freeze
+- [x] API smf_cnn2d: exported
+- [x] API smf_cnn2d: source definition matches freeze
+- [x] API smf_compare_validation_domains: exported
+- [x] API smf_compare_validation_domains: source definition matches freeze
+- [x] API smf_conformal_coverage: exported
+- [x] API smf_conformal_coverage: source definition matches freeze
+- [x] API smf_conformal_diagnose: exported
+- [x] API smf_conformal_diagnose: source definition matches freeze
+- [x] API smf_conformal_fit: exported
+- [x] API smf_conformal_fit: source definition matches freeze
+- [x] API smf_conformal_predict: exported
+- [x] API smf_conformal_predict: source definition matches freeze
+- [x] API smf_conformal_predict_probably: exported
+- [x] API smf_conformal_predict_probably: source definition matches freeze
+- [x] API smf_conformal_probably: exported
+- [x] API smf_conformal_probably: source definition matches freeze
+- [x] API smf_conformal_spec: exported
+- [x] API smf_conformal_spec: source definition matches freeze
+- [x] API smf_counterfactual: exported
+- [x] API smf_counterfactual: source definition matches freeze
+- [x] API smf_data_hash: exported
+- [x] API smf_data_hash: source definition matches freeze
+- [x] API smf_data_iterator: exported
+- [x] API smf_data_iterator: source definition matches freeze
+- [x] API smf_data_spec: exported
+- [x] API smf_data_spec: source definition matches freeze
+- [x] API smf_dataset_card: exported
+- [x] API smf_dataset_card: source definition matches freeze
+- [x] API smf_decide_benchmark: exported
+- [x] API smf_decide_benchmark: source definition matches freeze
+- [x] API smf_deployment_spec: exported
+- [x] API smf_deployment_spec: source definition matches freeze
+- [x] API smf_deprecation_policy: exported
+- [x] API smf_deprecation_policy: source definition matches freeze
+- [x] API smf_design_spec: exported
+- [x] API smf_design_spec: source definition matches freeze
+- [x] API smf_design_summary: exported
+- [x] API smf_design_summary: source definition matches freeze
+- [x] API smf_detect_leakage: exported
+- [x] API smf_detect_leakage: source definition matches freeze
+- [x] API smf_diagnose: exported
+- [x] API smf_diagnose: source definition matches freeze
+- [x] API smf_dist_cdf: exported
+- [x] API smf_dist_cdf: source definition matches freeze
+- [x] API smf_dist_interval: exported
+- [x] API smf_dist_interval: source definition matches freeze
+- [x] API smf_dist_log_prob: exported
+- [x] API smf_dist_log_prob: source definition matches freeze
+- [x] API smf_dist_mean: exported
+- [x] API smf_dist_mean: source definition matches freeze
+- [x] API smf_dist_median: exported
+- [x] API smf_dist_median: source definition matches freeze
+- [x] API smf_dist_quantile: exported
+- [x] API smf_dist_quantile: source definition matches freeze
+- [x] API smf_dist_sample: exported
+- [x] API smf_dist_sample: source definition matches freeze
+- [x] API smf_dist_sd: exported
+- [x] API smf_dist_sd: source definition matches freeze
+- [x] API smf_dist_variance: exported
+- [x] API smf_dist_variance: source definition matches freeze
+- [x] API smf_dl_architecture: exported
+- [x] API smf_dl_architecture: source definition matches freeze
+- [x] API smf_dl_checkpoint: exported
+- [x] API smf_dl_checkpoint: source definition matches freeze
+- [x] API smf_dl_determinism: exported
+- [x] API smf_dl_determinism: source definition matches freeze
+- [x] API smf_dl_device: exported
+- [x] API smf_dl_device: source definition matches freeze
+- [x] API smf_dl_distributional_head: exported
+- [x] API smf_dl_distributional_head: source definition matches freeze
+- [x] API smf_dl_early_stopping: exported
+- [x] API smf_dl_early_stopping: source definition matches freeze
+- [x] API smf_dl_ensemble: exported
+- [x] API smf_dl_ensemble: source definition matches freeze
+- [x] API smf_dl_gradcam: exported
+- [x] API smf_dl_gradcam: source definition matches freeze
+- [x] API smf_dl_gradient_x_input: exported
+- [x] API smf_dl_gradient_x_input: source definition matches freeze
+- [x] API smf_dl_integrated_gradients: exported
+- [x] API smf_dl_integrated_gradients: source definition matches freeze
+- [x] API smf_dl_interval: exported
+- [x] API smf_dl_interval: source definition matches freeze
+- [x] API smf_dl_load_checkpoint: exported
+- [x] API smf_dl_load_checkpoint: source definition matches freeze
+- [x] API smf_dl_mc_dropout: exported
+- [x] API smf_dl_mc_dropout: source definition matches freeze
+- [x] API smf_dl_mixed_precision: exported
+- [x] API smf_dl_mixed_precision: source definition matches freeze
+- [x] API smf_dl_optimizer: exported
+- [x] API smf_dl_optimizer: source definition matches freeze
+- [x] API smf_dl_predict: exported
+- [x] API smf_dl_predict: source definition matches freeze
+- [x] API smf_dl_predict_distribution: exported
+- [x] API smf_dl_predict_distribution: source definition matches freeze
+- [x] API smf_dl_predict_tensor: exported
+- [x] API smf_dl_predict_tensor: source definition matches freeze
+- [x] API smf_dl_resume: exported
+- [x] API smf_dl_resume: source definition matches freeze
+- [x] API smf_dl_saliency: exported
+- [x] API smf_dl_saliency: source definition matches freeze
+- [x] API smf_dl_save_checkpoint: exported
+- [x] API smf_dl_save_checkpoint: source definition matches freeze
+- [x] API smf_dl_scheduler: exported
+- [x] API smf_dl_scheduler: source definition matches freeze
+- [x] API smf_dl_spec: exported
+- [x] API smf_dl_spec: source definition matches freeze
+- [x] API smf_dl_train: exported
+- [x] API smf_dl_train: source definition matches freeze
+- [x] API smf_dl_train_tensor: exported
+- [x] API smf_dl_train_tensor: source definition matches freeze
+- [x] API smf_dl_uncertainty_decompose: exported
+- [x] API smf_dl_uncertainty_decompose: source definition matches freeze
+- [x] API smf_doctor: exported
+- [x] API smf_doctor: source definition matches freeze
+- [x] API smf_end_run: exported
+- [x] API smf_end_run: source definition matches freeze
+- [x] API smf_evaluate: exported
+- [x] API smf_evaluate: source definition matches freeze
+- [x] API smf_evaluate_probabilistic: exported
+- [x] API smf_evaluate_probabilistic: source definition matches freeze
+- [x] API smf_experiment_spec: exported
+- [x] API smf_experiment_spec: source definition matches freeze
+- [x] API smf_explain: exported
+- [x] API smf_explain: source definition matches freeze
+- [x] API smf_explain_spec: exported
+- [x] API smf_explain_spec: source definition matches freeze
+- [x] API smf_explanation_agreement: exported
+- [x] API smf_explanation_agreement: source definition matches freeze
+- [x] API smf_explanation_domain: exported
+- [x] API smf_explanation_domain: source definition matches freeze
+- [x] API smf_explanation_stability: exported
+- [x] API smf_explanation_stability: source definition matches freeze
+- [x] API smf_export_onnx: exported
+- [x] API smf_export_onnx: source definition matches freeze
+- [x] API smf_external_split: exported
+- [x] API smf_external_split: source definition matches freeze
+- [x] API smf_external_validate: exported
+- [x] API smf_external_validate: source definition matches freeze
+- [x] API smf_feature_select_resamples: exported
+- [x] API smf_feature_select_resamples: source definition matches freeze
+- [x] API smf_feature_spec: exported
+- [x] API smf_feature_spec: source definition matches freeze
+- [x] API smf_feature_stability: exported
+- [x] API smf_feature_stability: source definition matches freeze
+- [x] API smf_fit_experiment: exported
+- [x] API smf_fit_experiment: source definition matches freeze
+- [x] API smf_fit_model: exported
+- [x] API smf_fit_model: source definition matches freeze
+- [x] API smf_fit_preprocessor: exported
+- [x] API smf_fit_preprocessor: source definition matches freeze
+- [x] API smf_from_json: exported
+- [x] API smf_from_json: source definition matches freeze
+- [x] API smf_from_list: exported
+- [x] API smf_from_list: source definition matches freeze
+- [x] API smf_get_run: exported
+- [x] API smf_get_run: source definition matches freeze
+- [x] API smf_gp_fit: exported
+- [x] API smf_gp_fit: source definition matches freeze
+- [x] API smf_gp_predict: exported
+- [x] API smf_gp_predict: source definition matches freeze
+- [x] API smf_group_vfold_cv: exported
+- [x] API smf_group_vfold_cv: source definition matches freeze
+- [x] API smf_gru: exported
+- [x] API smf_gru: source definition matches freeze
+- [x] API smf_hardware_info: exported
+- [x] API smf_hardware_info: source definition matches freeze
+- [x] API smf_hash: exported
+- [x] API smf_hash: source definition matches freeze
+- [x] API smf_holdout_split: exported
+- [x] API smf_holdout_split: source definition matches freeze
+- [x] API smf_ice: exported
+- [x] API smf_ice: source definition matches freeze
+- [x] API smf_imbalance_spec: exported
+- [x] API smf_imbalance_spec: source definition matches freeze
+- [x] API smf_import_split_manifest: exported
+- [x] API smf_import_split_manifest: source definition matches freeze
+- [x] API smf_iterator_next: exported
+- [x] API smf_iterator_next: source definition matches freeze
+- [x] API smf_iterator_reset: exported
+- [x] API smf_iterator_reset: source definition matches freeze
+- [x] API smf_list_datasets: exported
+- [x] API smf_list_datasets: source definition matches freeze
+- [x] API smf_list_runs: exported
+- [x] API smf_list_runs: source definition matches freeze
+- [x] API smf_load_bundle: exported
+- [x] API smf_load_bundle: source definition matches freeze
+- [x] API smf_load_dataset: exported
+- [x] API smf_load_dataset: source definition matches freeze
+- [x] API smf_local_explain: exported
+- [x] API smf_local_explain: source definition matches freeze
+- [x] API smf_log_artifact: exported
+- [x] API smf_log_artifact: source definition matches freeze
+- [x] API smf_log_metric: exported
+- [x] API smf_log_metric: source definition matches freeze
+- [x] API smf_log_params: exported
+- [x] API smf_log_params: source definition matches freeze
+- [x] API smf_log_result: exported
+- [x] API smf_log_result: source definition matches freeze
+- [x] API smf_lstm: exported
+- [x] API smf_lstm: source definition matches freeze
+- [x] API smf_make_resampler: exported
+- [x] API smf_make_resampler: source definition matches freeze
+- [x] API smf_manifest: exported
+- [x] API smf_manifest: source definition matches freeze
+- [x] API smf_map_iterator: exported
+- [x] API smf_map_iterator: source definition matches freeze
+- [x] API smf_metric_spec: exported
+- [x] API smf_metric_spec: source definition matches freeze
+- [x] API smf_missingness_report: exported
+- [x] API smf_missingness_report: source definition matches freeze
+- [x] API smf_mlp: exported
+- [x] API smf_mlp: source definition matches freeze
+- [x] API smf_model_spec: exported
+- [x] API smf_model_spec: source definition matches freeze
+- [x] API smf_monte_carlo_cv: exported
+- [x] API smf_monte_carlo_cv: source definition matches freeze
+- [x] API smf_multimodal: exported
+- [x] API smf_multimodal: source definition matches freeze
+- [x] API smf_multitask: exported
+- [x] API smf_multitask: source definition matches freeze
+- [x] API smf_nested_resampler: exported
+- [x] API smf_nested_resampler: source definition matches freeze
+- [x] API smf_nested_tune: exported
+- [x] API smf_nested_tune: source definition matches freeze
+- [x] API smf_optimize_threshold: exported
+- [x] API smf_optimize_threshold: source definition matches freeze
+- [x] API smf_param_dbl: exported
+- [x] API smf_param_dbl: source definition matches freeze
+- [x] API smf_param_fct: exported
+- [x] API smf_param_fct: source definition matches freeze
+- [x] API smf_param_int: exported
+- [x] API smf_param_int: source definition matches freeze
+- [x] API smf_param_lgl: exported
+- [x] API smf_param_lgl: source definition matches freeze
+- [x] API smf_pareto_front: exported
+- [x] API smf_pareto_front: source definition matches freeze
+- [x] API smf_pdp: exported
+- [x] API smf_pdp: source definition matches freeze
+- [x] API smf_permutation_importance: exported
+- [x] API smf_permutation_importance: source definition matches freeze
+- [x] API smf_persistence_spec: exported
+- [x] API smf_persistence_spec: source definition matches freeze
+- [x] API smf_pins_fetch_bundle: exported
+- [x] API smf_pins_fetch_bundle: source definition matches freeze
+- [x] API smf_pins_publish_bundle: exported
+- [x] API smf_pins_publish_bundle: source definition matches freeze
+- [x] API smf_plot: exported
+- [x] API smf_plot: source definition matches freeze
+- [x] API smf_predict: exported
+- [x] API smf_predict: source definition matches freeze
+- [x] API smf_predict_bundle: exported
+- [x] API smf_predict_bundle: source definition matches freeze
+- [x] API smf_predict_distribution: exported
+- [x] API smf_predict_distribution: source definition matches freeze
+- [x] API smf_predict_model: exported
+- [x] API smf_predict_model: source definition matches freeze
+- [x] API smf_prediction_distribution: exported
+- [x] API smf_prediction_distribution: source definition matches freeze
+- [x] API smf_preprocess_provenance: exported
+- [x] API smf_preprocess_provenance: source definition matches freeze
+- [x] API smf_preprocess_spec: exported
+- [x] API smf_preprocess_spec: source definition matches freeze
+- [x] API smf_probabilistic_spec: exported
+- [x] API smf_probabilistic_spec: source definition matches freeze
+- [x] API smf_publication_plot: exported
+- [x] API smf_publication_plot: source definition matches freeze
+- [x] API smf_publication_table: exported
+- [x] API smf_publication_table: source definition matches freeze
+- [x] API smf_register_backend: exported
+- [x] API smf_register_backend: source definition matches freeze
+- [x] API smf_release_candidate_audit: exported
+- [x] API smf_release_candidate_audit: source definition matches freeze
+- [x] API smf_report: exported
+- [x] API smf_report: source definition matches freeze
+- [x] API smf_reporting_checklist: exported
+- [x] API smf_reporting_checklist: source definition matches freeze
+- [x] API smf_reporting_spec: exported
+- [x] API smf_reporting_spec: source definition matches freeze
+- [x] API smf_reproducibility_spec: exported
+- [x] API smf_reproducibility_spec: source definition matches freeze
+- [x] API smf_require_capability: exported
+- [x] API smf_require_capability: source definition matches freeze
+- [x] API smf_resample_experiment: exported
+- [x] API smf_resample_experiment: source definition matches freeze
+- [x] API smf_resample_manifest: exported
+- [x] API smf_resample_manifest: source definition matches freeze
+- [x] API smf_resampling_spec: exported
+- [x] API smf_resampling_spec: source definition matches freeze
+- [x] API smf_rng_info: exported
+- [x] API smf_rng_info: source definition matches freeze
+- [x] API smf_rnn: exported
+- [x] API smf_rnn: source definition matches freeze
+- [x] API smf_run_crosslang_validation: exported
+- [x] API smf_run_crosslang_validation: source definition matches freeze
+- [x] API smf_run_gold_validation: exported
+- [x] API smf_run_gold_validation: source definition matches freeze
+- [x] API smf_run_reference_validation: exported
+- [x] API smf_run_reference_validation: source definition matches freeze
+- [x] API smf_save_bundle: exported
+- [x] API smf_save_bundle: source definition matches freeze
+- [x] API smf_save_manifest: exported
+- [x] API smf_save_manifest: source definition matches freeze
+- [x] API smf_scalability_spec: exported
+- [x] API smf_scalability_spec: source definition matches freeze
+- [x] API smf_search_grid: exported
+- [x] API smf_search_grid: source definition matches freeze
+- [x] API smf_search_random: exported
+- [x] API smf_search_random: source definition matches freeze
+- [x] API smf_search_space: exported
+- [x] API smf_search_space: source definition matches freeze
+- [x] API smf_select_compromise: exported
+- [x] API smf_select_compromise: source definition matches freeze
+- [x] API smf_select_features: exported
+- [x] API smf_select_features: source definition matches freeze
+- [x] API smf_shap: exported
+- [x] API smf_shap: source definition matches freeze
+- [x] API smf_spatial_cv: exported
+- [x] API smf_spatial_cv: source definition matches freeze
+- [x] API smf_spec_hash: exported
+- [x] API smf_spec_hash: source definition matches freeze
+- [x] API smf_split_manifest: exported
+- [x] API smf_split_manifest: source definition matches freeze
+- [x] API smf_start_run: exported
+- [x] API smf_start_run: source definition matches freeze
+- [x] API smf_task_spec: exported
+- [x] API smf_task_spec: source definition matches freeze
+- [x] API smf_tcn: exported
+- [x] API smf_tcn: source definition matches freeze
+- [x] API smf_time_cv: exported
+- [x] API smf_time_cv: source definition matches freeze
+- [x] API smf_to_json: exported
+- [x] API smf_to_json: source definition matches freeze
+- [x] API smf_to_list: exported
+- [x] API smf_to_list: source definition matches freeze
+- [x] API smf_to_yaml: exported
+- [x] API smf_to_yaml: source definition matches freeze
+- [x] API smf_trace_features: exported
+- [x] API smf_trace_features: source definition matches freeze
+- [x] API smf_tracker_local: exported
+- [x] API smf_tracker_local: source definition matches freeze
+- [x] API smf_tracker_mlflow: exported
+- [x] API smf_tracker_mlflow: source definition matches freeze
+- [x] API smf_tracking_spec: exported
+- [x] API smf_tracking_spec: source definition matches freeze
+- [x] API smf_transfer_learning: exported
+- [x] API smf_transfer_learning: source definition matches freeze
+- [x] API smf_transformer: exported
+- [x] API smf_transformer: source definition matches freeze
+- [x] API smf_tune: exported
+- [x] API smf_tune: source definition matches freeze
+- [x] API smf_tune_objective: exported
+- [x] API smf_tune_objective: source definition matches freeze
+- [x] API smf_tuning_spec: exported
+- [x] API smf_tuning_spec: source definition matches freeze
+- [x] API smf_uncertainty_compare: exported
+- [x] API smf_uncertainty_compare: source definition matches freeze
+- [x] API smf_uncertainty_decompose: exported
+- [x] API smf_uncertainty_decompose: source definition matches freeze
+- [x] API smf_uncertainty_descriptor: exported
+- [x] API smf_uncertainty_descriptor: source definition matches freeze
+- [x] API smf_uncertainty_from_distribution: exported
+- [x] API smf_uncertainty_from_distribution: source definition matches freeze
+- [x] API smf_uncertainty_label: exported
+- [x] API smf_uncertainty_label: source definition matches freeze
+- [x] API smf_uncertainty_report: exported
+- [x] API smf_uncertainty_report: source definition matches freeze
+- [x] API smf_uncertainty_semantics: exported
+- [x] API smf_uncertainty_semantics: source definition matches freeze
+- [x] API smf_uncertainty_spec: exported
+- [x] API smf_uncertainty_spec: source definition matches freeze
+- [x] API smf_uncertainty_validate: exported
+- [x] API smf_uncertainty_validate: source definition matches freeze
+- [x] API smf_vae: exported
+- [x] API smf_vae: source definition matches freeze
+- [x] API smf_validate_bootstrap_design: exported
+- [x] API smf_validate_bootstrap_design: source definition matches freeze
+- [x] API smf_validate_bundle: exported
+- [x] API smf_validate_bundle: source definition matches freeze
+- [x] API smf_validate_crosslang_fixtures: exported
+- [x] API smf_validate_crosslang_fixtures: source definition matches freeze
+- [x] API smf_validate_design: exported
+- [x] API smf_validate_design: source definition matches freeze
+- [x] API smf_validate_resampling_design: exported
+- [x] API smf_validate_resampling_design: source definition matches freeze
+- [x] API smf_validate_schema: exported
+- [x] API smf_validate_schema: source definition matches freeze
+- [x] API smf_validate_split: exported
+- [x] API smf_validate_split: source definition matches freeze
+- [x] API smf_vetiver_model: exported
+- [x] API smf_vetiver_model: source definition matches freeze
+- [x] API smf_vetiver_pin_write: exported
+- [x] API smf_vetiver_pin_write: source definition matches freeze
+- [x] API smf_vfold_cv: exported
+- [x] API smf_vfold_cv: source definition matches freeze
+- [x] API smf_vit: exported
+- [x] API smf_vit: source definition matches freeze
+- [x] API smf_warning_record: exported
+- [x] API smf_warning_record: source definition matches freeze
+- [x] API smf_with_seed: exported
+- [x] API smf_with_seed: source definition matches freeze
+- [x] API smf_write_plumber: exported
+- [x] API smf_write_plumber: source definition matches freeze
+- [x] Gold gold_linear_regression: release SHA-256 matches
+- [x] Gold gold_linear_regression: truth/card release metadata complete
+- [x] Gold gold_heteroscedastic_regression: release SHA-256 matches
+- [x] Gold gold_heteroscedastic_regression: truth/card release metadata complete
+- [x] Gold gold_binary_calibration: release SHA-256 matches
+- [x] Gold gold_binary_calibration: truth/card release metadata complete
+- [x] Gold gold_multiclass_imbalanced: release SHA-256 matches
+- [x] Gold gold_multiclass_imbalanced: truth/card release metadata complete
+- [x] Gold gold_grouped_fields: release SHA-256 matches
+- [x] Gold gold_grouped_fields: truth/card release metadata complete
+- [x] Gold gold_hierarchical_yield: release SHA-256 matches
+- [x] Gold gold_hierarchical_yield: truth/card release metadata complete
+- [x] Gold gold_time_climate: release SHA-256 matches
+- [x] Gold gold_time_climate: truth/card release metadata complete
+- [x] Gold gold_spatial_soil: release SHA-256 matches
+- [x] Gold gold_spatial_soil: truth/card release metadata complete
+- [x] Gold gold_spectral_curve: release SHA-256 matches
+- [x] Gold gold_spectral_curve: truth/card release metadata complete
+- [x] Gold gold_hyperspectral_small: release SHA-256 matches
+- [x] Gold gold_hyperspectral_small: truth/card release metadata complete
+- [x] Gold gold_rgb_leaf_small: release SHA-256 matches
+- [x] Gold gold_rgb_leaf_small: truth/card release metadata complete
+- [x] Gold gold_multimodal_stress: release SHA-256 matches
+- [x] Gold gold_multimodal_stress: truth/card release metadata complete
+- [x] Gold gold_count_pests: release SHA-256 matches
+- [x] Gold gold_count_pests: truth/card release metadata complete
+- [x] Gold gold_nonlinear_bart: release SHA-256 matches
+- [x] Gold gold_nonlinear_bart: truth/card release metadata complete
+- [x] Gold gold_gp_surface: release SHA-256 matches
+- [x] Gold gold_gp_surface: truth/card release metadata complete
+- [x] Gold gold_distributional_yield: release SHA-256 matches
+- [x] Gold gold_distributional_yield: truth/card release metadata complete
+- [x] Gold gold_covariate_shift: release SHA-256 matches
+- [x] Gold gold_covariate_shift: truth/card release metadata complete
+- [x] Gold gold_missingness_mcar_mar: release SHA-256 matches
+- [x] Gold gold_missingness_mcar_mar: truth/card release metadata complete
+- [x] Gold gold_conformal_heteroscedastic: release SHA-256 matches
+- [x] Gold gold_conformal_heteroscedastic: truth/card release metadata complete
+- [x] Gold gold_dl_tiny: release SHA-256 matches
+- [x] Gold gold_dl_tiny: truth/card release metadata complete
+- [x] Gold gold_xai_stability: release SHA-256 matches
+- [x] Gold gold_xai_stability: truth/card release metadata complete
+- [x] Gold gold_dl_nonlinear: release SHA-256 matches
+- [x] Gold gold_dl_nonlinear: truth/card release metadata complete
+- [x] Gold gold_dl_sequence: release SHA-256 matches
+- [x] Gold gold_dl_sequence: truth/card release metadata complete
+- [x] Gold gold_bayesian_linear: release SHA-256 matches
+- [x] Gold gold_bayesian_linear: truth/card release metadata complete
+- [x] Gold gold_conformal_regression: release SHA-256 matches
+- [x] Gold gold_conformal_regression: truth/card release metadata complete
+- [x] metadata API_FREEZE_1.0.0.csv exists
+- [x] metadata API_FREEZE_1.0.0.sha256 exists
+- [x] metadata API_DIFF_0.9.0_TO_1.0.0.csv exists
+- [x] metadata FINAL_COMPATIBILITY_MATRIX_1.0.0.csv exists
+- [x] metadata BACKEND_MATRIX_1.0.0.csv exists
+- [x] metadata GOLD_RELEASE_MANIFEST_1.0.0.csv exists
+- [x] metadata BENCHMARK_BASELINES_1.0.0.csv exists
+- [x] metadata SECURITY_REVIEW_1.0.0.json exists
+- [x] metadata RELEASE_MANIFEST_1.0.0.json exists
+- [x] metadata BIBLIOGRAPHY_LEDGER_1.0.0.csv exists
+- [x] metadata RELEASE_MANIFEST_1.0.1.json exists
+- [x] DESCRIPTION version 1.0.1
+- [x] NEWS begins 1.0.1
+- [x] CITATION.cff version 1.0.1
+- [x] inst/CITATION version 1.0.1
+- [x] Notebook 01-foundations-to-advanced-scientific-modeling.ipynb: release metadata 1.0.1
+- [x] Notebook 02-data-audit-and-leakage.ipynb: release metadata 1.0.1
+- [x] Notebook 03-resampling-and-scientific-design.ipynb: release metadata 1.0.1
+- [x] Notebook 04-bootstrap-and-stability.ipynb: release metadata 1.0.1
+- [x] Notebook 05-feature-engineering-and-selection.ipynb: release metadata 1.0.1
+- [x] Notebook 06-supervised-machine-learning.ipynb: release metadata 1.0.1
+- [x] Notebook 07-probabilistic-machine-learning.ipynb: release metadata 1.0.1
+- [x] Notebook 08-tuning-and-scientific-benchmarking.ipynb: release metadata 1.0.1
+- [x] Notebook 09-imbalance-calibration-and-thresholds.ipynb: release metadata 1.0.1
+- [x] Notebook 10-explainable-ai-and-stability.ipynb: release metadata 1.0.1
+- [x] Notebook 11-deep-learning-foundations.ipynb: release metadata 1.0.1
+- [x] Notebook 12-deep-learning-architectures.ipynb: release metadata 1.0.1
+- [x] Notebook 13-probabilistic-deep-learning.ipynb: release metadata 1.0.1
+- [x] Notebook 14-deep-learning-xai-and-reproducibility.ipynb: release metadata 1.0.1
+- [x] Notebook 15-bayesian-modeling.ipynb: release metadata 1.0.1
+- [x] Notebook 16-bayesian-diagnostics-and-predictive-checking.ipynb: release metadata 1.0.1
+- [x] Notebook 17-conformal-prediction.ipynb: release metadata 1.0.1
+- [x] Notebook 18-full-uncertainty.ipynb: release metadata 1.0.1
+- [x] Notebook 19-complete-scientific-workflow.ipynb: release metadata 1.0.1
+- [x] Notebook 20-tracking-persistence-and-scalable-inference.ipynb: release metadata 1.0.1
+- [x] Notebook 21-agronomy-soil-workflow.ipynb: release metadata 1.0.1
+- [x] Notebook 22-spectroscopy-phenotyping-workflow.ipynb: release metadata 1.0.1
+- [x] Notebook 23-spatial-environmental-workflow.ipynb: release metadata 1.0.1
+- [x] Notebook 24-protected-external-validation.ipynb: release metadata 1.0.1
+- [x] Notebook 25-api-catalog.ipynb: release metadata 1.0.1
+- [x] Notebook 26-migration-and-deprecation.ipynb: release metadata 1.0.1
+- [x] Notebook 27-validation-and-reproducibility.ipynb: release metadata 1.0.1
+- [x] document SECURITY_REVIEW_1.0.0.md exists
+- [x] document COMPATIBILITY_1.0.0.md exists
+- [x] document MIGRATION_0.9.0_TO_1.0.0.md exists
+- [x] document RELEASE_NOTES_1.0.0.md exists
+- [x] document RELEASE_CHECKLIST_1.0.0.md exists
+- [x] document BIBLIOGRAPHY_VERIFICATION_1.0.0.md exists
+- [x] no TODO/FIXME/XXX in R source
+- [x] no direct system/system2 call in package R source
+- [x] no direct shell call in package R source
+- [x] no direct eval(parse) call in package R source
+- [x] no direct source call in package R source
+- [x] no direct download.file call in package R source
+- [x] API freeze SHA-256 valid

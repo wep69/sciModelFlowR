@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">sciModelFlowR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -33,6 +33,75 @@
       <small>Source: <a href="https://github.com/wep69/sciModelFlowR/blob/HEAD/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="1.0.1" id="scimodelflowr-101">sciModelFlowR 1.0.1<a class="anchor" aria-label="anchor" href="#scimodelflowr-101"></a></h2>
+<div class="section level3">
+<h3 id="patch-release--local-validation-campaign-corrections-1-0-1">Patch release — local validation campaign corrections<a class="anchor" aria-label="anchor" href="#patch-release--local-validation-campaign-corrections-1-0-1"></a></h3>
+<p>Version 1.0.1 releases the 22 documented corrections produced by the local validation campaign of the 1.0.0 source freeze (see <code>DERIVED_PATCH_NOTES.md</code> for the full audit trail and preserved originals). The frozen 1.0.0 source tree, hashes and release metadata remain the historical reference; this patch does not expand or change the 246-symbol public API.</p>
+<div class="section level4">
+<h4 id="loadruntime-blockers-1-0-1">Load/runtime blockers<a class="anchor" aria-label="anchor" href="#loadruntime-blockers-1-0-1"></a></h4>
+<ul><li>
+<code>R/resampling.R</code>: backtick-quoted the reserved word in <code>summary=list(\</code>repeat`=…)` (the package could not be parsed/installed).</li>
+<li>
+<code>R/bayesian-adapters.R</code> → <code>R/bayesian-core.R</code>: moved the <code>S7::method(print, GPFitResult)</code> and <code>S7::method(print, BARTFitResult)</code> registrations after their class definitions (load order blocker).</li>
+<li>
+<code>R/provenance.R</code>: <code>.smf_hardware_info()</code> no longer indexes the non-existent <code>Sys.info()[["model"]]</code> (run manifests, batch/resume, calibration and deployment paths aborted); CPU model falls back to <code>PROCESSOR_IDENTIFIER</code>/<code>machine</code>.</li>
+<li>
+<code>R/deep-learning-train.R</code>: <code>torch::nn_lazy_linear</code> is resolved at runtime with an explicit <code>TORCH_LAZY_UNSUPPORTED</code> capability error when the backend does not provide lazy modules.</li>
+<li>
+<code>R/scalability.R</code>: removed a <code>:::</code> self-reference in the parallel batch worker.</li>
+</ul></div>
+<div class="section level4">
+<h4 id="scientificnumerical-corrections-1-0-1">Scientific/numerical corrections<a class="anchor" aria-label="anchor" href="#scientificnumerical-corrections-1-0-1"></a></h4>
+<ul><li>
+<code>R/release-candidate.R</code>: the reference gate now fits on the holdout train rows and evaluates on the held-out test rows, matching the frozen fixture (the previous full-data fit leaked test rows and failed deterministically).</li>
+<li>
+<code>R/calibration.R</code>: isotonic calibration fits on score-ordered pairs (PAVA requires nondecreasing x) and degenerate all-zero rows fall back to the validated input row / uniform simplex instead of emitting zeros.</li>
+<li>
+<code>R/model-adapters.R</code>: <code>"linear"</code> is accepted as an alias of <code>"linear_regression"</code> in the stats and tidymodels adapters (used by vignettes and validators).</li>
+<li>
+<code>R/tuning-core.R</code>: the racing archive uses a homogeneous schema so the final <code>rbind</code> succeeds (racing previously never produced an archive).</li>
+</ul></div>
+<div class="section level4">
+<h4 id="serializationround-trip-1-0-1">Serialization/round-trip<a class="anchor" aria-label="anchor" href="#serializationround-trip-1-0-1"></a></h4>
+<ul><li>
+<code>R/core-serialization.R</code>: empty JSON/YAML arrays (<code>[]</code>) are mapped back to typed empty vectors via S7 property introspection, fixing cross-session round-trips (e.g. <code>DLGradientExplanation</code>, <code>ExplainSpec</code>, <code>DataSpec</code>) that failed because installed S7 class objects are not identical to session-created ones.</li>
+</ul></div>
+<div class="section level4">
+<h4 id="packagingbuild-1-0-1">Packaging/build<a class="anchor" aria-label="anchor" href="#packagingbuild-1-0-1"></a></h4>
+<ul><li>
+<code>inst/gold/</code> → <code>inst/gold_data/</code>, <code>inst/extdata/gold/</code> → <code>inst/extdata/gold_data/</code>, <code>inst/crosslang/gold/</code> → <code>inst/crosslang/gold_data/</code>: <code>R CMD build</code> drops directories whose name ends in <code>old</code>, so the frozen layout silently removed the complete Gold suite, cards, hashes and known truth from built tarballs. Dataset names (<code>gold_*</code>), file contents and hashes are unchanged.</li>
+<li>
+<code>man/</code>: kept the frozen topic pages (11 topics covering all 246 exports); removed 246 empty per-function pages generated by a full <code>document()</code> run and three illustrative <code>\usage{}</code> blocks without <code>\arguments{}</code>; removed the broken single-line <code>smf_explain_api.Rd</code>.</li>
+<li>
+<code>vignettes/*.qmd</code>: added <code>vignette:</code> metadata with <code>%\VignetteEngine{quarto::html}</code> to all 28 articles and set <code>VignetteBuilder: quarto</code>; <code>R CMD build</code> now renders 28 HTML vignettes into <code>inst/doc</code> (previously zero) and the check rebuilds them.</li>
+<li>
+<code>DESCRIPTION</code>/<code>NAMESPACE</code>: <code>tibble</code>/<code>vctrs</code> moved from Imports to Suggests (unused); <code>import(stats)</code>/<code>import(utils)</code> added so codetools resolves base helpers; <code>LICENSE</code> reduced to the standard two-line stub (BSD-3-Clause text preserved in the validation records).</li>
+<li>
+<code>R/zzz.R</code>: declared NSE globals (<code>self</code>, ggplot2 column names) for <code>R CMD check</code>.</li>
+</ul></div>
+<div class="section level4">
+<h4 id="teaching-material-and-validation-harness-1-0-1">Teaching material and validation harness<a class="anchor" aria-label="anchor" href="#teaching-material-and-validation-harness-1-0-1"></a></h4>
+<ul><li>
+<code>inst/notebooks/jupyter/*.ipynb</code>: version assertion updated from <code>0.9.0</code> to the release version and metadata aligned; all 27 notebooks execute in clean IR kernels.</li>
+<li>
+<code>tools/validate_1.0.0.R</code>/<code>_release.R</code>: line-separated equivalents of the single-line frozen harnesses (literal <code>\n</code> sequences made them unparseable); originals preserved.</li>
+<li>
+<code>tests/testthat</code>: repaired two single-line test files; aligned stale constants (API freeze, backend matrix, Gold counts); replaced <code><a href="https://rdrr.io/r/base/table.html" class="external-link">table()</a></code> identity comparisons; repaired type-strict expectations; updated the reference-scope and linear-alias expectations.</li>
+<li>Repository owner references and pkgdown URL moved to the published location (<code>https://github.com/wep69/sciModelFlowR</code>).</li>
+</ul></div>
+<div class="section level4">
+<h4 id="validation-summary-local-campaign-windows-r-1-0-1">Validation summary (local campaign, Windows, R 4.6.0)<a class="anchor" aria-label="anchor" href="#validation-summary-local-campaign-windows-r-1-0-1"></a></h4>
+<ul><li>
+<code>testthat</code>: 61 files, 299 pass / 0 fail (source and installed).</li>
+<li>Gold 25/25, cross-language 25/25, reference tolerances ~1e-15.</li>
+<li>
+<code>R CMD build</code> + <code>R CMD check --as-cran</code>: 0 ERROR / 0 WARNING / 2 NOTEs (new submission metadata; intentional top-level release documents).</li>
+<li>28/28 vignettes, 27/27 notebooks, pkgdown site rebuilt.</li>
+<li>Historical 0.1.0–0.9.0 campaigns remain <code>NOT RUN</code> in this environment (their snapshots are not distributed with 1.0.x); GPU/CUDA and ONNX remain <code>SKIP</code>/<code>QUARANTINED</code>. The package is not claimed CRAN-ready.</li>
+</ul></div>
+</div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="1.0.0" id="scimodelflowr-100">sciModelFlowR 1.0.0<a class="anchor" aria-label="anchor" href="#scimodelflowr-100"></a></h2>
 <div class="section level3">

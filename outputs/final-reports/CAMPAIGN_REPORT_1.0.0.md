@@ -4,6 +4,16 @@
 **Repo:** `D:\Walter\R\Pacotes_criados\sciModelFlowR\repo` (git, sem CI, GitHub Pages via `/docs`)
 **Data:** 2026-09-18 · **Máquina:** Windows 11 x64, R 4.6.0, Quarto 1.11.0, 8 cores, 32 GB, sem CUDA
 
+> **Addendum 2026-09-18 — patch release 1.0.1.** Os 22 fixes derivados foram
+> publicados como **sciModelFlowR 1.0.1** (tag `v1.0.1`, GitHub Release com
+> tarball), mantendo o freeze 1.0.0 como histórico (tag `v1.0.0`).
+> Validação completa em `VALIDATION_RECORD_1.0.1.md`:
+> static audit 600/600, testthat 299 PASS, Gold/crosslang 25/25, reference
+> ~7e-15, 28/28 vinhetas, 27/27 notebooks, pkgdown 28/28 e
+> `R CMD check --as-cran` **0 ERROR / 0 WARNING / 2 NOTEs**.
+> Tarball: `sciModelFlowR_1.0.1.tar.gz`
+> SHA-256 `F395795E874E6CFEECDD1F52BDB5469339E5100CC9D6FA75EA9CE1EE07E90DB4`.
+
 ---
 
 ## 1. O que foi entregue

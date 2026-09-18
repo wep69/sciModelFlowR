@@ -22,7 +22,7 @@
 
     <a class="navbar-brand me-2" href="index.html">sciModelFlowR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -50,11 +50,11 @@
   <main id="main" class="col-md-9"><div class="section level1">
 <div class="page-header"><h1 id="scimodelflowr">sciModelFlowR<a class="anchor" aria-label="anchor" href="#scimodelflowr"></a>
 </h1></div>
-<p><strong>Version 1.0.0 - Consolidated Scientific Release source tree</strong></p>
+<p><strong>Version 1.0.1 - patch release of the Consolidated Scientific Release</strong></p>
 <p><code>sciModelFlowR</code> is a design-aware scientific modeling framework for explicit data/design declarations, leakage-safe preprocessing and resampling, deterministic and probabilistic ML, tuning, benchmarking, explainability, Deep Learning, Bayesian and conformal inference, typed uncertainty, experiment tracking, safe persistence, scalable inference, protected external validation, and scientific reporting.</p>
-<p>The 1.0.0 source tree preserves the <strong>246-symbol public API frozen at 0.9.0</strong>. This release phase is consolidation rather than algorithm expansion: stable contracts, Gold/reference evidence, cross-language fixtures, compatibility metadata, security review, release manifests, migration material, and final certification entry points are synchronized around one 1.x grammar.</p>
+<p>Version 1.0.1 releases the 22 documented corrections from the local validation campaign of the frozen 1.0.0 source tree (see <code>DERIVED_PATCH_NOTES.md</code>). The <strong>246-symbol public API</strong> is unchanged; the 1.0.0 freeze, hashes and release metadata remain the historical reference.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/walterufpb/sciModelFlowR" class="external-link">sciModelFlowR</a></span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/wep69/sciModelFlowR" class="external-link">sciModelFlowR</a></span><span class="op">)</span></span>
 <span><span class="fu"><a href="reference/smf_core_api.html">smf_doctor</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="fu"><a href="reference/smf_core_api.html">smf_list_datasets</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="reference/release-candidate-090.html">smf_api_catalog</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
@@ -65,18 +65,18 @@
 <div class="section level2">
 <h2 id="certification-status">Certification status<a class="anchor" aria-label="anchor" href="#certification-status"></a>
 </h2>
-<p>The source implementation is consolidated for 1.0.0, but runtime certification is reported separately. In this environment no R executable is available, so <code>testthat</code>, numerical/reference tolerances, optional-backend certification, CPU/GPU execution, rendered Quarto/Jupyter documentation, pkgdown, <code>R CMD build</code>, and <code>R CMD check --as-cran</code> are <strong>not claimed as passed</strong>. They are reserved for the final local validation campaign.</p>
-<p>The package must not be described as CRAN-ready until the actual build/check artifacts and logs exist. Optional backends remain quarantined until their rows in the final compatibility matrix are certified.</p>
+<p>Local validation campaign (Windows 11, R 4.6.0, Quarto 1.11.0, 2026-09-18): <code>testthat</code> 61 files / 299 pass / 0 fail, Gold 25/25, cross-language 25/25, reference tolerances ~1e-15, 28/28 vignettes rendered, 27/27 notebooks executed in clean IR kernels, and <code>R CMD build</code> + <code>R CMD check --as-cran</code> completed with <strong>0 ERROR / 0 WARNING / 2 NOTEs</strong> (new-submission metadata; intentional top-level release documents). The 2 NOTEs are reviewed and accepted.</p>
+<p>The package is <strong>not claimed CRAN-ready</strong>. Optional backends are exercised by the frozen test suite where installed but are not formally certified; GPU/CUDA was unavailable (<code>SKIP</code>); ONNX remains <code>QUARANTINED</code>; the historical 0.1.0–0.9.0 campaigns require their own snapshots and remain <code>NOT RUN</code> in this environment. Full evidence: <code>outputs/final-reports/VALIDATION_RECORD_1.0.1.md</code>.</p>
 </div>
 <div class="section level2">
 <h2 id="stable-api">Stable API<a class="anchor" aria-label="anchor" href="#stable-api"></a>
 </h2>
-<p><code>inst/metadata/API_FREEZE_1.0.0.csv</code> contains the stable 1.x export contract. <code>inst/metadata/API_DIFF_0.9.0_TO_1.0.0.csv</code> records that no public symbol or signature was intentionally changed during consolidation. Any future 1.x deprecation follows <code>DEPRECATION_POLICY.md</code>.</p>
+<p><code>inst/metadata/API_FREEZE_1.0.0.csv</code> contains the stable 1.x export contract (the 1.0.0 freeze point; preserved unchanged in 1.0.1). <code>inst/metadata/API_DIFF_0.9.0_TO_1.0.0.csv</code> records that no public symbol or signature was intentionally changed during consolidation. Any future 1.x deprecation follows <code>DEPRECATION_POLICY.md</code>.</p>
 </div>
 <div class="section level2">
 <h2 id="release-evidence">Release evidence<a class="anchor" aria-label="anchor" href="#release-evidence"></a>
 </h2>
-<p>Key release evidence is stored under <code>inst/metadata/</code>: final compatibility matrix, Gold release manifest, benchmark baselines, security review, API freeze/diff, bibliography ledger, and the 1.0.0 release manifest. The final local validation campaign will update certification status without redefining scientific semantics.</p>
+<p>Key release evidence is stored under <code>inst/metadata/</code>: final compatibility matrix, Gold release manifest, benchmark baselines, security review, API freeze/diff, bibliography ledger, and the 1.0.0/1.0.1 release manifests. <code>inst/metadata/RELEASE_MANIFEST_1.0.1.json</code> records the patch-release corrections and validation outcomes without redefining scientific semantics.</p>
 </div>
 </div>
   </main><aside class="col-md-3"><div class="links">
