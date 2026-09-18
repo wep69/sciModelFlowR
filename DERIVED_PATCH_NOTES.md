@@ -345,6 +345,23 @@ com três desvios documentados em relação ao freeze. Originais preservados em
   código científico. Rerun em ambiente limpo recomendado para certificação
   pkgdown definitiva.
 
+## 22. `inst/notebooks/jupyter/*.ipynb` — asserção de versão 0.9.0 obsoleta (27 notebooks)
+
+- **Estado no freeze:** os 27 notebooks (IRkernel, `paired_vignette` com
+  metadata `"release": "1.0.0"`) terminam com
+  `stopifnot(as.character(packageVersion("sciModelFlowR")) == "0.9.0")` —
+  contradiz o próprio metadata e o pacote 1.0.0. Execução em kernel limpo
+  **falharia** em todos; a campanha §17.9/§21.3 exige 27/27 executados.
+- **Derivado:** asserção atualizada para `"1.0.0"` (metadata preservado;
+  estrutura de células intacta). Originais em
+  `outputs/validation-records/notebooks_frozen/` + hashes em
+  `outputs/validation-records/notebooks_frozen_sha256.csv`.
+- **Resultado (verificado):** 27/27 executados em kernels IR limpos
+  (`R_LIBS` apontando para o tarball derivado instalado), cópias executadas
+  fora do source tree em `outputs/rendered-docs/notebooks/`, evidência em
+  `outputs/evidence/notebooks_execution_1.0.0.csv`.
+- **Política (§29):** material didático/validação → 1.0.1.
+
 ## 17. `tools/validate_1.0.0.R` — harness de linha única
 
 - **Estado no freeze:** 1 linha com `\n` literais entre comandos (não faz parse).
