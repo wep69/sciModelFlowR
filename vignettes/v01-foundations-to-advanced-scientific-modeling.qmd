@@ -1,5 +1,9 @@
 ---
 title: "sciModelFlowR: From Scientific Design to Reproducible Modeling Workflows"
+vignette: >
+  %\VignetteIndexEntry{sciModelFlowR: From Scientific Design to Reproducible Modeling Workflows}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
 format:
   html:
     toc: true

@@ -1,5 +1,9 @@
 ---
 title: "Protected External Validation"
+vignette: >
+  %\VignetteIndexEntry{Protected External Validation}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
 format: html
 ---
 

@@ -1,5 +1,9 @@
 ---
 title: "Probabilistic Deep Learning: Distributional Heads, MC Dropout, and Deep Ensembles"
+vignette: >
+  %\VignetteIndexEntry{Probabilistic Deep Learning: Distributional Heads, MC Dropout, and Deep Ensembles}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
 format:
   html:
     toc: true

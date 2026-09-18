@@ -1,5 +1,9 @@
 ---
 title: "Deep Learning Foundations: Training, Reproducibility, and Scientific Safeguards"
+vignette: >
+  %\VignetteIndexEntry{Deep Learning Foundations: Training, Reproducibility, and Scientific Safeguards}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
 format:
   html:
     toc: true

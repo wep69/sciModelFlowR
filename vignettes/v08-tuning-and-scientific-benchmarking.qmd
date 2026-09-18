@@ -1,5 +1,9 @@
 ---
 title: "Scientific Tuning, Nested Model Selection, and Hyperparameter Search"
+vignette: >
+  %\VignetteIndexEntry{Scientific Tuning, Nested Model Selection, and Hyperparameter Search}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
 format: html
 execute:
   eval: false

@@ -1,5 +1,9 @@
 ---
 title: "Bayesian Diagnostics, Posterior Predictive Checking, and Predictive Comparison"
+vignette: >
+  %\VignetteIndexEntry{Bayesian Diagnostics, Posterior Predictive Checking, and Predictive Comparison}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
 format:
   html:
     toc: true

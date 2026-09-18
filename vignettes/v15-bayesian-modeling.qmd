@@ -1,5 +1,9 @@
 ---
 title: "Bayesian Modeling: Priors, Posterior Inference, BART, and Gaussian Processes"
+vignette: >
+  %\VignetteIndexEntry{Bayesian Modeling: Priors, Posterior Inference, BART, and Gaussian Processes}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
 format:
   html:
     toc: true

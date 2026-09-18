@@ -3,7 +3,7 @@ title: "Feature Engineering and Selection: Learn Inside the Fold"
 format: html
 vignette: >
   %\VignetteIndexEntry{Feature Engineering and Selection: Learn Inside the Fold}
-  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEngine{quarto::html}
   %\VignetteEncoding{UTF-8}
 ---
 

@@ -1,5 +1,9 @@
 ---
 title: "Complete Design-Aware Scientific Modeling Workflow"
+vignette: >
+  %\VignetteIndexEntry{Complete Design-Aware Scientific Modeling Workflow}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
 format: html
 execute:
   eval: false

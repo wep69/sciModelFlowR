@@ -3,7 +3,7 @@ title: "Explainable AI and Explanation Stability"
 format: html
 vignette: >
   %\VignetteIndexEntry{Explainable AI and Explanation Stability}
-  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEngine{quarto::html}
   %\VignetteEncoding{UTF-8}
 ---
 

@@ -1,5 +1,9 @@
 ---
 title: "Spectroscopy and Phenotyping Workflow"
+vignette: >
+  %\VignetteIndexEntry{Spectroscopy and Phenotyping Workflow}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
 format: html
 ---
 

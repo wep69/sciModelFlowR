@@ -1,5 +1,9 @@
 ---
 title: "sciModelFlowR 0.3.0: Imbalance, Calibration, and Thresholds"
+vignette: >
+  %\VignetteIndexEntry{sciModelFlowR 0.3.0: Imbalance, Calibration, and Thresholds}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
 format:
   html:
     toc: true

@@ -1,5 +1,9 @@
 ---
 title: "Migration and Deprecation Guide"
+vignette: >
+  %\VignetteIndexEntry{Migration and Deprecation Guide}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
 format: html
 ---
 

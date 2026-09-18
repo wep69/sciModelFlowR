@@ -1,5 +1,9 @@
 ---
 title: "sciModelFlowR 0.5.0 Overview"
+vignette: >
+  %\VignetteIndexEntry{sciModelFlowR 0.5.0 Overview}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
 format:
   html:
     toc: true

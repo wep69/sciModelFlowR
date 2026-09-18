@@ -1,5 +1,9 @@
 ---
 title: "Full Uncertainty: Typed Intervals, Decomposition, and Scientific Communication"
+vignette: >
+  %\VignetteIndexEntry{Full Uncertainty: Typed Intervals, Decomposition, and Scientific Communication}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
 format:
   html:
     toc: true

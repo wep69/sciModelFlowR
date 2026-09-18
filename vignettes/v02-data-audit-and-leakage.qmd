@@ -1,5 +1,9 @@
 ---
 title: "Data Audit and Leakage: A Design-Aware Workflow"
+vignette: >
+  %\VignetteIndexEntry{Data Audit and Leakage: A Design-Aware Workflow}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
 format:
   html:
     toc: true

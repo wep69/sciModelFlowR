@@ -1,5 +1,9 @@
 ---
 title: "Resampling and Scientific Design: Validation Geometry Before Model Ranking"
+vignette: >
+  %\VignetteIndexEntry{Resampling and Scientific Design: Validation Geometry Before Model Ranking}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
 format:
   html:
     toc: true

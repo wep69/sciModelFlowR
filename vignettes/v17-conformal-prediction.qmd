@@ -1,5 +1,9 @@
 ---
 title: "Conformal Prediction: Coverage, Calibration Sets, CV+, and Prediction Sets"
+vignette: >
+  %\VignetteIndexEntry{Conformal Prediction: Coverage, Calibration Sets, CV+, and Prediction Sets}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
 format:
   html:
     toc: true

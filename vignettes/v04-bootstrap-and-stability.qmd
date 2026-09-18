@@ -1,5 +1,9 @@
 ---
 title: "Bootstrap and Stability: Match the Resampling Unit to the Scientific Dependence"
+vignette: >
+  %\VignetteIndexEntry{Bootstrap and Stability: Match the Resampling Unit to the Scientific Dependence}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
 format:
   html:
     toc: true

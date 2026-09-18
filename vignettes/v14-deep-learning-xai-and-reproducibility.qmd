@@ -1,5 +1,9 @@
 ---
 title: "Deep Learning Explainability, Checkpoints, and Reproducible Scientific Reporting"
+vignette: >
+  %\VignetteIndexEntry{Deep Learning Explainability, Checkpoints, and Reproducible Scientific Reporting}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
 format:
   html:
     toc: true

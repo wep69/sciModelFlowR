@@ -1,5 +1,9 @@
 ---
 title: "Deep Learning Architectures for Tabular, Spectral, Image, and Sequential Data"
+vignette: >
+  %\VignetteIndexEntry{Deep Learning Architectures for Tabular, Spectral, Image, and Sequential Data}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
 format:
   html:
     toc: true

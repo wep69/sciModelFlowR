@@ -1,5 +1,9 @@
 ---
 title: "Validation, Gold Data, and Reproducibility"
+vignette: >
+  %\VignetteIndexEntry{Validation, Gold Data, and Reproducibility}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
 format:
   html:
     toc: true

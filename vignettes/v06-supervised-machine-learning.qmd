@@ -1,5 +1,9 @@
 ---
 title: "sciModelFlowR 0.3.0: Supervised Machine Learning"
+vignette: >
+  %\VignetteIndexEntry{sciModelFlowR 0.3.0: Supervised Machine Learning}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
 format:
   html:
     toc: true

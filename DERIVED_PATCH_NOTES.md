@@ -305,6 +305,46 @@ com três desvios documentados em relação ao freeze. Originais preservados em
   LICENSE` restaurado (elimina os NOTEs de DESCRIPTION). `self` (NSE do
   `torch::nn_module`) declarado via `utils::globalVariables()` em `R/zzz.R`.
 
+## 20. `vignettes/*.qmd` — metadados de vignette em falta + engine errado (WARNING)
+
+- **Estado no freeze:** os 28 `.qmd` não tinham bloco `vignette:` com
+  `%\VignetteEngine{}` (e 3 tinham engine incompatível: `knitr::rmarkdown`,
+  `knitr::knitr` — patterns de knitr não cobrem `.qmd`, verificado via
+  `tools::vignetteEngine()`). Com `VignetteBuilder: knitr` (congelado), o
+  `R CMD build` **não construía nenhum vignette** (0 entradas `inst/doc`),
+  produzindo `WARNING: Files in 'vignettes' but no files in 'inst/doc'` e
+  NOTE "no prebuilt vignette index" no check.
+- **Derivado:** adicionado `vignette: >` com `%\VignetteIndexEntry{<título>}`
+  + `%\VignetteEngine{quarto::html}` + `%\VignetteEncoding{UTF-8}` aos 28
+  qmds (títulos preservados; 3 engines normalizados) e
+  `VignetteBuilder: quarto` (o pacote `quarto` registra o engine
+  `quarto::html`; `quarto` já estava em Suggests).
+- **Resultado (verificado):** `R CMD build` passa a construir
+  `inst/doc/` com **28 HTML + 28 .R + 28 .qmd** (62 entradas); o check
+  re-constroi todos os vignettes (`re-building of vignette outputs ... OK`,
+  101 s). Hashes congelados dos 28 qmds em
+  `outputs/validation-records/vignettes_qmd_frozen_sha256.csv`.
+- **Política (§29):** metadados de release engineering → 1.0.1.
+
+## 21. pkgdown + Quarto no Windows — bug de path absoluto (harness de docs)
+
+- **Sintoma:** `pkgdown::build_article()` abortava com
+  `os error 123: stat 'D:\...\vignettes\C:\Users\...\pkgdown-quarto-<id>'`
+  (pkgdown 2.2.1 + Quarto 1.11.0): o `quarto_render()` interno passa
+  `--output-dir` com path absoluto do `tempdir()` e o Quarto CLI junta-o ao
+  diretório do input.
+- **Workaround usado (derivado de harness, fora do package):**
+  `TMPDIR=D:\smf_tmp` + patch em sessão de `pkgdown:::quarto_render` que
+  (a) absolutiza o input e (b) passa `--output-dir` **relativo** ao dir do
+  input. Script em `outputs/evidence/` logs; nenhum ficheiro do pacote foi
+  alterado por esse motivo.
+- **Resultado:** 28/28 artigos renderizados
+  (`outputs/evidence/pkgdown_articles_1.0.0.csv`), site completo em `docs/`
+  (home, reference 11 tópicos, 28 artigos, news, 404, `.nojekyll`).
+- **Política (§29):** workaround de harness documentado; sem impacto no
+  código científico. Rerun em ambiente limpo recomendado para certificação
+  pkgdown definitiva.
+
 ## 17. `tools/validate_1.0.0.R` — harness de linha única
 
 - **Estado no freeze:** 1 linha com `\n` literais entre comandos (não faz parse).

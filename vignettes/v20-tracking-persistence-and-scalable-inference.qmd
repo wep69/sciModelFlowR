@@ -3,7 +3,7 @@ title: "Tracking, Persistence, Deployment, and Scalable Inference"
 format: html
 vignette: >
   %\VignetteIndexEntry{Tracking, Persistence, Deployment, and Scalable Inference}
-  %\VignetteEngine{knitr::knitr}
+  %\VignetteEngine{quarto::html}
   %\VignetteEncoding{UTF-8}
 ---
 

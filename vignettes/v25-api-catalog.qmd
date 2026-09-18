@@ -1,5 +1,9 @@
 ---
 title: "Stable 1.x API Catalog"
+vignette: >
+  %\VignetteIndexEntry{Stable 1.x API Catalog}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
 format: html
 ---
 

@@ -1,5 +1,9 @@
 ---
 title: "Spatial and Environmental Workflow"
+vignette: >
+  %\VignetteIndexEntry{Spatial and Environmental Workflow}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
 format: html
 ---
 

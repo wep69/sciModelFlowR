@@ -1,5 +1,9 @@
 ---
 title: "Agronomy and Soil Scientific Workflow"
+vignette: >
+  %\VignetteIndexEntry{Agronomy and Soil Scientific Workflow}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
 format: html
 ---
 
