@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "distribution": "gaussian",
+  "outputs": [
+    "mu",
+    "raw_scale"
+  ],
+  "transform": {
+    "mu": "identity",
+    "sigma": "softplus(raw_scale)+1e-6"
+  },
+  "uncertainty_type": "conditional_aleatoric"
+}

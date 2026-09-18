@@ -1,0 +1,15 @@
+id: deep-learning-foundations
+dataset: gold_dl_nonlinear
+learning_objectives:
+  - separate development validation from final assessment
+  - declare an MLP architecture and CPU training policy
+  - record seeds, device, precision, and checkpoint metadata
+seed: 260915
+required_outputs:
+  - DLArchitecture
+  - DLFitResult
+  - DLHistory
+required_assertions:
+  - final_test_is_not_validation
+  - package_loads_without_torch
+expected_warnings: []

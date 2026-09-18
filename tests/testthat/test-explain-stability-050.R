@@ -1,0 +1,11 @@
+test_that("explanation stability is tied to design-aware resampling and is reproducible", {
+  d <- smf_load_dataset("gold_xai_stability")
+  rs <- smf_resampling_spec("kfold",n_splits=3L,seed=17L)
+  sp <- smf_experiment_spec(task=smf_task_spec("regression","response"),data=smf_data_spec("response",c("signal_primary","signal_correlated","weak_feature"),"obs_id"),design=smf_design_spec(id_column="obs_id"),resampling=rs,model=smf_model_spec("linear","stats"),metrics=list(smf_metric_spec("rmse")))
+  ex <- smf_explain_spec("permutation",n_repeats=2L,seed=44L)
+  a <- smf_explanation_stability(sp,d,ex,top_k=2L)
+  b <- smf_explanation_stability(sp,d,ex,top_k=2L)
+  expect_equal(a@summary,b@summary)
+  expect_false(a@provenance$final_test_used)
+  expect_true(is.data.frame(a@rank_stability))
+})

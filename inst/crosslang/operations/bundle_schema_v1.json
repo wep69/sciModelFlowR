@@ -1,0 +1,20 @@
+{
+  "fixture": "sciModelFlowR_bundle_schema_v1",
+  "bundle_schema_version": "1.0.0",
+  "required_files": [
+    "manifest.json",
+    "spec.json",
+    "schema.json",
+    "preprocessing.json",
+    "labels.json",
+    "run_manifest.json",
+    "checksums.sha256",
+    "README.md"
+  ],
+  "portable_model_file": "model/model_state.json",
+  "opaque_model_file": "model/model.rds",
+  "checksum_algorithm": "sha256",
+  "opaque_loading_requires_explicit_trust": true,
+  "major_schema_mismatch_is_blocking": true,
+  "prediction_equivalence_required_after_reload": true
+}

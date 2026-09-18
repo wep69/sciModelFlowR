@@ -1,0 +1,137 @@
+release: "0.9.0"
+policy:
+  frozen_fixtures: true
+  hash_algorithm: SHA-256
+  synthetic_not_empirical: true
+  regeneration_rule: "Any intentional change requires a new Gold-data version and new hashes."
+datasets:
+  gold_linear_regression:
+    seed: null
+    generator_version: "historical"
+    exact_generator_distributed: false
+  gold_heteroscedastic_regression:
+    seed: null
+    generator_version: "historical"
+    exact_generator_distributed: false
+  gold_binary_calibration:
+    seed: null
+    generator_version: "historical"
+    exact_generator_distributed: false
+  gold_multiclass_imbalanced:
+    seed: null
+    generator_version: "historical"
+    exact_generator_distributed: false
+  gold_grouped_fields:
+    seed: null
+    generator_version: "historical"
+    exact_generator_distributed: false
+  gold_hierarchical_yield:
+    seed: 260919
+    generator_version: "0.9.0"
+    exact_generator_distributed: true
+    generator: data-raw/generate-gold-0.9.0.py
+    rng: NumPy_default_rng_PCG64
+  gold_time_climate:
+    seed: 260919
+    generator_version: "0.9.0"
+    exact_generator_distributed: true
+    generator: data-raw/generate-gold-0.9.0.py
+    rng: NumPy_default_rng_PCG64
+  gold_spatial_soil:
+    seed: 260919
+    generator_version: "0.9.0"
+    exact_generator_distributed: true
+    generator: data-raw/generate-gold-0.9.0.py
+    rng: NumPy_default_rng_PCG64
+  gold_spectral_curve:
+    seed: 260919
+    generator_version: "0.9.0"
+    exact_generator_distributed: true
+    generator: data-raw/generate-gold-0.9.0.py
+    rng: NumPy_default_rng_PCG64
+  gold_hyperspectral_small:
+    seed: 260919
+    generator_version: "0.9.0"
+    exact_generator_distributed: true
+    generator: data-raw/generate-gold-0.9.0.py
+    rng: NumPy_default_rng_PCG64
+  gold_rgb_leaf_small:
+    seed: 260919
+    generator_version: "0.9.0"
+    exact_generator_distributed: true
+    generator: data-raw/generate-gold-0.9.0.py
+    rng: NumPy_default_rng_PCG64
+  gold_multimodal_stress:
+    seed: 260919
+    generator_version: "0.9.0"
+    exact_generator_distributed: true
+    generator: data-raw/generate-gold-0.9.0.py
+    rng: NumPy_default_rng_PCG64
+  gold_count_pests:
+    seed: 260919
+    generator_version: "0.9.0"
+    exact_generator_distributed: true
+    generator: data-raw/generate-gold-0.9.0.py
+    rng: NumPy_default_rng_PCG64
+  gold_nonlinear_bart:
+    seed: 260919
+    generator_version: "0.9.0"
+    exact_generator_distributed: true
+    generator: data-raw/generate-gold-0.9.0.py
+    rng: NumPy_default_rng_PCG64
+  gold_gp_surface:
+    seed: 260919
+    generator_version: "0.9.0"
+    exact_generator_distributed: true
+    generator: data-raw/generate-gold-0.9.0.py
+    rng: NumPy_default_rng_PCG64
+  gold_distributional_yield:
+    seed: 260919
+    generator_version: "0.9.0"
+    exact_generator_distributed: true
+    generator: data-raw/generate-gold-0.9.0.py
+    rng: NumPy_default_rng_PCG64
+  gold_covariate_shift:
+    seed: 260919
+    generator_version: "0.9.0"
+    exact_generator_distributed: true
+    generator: data-raw/generate-gold-0.9.0.py
+    rng: NumPy_default_rng_PCG64
+  gold_missingness_mcar_mar:
+    seed: 260919
+    generator_version: "0.9.0"
+    exact_generator_distributed: true
+    generator: data-raw/generate-gold-0.9.0.py
+    rng: NumPy_default_rng_PCG64
+  gold_conformal_heteroscedastic:
+    seed: 260919
+    generator_version: "0.9.0"
+    exact_generator_distributed: true
+    generator: data-raw/generate-gold-0.9.0.py
+    rng: NumPy_default_rng_PCG64
+  gold_dl_tiny:
+    seed: 260919
+    generator_version: "0.9.0"
+    exact_generator_distributed: true
+    generator: data-raw/generate-gold-0.9.0.py
+    rng: NumPy_default_rng_PCG64
+  gold_xai_stability:
+    seed: null
+    generator_version: "0.5.0"
+    exact_generator_distributed: false
+  gold_dl_nonlinear:
+    seed: null
+    generator_version: "historical"
+    exact_generator_distributed: false
+  gold_dl_sequence:
+    seed: null
+    generator_version: "historical"
+    exact_generator_distributed: false
+  gold_bayesian_linear:
+    seed: null
+    generator_version: "historical"
+    exact_generator_distributed: false
+  gold_conformal_regression:
+    seed: null
+    generator_version: "historical"
+    exact_generator_distributed: false

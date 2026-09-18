@@ -1,0 +1,11 @@
+id: migration-deprecation
+release: 0.9.0
+vignette: v26-migration-and-deprecation.qmd
+seed: 260919
+learning_objectives:
+  - preserve scientific design and leakage boundaries
+  - distinguish implementation from certification
+  - retain reproducibility evidence
+required_assertions:
+  - no final-test learning
+  - no causal interpretation from predictive XAI

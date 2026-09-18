@@ -1,0 +1,182 @@
+{
+  "gold_bayesian_linear": {
+    "generator_seed": 260917,
+    "intercept": 1.5,
+    "sigma": 0.8,
+    "x1": 2.0,
+    "x2": -1.0
+  },
+  "gold_binary_calibration": {
+    "intercept": -0.4,
+    "x1": 1.1,
+    "x2": -0.8
+  },
+  "gold_conformal_heteroscedastic": {
+    "guarantee": "marginal under exchangeability",
+    "mean": "2+0.7*x+sin(1.3*x)",
+    "partition_sizes": {
+      "calibration": 650,
+      "test": 1500,
+      "train": 650
+    },
+    "sigma": "0.25+0.45*abs(x)",
+    "target_coverage": 0.9
+  },
+  "gold_conformal_regression": {
+    "generator_seed": 260918,
+    "guarantee": "marginal under exchangeability",
+    "partition_sizes": {
+      "calibration": 500,
+      "test": 1200,
+      "train": 500
+    },
+    "target_coverage": 0.9
+  },
+  "gold_count_pests": {
+    "log_intercept": 1.5,
+    "nb_shape": 4,
+    "time_effect": 0.18,
+    "treatment_effects": {
+      "bio": -0.45,
+      "chemical": -0.75,
+      "control": 0
+    }
+  },
+  "gold_covariate_shift": {
+    "conditional_mean": "5+2*x1-1.2*x2",
+    "development_x1_mean": 0,
+    "external_x1_mean": 1.1,
+    "shift_type": "covariate_shift_same_conditional"
+  },
+  "gold_distributional_yield": {
+    "mean": "55+6*x+4*treatment",
+    "sigma": "0.8+1.2*abs(x)+0.5*treatment"
+  },
+  "gold_dl_nonlinear": {
+    "generator_seed": 260915,
+    "mean": "3 + 1.8*sin(1.2*x1) + 0.55*x2^2 - 0.35*x1*x2",
+    "sigma": "0.25 + 0.18*abs(x1) + 0.10*I(x2>0)"
+  },
+  "gold_dl_sequence": {
+    "generator_seed": 260916,
+    "n_sequences": 160,
+    "period": 12,
+    "sequence_length": 24
+  },
+  "gold_dl_tiny": {
+    "mean": "1.2*tanh(x1+0.5*x2)+0.6*x3*x4-0.4*x5^2",
+    "noise_sd": 0.18,
+    "purpose": "CPU tiny-neural-network smoke fixture"
+  },
+  "gold_gp_surface": {
+    "mean": "2*sin(2*pi*x)*cos(2*pi*y)+0.8*x-0.4*y",
+    "noise_sd": 0.12
+  },
+  "gold_grouped_fields": {
+    "field_sd": 5,
+    "group": "field",
+    "residual_sd": 3
+  },
+  "gold_heteroscedastic_regression": {
+    "intercept": 10,
+    "sigma_intercept": 0.6,
+    "sigma_x": 0.35,
+    "x": 2,
+    "z": -0.7
+  },
+  "gold_hierarchical_yield": {
+    "block_sd": 1.2,
+    "genotype_effects": {
+      "G1": 0,
+      "G2": 2.5,
+      "G3": -1.5,
+      "G4": 4
+    },
+    "intercept": 48,
+    "nitrogen_main": 0.11,
+    "residual_sd": 2.2,
+    "site_effects": {
+      "S1": -4,
+      "S2": 0,
+      "S3": 3,
+      "S4": 6
+    }
+  },
+  "gold_hyperspectral_small": {
+    "leaf_n_latent_band_center": 26,
+    "n_bands": 64,
+    "water_latent_band_center": 50
+  },
+  "gold_linear_regression": {
+    "intercept": 32,
+    "nitrogen": 0.18,
+    "noise_sd": 3.5,
+    "rainfall": 0.012,
+    "soil_n": 4.5
+  },
+  "gold_missingness_mcar_mar": {
+    "outcome": "3+1.5*x1-0.8*x2+0.4*x3+noise",
+    "x2_mcar_rate": 0.12,
+    "x3_mar_logit": "-1.8+1.2*x1"
+  },
+  "gold_multiclass_imbalanced": {
+    "classes": [
+      "A",
+      "B",
+      "C"
+    ],
+    "generator_seed": 260915,
+    "n": 600,
+    "property": "stored class probabilities sum to one; class C is rare",
+    "truth_columns": [
+      "true_p_A",
+      "true_p_B",
+      "true_p_C"
+    ]
+  },
+  "gold_multimodal_stress": {
+    "latent": "2.8*(0.25-soil_moisture)+0.7*heat+noise",
+    "modalities": [
+      "soil",
+      "thermal",
+      "chlorophyll",
+      "fluorescence",
+      "gas_exchange",
+      "spectral"
+    ]
+  },
+  "gold_nonlinear_bart": {
+    "formula": "10*sin(pi*x1*x2)+20*(x3-0.5)^2+10*x4+5*x5",
+    "sigma": 1
+  },
+  "gold_rgb_leaf_small": {
+    "health_exg_effect": 45,
+    "health_lesion_effect": -35,
+    "stress_prevalence": 0.38
+  },
+  "gold_spatial_soil": {
+    "coordinates": [
+      "x",
+      "y"
+    ],
+    "residual_sd": 1.5
+  },
+  "gold_spectral_curve": {
+    "chlorophyll_absorption_nm": 680,
+    "n_wavelengths": 21,
+    "red_edge_center_nm": 700,
+    "water_absorption_nm": 930
+  },
+  "gold_time_climate": {
+    "ar1": 0.65,
+    "period": 12,
+    "trend_per_step": 0.015
+  },
+  "gold_xai_stability": {
+    "property": "importance may redistribute between correlated signals; causal interpretation is false",
+    "response_formula": "10 + 4*signal_primary + 1.5*signal_correlated + 0.25*weak_feature + deterministic small oscillation",
+    "signal_correlated": "highly correlated surrogate",
+    "signal_primary_effect": "dominant",
+    "weak_feature": "low influence"
+  }
+}

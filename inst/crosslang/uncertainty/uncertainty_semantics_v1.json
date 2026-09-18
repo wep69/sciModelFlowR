@@ -1,0 +1,13 @@
+{
+  "schema_version": "1",
+  "canonical_types": [
+    "confidence",
+    "credible",
+    "prediction",
+    "posterior_predictive",
+    "bootstrap",
+    "conformal"
+  ],
+  "non_interchangeable": true,
+  "rule": "compare target and probability statement before comparing interval widths"
+}

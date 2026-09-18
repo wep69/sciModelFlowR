@@ -1,0 +1,1018 @@
+---
+title: "sciModelFlowR: From Scientific Design to Reproducible Modeling Workflows"
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    code-fold: false
+execute:
+  echo: true
+  warning: true
+  message: false
+---
+
+# sciModelFlowR: From Scientific Design to Reproducible Modeling Workflows
+
+This is the integrating foundations-to-advanced tutorial for `sciModelFlowR`. It is written for researchers, graduate students, reviewers, and analysts who need modern predictive modeling without separating the algorithm from the scientific design that generated the data. Version 1.0.0 consolidates the full design-aware workflow: resampling, bootstrap, feature learning, supervised and probabilistic modeling, tuning, benchmarking, XAI, Deep Learning, Bayesian inference, conformal prediction, typed uncertainty, experiment tracking, safe persistence, deployment/scalability, protected external validation, domain workflows, and publication reporting. The 1.x public grammar is frozen from the 0.9.0 release candidate; certification evidence is reported separately from source completeness.
+
+
+> The teaching datasets used here are frozen synthetic Gold datasets. They are suitable for validation and instruction, but they are not field evidence. Numerical examples should therefore be interpreted as demonstrations of workflow behavior rather than agronomic findings.
+
+## 1. Why this tutorial exists
+
+Modern scientific modeling often fails for reasons that are not caused by the estimator. A researcher may fit a technically sophisticated model and still obtain optimistic, irreproducible, or scientifically ambiguous results because the unit of analysis was unclear, preprocessing used information from the test set, repeated observations were split between training and testing, or uncertainty was reported without saying what it meant. `sciModelFlowR` is designed around these integration failures.
+
+The package uses a simple governing sequence:
+
+**scientific question -> design declaration -> data audit -> leakage-safe preprocessing -> validation geometry -> reference model -> diagnostics -> uncertainty semantics -> external evidence -> reproducibility manifest.**
+
+The order matters. A model cannot repair a validation design that allows the same experimental unit to appear on both sides of a split. A highly accurate prediction cannot establish geographic transferability when neighboring samples were randomly mixed. A posterior interval cannot be called a confidence interval simply because both contain 95% of something. The package therefore treats design, validation, uncertainty, and provenance as explicit software contracts.
+
+The reference path still includes transparent `stats::lm()` and `stats::glm()` adapters, but version 0.5.0 also introduces optional adapters for `tidymodels`/`parsnip`, `mlr3`, and XGBoost. These engines are accessed through package-native contracts so that preprocessing, split geometry, calibration boundaries, metrics, warnings, and provenance remain comparable across backends.
+
+## 2. Learning objectives
+
+After working through this tutorial, the reader should be able to:
+
+1. state the prediction or inference target before choosing an algorithm;
+2. identify the observational unit, experimental unit, grouping structure, repeated unit, time variable, spatial coordinates, and external domains when they exist;
+3. encode those decisions using package-native specifications;
+4. distinguish an audit finding from an automatic data correction;
+5. recognize detected, high-risk, and possible forms of data leakage;
+6. fit preprocessing only on training data and reuse the fitted state on held-out observations;
+7. understand why stable IDs are more useful than shared random-number streams for R-Python split parity;
+8. fit the reference regression workflow under design-aware resampling and verify its backend equivalence;
+9. interpret package-native result objects without depending on the native backend object;
+10. read a reproducibility manifest and explain what it can and cannot reproduce;
+11. use the Gold datasets as validation fixtures rather than as empirical evidence;
+12. distinguish the executable 0.5.0 tuning/benchmarking, supervised, probabilistic, calibration, imbalance, resampling, bootstrap, and feature pathways from capabilities deliberately deferred;
+13. recognize why grouped, temporal, and spatial data need validation geometries different from ordinary random cross-validation;
+14. understand why probabilistic, Bayesian, bootstrap, conformal, and deep-learning outputs will share the same future result grammar;
+15. prepare an analysis that is easier for another researcher to audit, reproduce, and review.
+
+## 3. The package in one map
+
+| Stage | Scientific question | Current functions |
+|---|---|---|
+| Specification | What is being predicted and from what units? | `smf_task_spec()`, `smf_data_spec()`, `smf_design_spec()` |
+| Audit | Is the table compatible with the declared question? | `smf_validate_schema()`, `smf_audit_data()`, `smf_detect_leakage()` |
+| Preprocessing | What is learned from training data? | `smf_preprocess_spec()`, `smf_fit_preprocessor()`, `smf_apply_preprocessor()` |
+| Validation | Which observations are genuinely held out? | `smf_resampling_spec()`, `smf_make_resampler()`, `smf_group_vfold_cv()`, `smf_time_cv()`, `smf_spatial_cv()`, `smf_nested_resampler()` |
+| Features | What predictor information is learned inside training? | `smf_feature_spec()`, `smf_select_features()`, `smf_feature_stability()` |
+| Model | Which supervised adapter is scientifically and technically admissible? | `smf_model_spec()`, `smf_fit_model()`, `smf_fit_experiment()`, `smf_resample_experiment()` |
+| Probabilistic output | What probability or predictive-distribution operation is actually available? | `smf_predict_distribution()`, `smf_dist_quantile()`, `smf_evaluate_probabilistic()` |
+| Calibration | Were probabilities recalibrated without touching final test labels? | `smf_calibration_spec()`, `smf_calibrate()`, `smf_calibration_report()` |
+| Imbalance | Was sampling/weighting learned only inside analysis folds? | `smf_imbalance_spec()`, `smf_apply_imbalance()`, `smf_optimize_threshold()` |
+| Evaluation | How well did held-out predictions perform? | `smf_metric_spec()`, `smf_evaluate()` |
+| Diagnostics | What failed or remains unexplained? | `smf_diagnose()`, `smf_plot()` |
+| Provenance | Can this run be reconstructed? | `smf_manifest()`, `smf_save_manifest()` |
+| Environment | What is available on this machine? | `smf_doctor()`, `smf_capabilities()` |
+
+The map below is the consolidated 1.0.0 package map. It spans data/design contracts, resampling/bootstrap/features, supervised and probabilistic modeling, tuning/benchmarking, explanation stability, Deep Learning, Bayesian inference, conformal prediction, typed uncertainty, tracking, persistence, deployment, scalable inference, protected external validation, domain workflows, and scientific reporting. These layers attach to the same package-native contracts rather than behaving as parallel mini-packages.
+
+## 4. Inspect the environment before modeling
+
+```{r}
+#| eval: false
+library(sciModelFlowR)
+smf_doctor()
+smf_capabilities()
+```
+
+`smf_doctor()` is not a model-selection function. It reports what is technically available: R version, package version, optional packages, and relevant engines. This matters because a teaching computer may not have `torch`, Stan, or gradient-boosting libraries installed. The scientific workflow should still be inspectable, and missing optional software should fail with an informative message rather than changing the requested method silently.
+
+A capability registry makes this distinction explicit. A backend can be installed but unable to provide a particular operation. Conversely, an operation such as bootstrap uncertainty can sometimes be supplied by a package wrapper even when the estimator has no native bootstrap implementation. Future versions record these differences rather than pretending all engines share one feature set.
+
+## 5. Teaching datasets
+
+```{r}
+#| eval: false
+smf_list_datasets()
+```
+
+The Gold suite available by version 0.5.0 contains seven frozen datasets plus additional cross-language tuning fixtures.
+
+| Dataset | Structure | Main validation purpose |
+|---|---|---|
+| `gold_linear_regression` | independent Gaussian regression | reference fit, preprocessing, metrics, manifest |
+| `gold_heteroscedastic_regression` | changing residual scale | residual patterns and future probabilistic scoring |
+| `gold_binary_calibration` | known logistic probabilities | probability prediction, calibration, Brier/log-loss checks |
+| `gold_multiclass_imbalanced` | three overlapping classes with rare class C | multiclass probabilities, fold-safe imbalance handling, calibration |
+| `gold_grouped_fields` | plots nested in fields | grouping metadata and pseudoreplication warnings |
+| `gold_time_climate` | trend, seasonality, serial dependence | time declaration and future temporal validation |
+| `gold_spatial_soil` | coordinates and smooth spatial structure | coordinate declaration and future spatial validation |
+
+Each dataset has a card that records the generator, seed, expected behavior, known traps, and SHA-256 hash. A Gold dataset is useful precisely because the generating structure is known. The analyst can test whether software recovers the intended behavior without pretending that synthetic observations say anything about a real population.
+
+## 6. Start with the scientific question
+
+Suppose the teaching objective is to predict a continuous crop-yield-like response from nitrogen, rainfall, and a soil nitrogen indicator. The first decision is not whether random forest or XGBoost is likely to win. The first decision is what each row represents and what future observations the model is intended to predict.
+
+```{r}
+#| eval: false
+d <- smf_load_dataset("gold_linear_regression")
+head(d)
+```
+
+In this Gold dataset each row is an independent teaching observation. `obs_id` is a stable identifier; `yield` is the target; the other three scientific variables are predictors. There is no declared grouping, time dependence, or spatial dependence. That simplicity makes the dataset appropriate for the first full workflow.
+
+A different declaration would be required if rows represented repeated leaves from the same plant, pixels from the same plot, spectra from the same sample, visits to the same subject, or neighboring soil cores. Identical table dimensions do not imply identical validation geometry.
+
+## 7. Encode the data roles
+
+```{r}
+#| eval: false
+data_spec <- smf_data_spec(
+  target = "yield",
+  predictors = c("nitrogen", "rainfall", "soil_n"),
+  id_column = "obs_id",
+  units = list(
+    nitrogen = "teaching dose units",
+    rainfall = "mm-like teaching scale",
+    soil_n = "teaching soil-N scale",
+    yield = "teaching yield units"
+  )
+)
+```
+
+A `DataSpec` is not a replacement for a data dictionary. It is the machine-readable subset of that dictionary required by the workflow. Its main purpose is to stop important variable roles from being inferred differently at different stages. The target cannot simultaneously be a predictor. Stable IDs are kept separate from ordinary predictors. Units can travel with the specification even when the backend itself does not use units mathematically.
+
+Explicit roles also support auditability. If an ID column is accidentally included among predictors, a future backend does not need to guess whether a high-cardinality factor is scientific signal or an identifier. If a response is transformed, the result object can record the scale on which predictions are reported.
+
+## 8. Encode the task
+
+```{r}
+#| eval: false
+task_spec <- smf_task_spec(
+  kind = "regression",
+  target = "yield"
+)
+```
+
+Task declarations are intentionally separate from data declarations. A target column can sometimes support different scientific tasks. A continuous abundance measure may be modeled as a count under an appropriate likelihood, transformed into a binary management decision, or treated as a regression target. Those choices change compatible metrics, output scales, uncertainty, and interpretation.
+
+The executable reference path supports regression through `lm` and binary probability prediction through logistic `glm`. Version 0.2.0 adds repeated evaluation through design-aware resampling without pretending that a larger estimator catalog has already been certified. Multiclass, multi-output, counts, and probabilistic distributional objectives remain reserved in the schema but are not advertised as fully implemented engines.
+
+## 9. Declare the design before validation
+
+```{r}
+#| eval: false
+design_spec <- smf_design_spec(
+  id_column = "obs_id",
+  experimental_unit = "obs_id"
+)
+```
+
+For this dataset the observational unit and teaching experimental unit coincide. That is not the default assumption of the package. In grouped agricultural data the experimental unit may be the plot while several measurements are recorded within plot. In remote sensing, thousands of pixels may come from one plot. In plant physiology, multiple leaves may come from one plant. In spectroscopy, repeated scans may come from one sample.
+
+The package stores group columns, block columns, repeated units, time, coordinates, hierarchy, and external-domain labels separately because they imply different restrictions. A grouping variable can define nonindependence. A block can arise from randomization. Time imposes ordering. Coordinates create a distance geometry. An external domain can identify a site or season that must never enter tuning.
+
+## 10. Audit before modeling
+
+```{r}
+#| eval: false
+audit <- smf_audit_data(d, data_spec, design_spec)
+audit
+```
+
+The audit checks schema compatibility, missingness, duplicate rows, duplicate IDs, cardinality, and leakage indicators. Its central rule is that auditing reports evidence; it does not silently clean the dataset. A duplicated ID might be a mistake, but it can also be a legitimate repeated measurement. Automatically deleting one of the rows would destroy information before the design was clarified.
+
+### 10.1 Detected versus suspected leakage
+
+The strongest example is an exact target copy among predictors. That is blocking in a managed workflow because the prediction problem has been contaminated by the answer. Near-perfect numeric association is different. It may be leakage, but a genuine physical predictor can also be very strongly related to a response. The package therefore records evidence and asks for provenance rather than issuing an accusation based on a column name or correlation alone.
+
+### 10.2 A deliberately inappropriate workflow
+
+```{r}
+#| eval: false
+bad <- d
+bad$yield_copy <- bad$yield
+bad_spec <- smf_data_spec(
+  target = "yield",
+  predictors = c("nitrogen", "rainfall", "soil_n", "yield_copy"),
+  id_column = "obs_id"
+)
+smf_detect_leakage(bad, bad_spec)
+```
+
+The tempting response is to celebrate the resulting predictive performance. The scientific response is to recognize that a post-outcome or target-derived variable invalidates the intended prediction setting. A high metric cannot rescue an invalid information boundary.
+
+## 11. Preprocessing is a fitted model component
+
+Many data transformations estimate quantities from the sample. Mean imputation estimates a mean. Median imputation estimates a median. Standardization estimates a center and scale. Dummy encoding learns observed levels. Supervised feature selection uses the response. These steps belong inside the training boundary.
+
+```{r}
+#| eval: false
+prep_spec <- smf_preprocess_spec(
+  impute_numeric = "median",
+  center = TRUE,
+  scale = TRUE,
+  one_hot = TRUE
+)
+```
+
+The specification describes what should happen; the fitted preprocessor stores what was learned from a particular training partition. This separation mirrors the distinction between a model specification and a fitted model.
+
+A frequent error is to standardize the entire table and split afterward. Even when the impact seems numerically small, the held-out data have contributed information to the preprocessing parameters. In nested tuning, the same principle applies recursively: a step learned from data belongs inside the relevant fold.
+
+## 12. Validation geometry begins with stable membership
+
+```{r}
+#| eval: false
+resampling_spec <- smf_resampling_spec(
+  method = "holdout",
+  train_prop = 0.80,
+  seed = 260915L
+)
+```
+
+Version 0.2.0 extends the validation layer to ordinary and repeated V-fold, stratified, grouped, blocked, temporal, spatial, external, Monte Carlo, and nested resampling. Every managed split is represented by stable IDs and hashes, and design guards prevent row-wise random resampling when declared dependence makes it scientifically inappropriate.
+
+The limited executable scope is deliberate. It allows the package to validate the semantics of a split record before implementing many resampling algorithms. A `SplitRecord` stores row membership, stable IDs when available, method, seed, summary, and a hash.
+
+### 12.1 Why R and Python do not need the same RNG stream
+
+Cross-language reproducibility should not require R and NumPy to generate identical random permutations. Instead, one implementation creates a split manifest with stable IDs. The other reads that manifest. Both then operate on the same observations. This is stronger scientific parity because it validates the actual membership rather than the accident of two random-number generators.
+
+## 13. Fit preprocessing only on training rows
+
+```{r}
+#| eval: false
+split <- smf_holdout_split(
+  d,
+  train_prop = 0.80,
+  id_column = "obs_id",
+  seed = 260915L
+)
+
+train <- d[split@train_index, ]
+test  <- d[split@test_index, ]
+
+pre <- smf_fit_preprocessor(
+  train,
+  prep_spec,
+  data_spec,
+  role = "training"
+)
+
+x_train <- smf_apply_preprocessor(pre, train)
+x_test  <- smf_apply_preprocessor(pre, test)
+```
+
+The fitted object records the training-data hash and learned state. If a managed call explicitly attempts to fit the preprocessor with `role = "test"`, the package raises a leakage error. The user can always leave the framework and write arbitrary R code, but the managed API should not make invalid behavior easy.
+
+This safeguard becomes even more important later. SMOTE, response-driven feature selection, PCA fit to a data-dependent subset, neural normalization layers, calibration, and conformal calibration all have information boundaries that must be recorded.
+
+## 14. Use a reference model to validate the architecture
+
+```{r}
+#| eval: false
+model_spec <- smf_model_spec(
+  family = "linear_regression",
+  engine = "stats"
+)
+
+metrics <- list(
+  smf_metric_spec("rmse"),
+  smf_metric_spec("mae")
+)
+```
+
+The `stats` backend has a small capability record. It supports the reference regression and binary-classification paths required to verify the package kernel. Requesting an unsupported capability should produce a capability error instead of silently substituting another method.
+
+The point of an adapter is not to hide the existence of `lm`. The point is to make its output participate in the same scientific result grammar that later accommodates random forests, boosting, neural networks, and Bayesian models.
+
+## 15. Compose the complete experiment
+
+```{r}
+#| eval: false
+spec <- smf_experiment_spec(
+  task = task_spec,
+  data = data_spec,
+  design = design_spec,
+  preprocessing = prep_spec,
+  resampling = resampling_spec,
+  model = model_spec,
+  metrics = metrics,
+  reproducibility = smf_reproducibility_spec(seed = 260915L)
+)
+```
+
+`ExperimentSpec` is the composition root. A complete object makes the assumptions available before computation begins. That improves reviewability: another analyst can inspect the target, data roles, design, preprocessing, validation, model family, metrics, and seed policy without first reading code scattered across a notebook.
+
+The specification is also hashable. If a scientifically relevant field changes, the spec hash changes. The hash is not a proof that an analysis is correct; it is a compact identity for a particular configuration.
+
+## 16. Execute the managed workflow
+
+```{r}
+#| eval: false
+result <- smf_fit_experiment(spec, d)
+result
+summary(result)
+```
+
+The managed sequence is fixed. Schema and design are validated. Data are audited. Blocking leakage stops execution. The split is created or validated. Preprocessing is fitted to training rows only. The reference model is fitted. Predictions are generated for held-out rows. Metrics are calculated. Diagnostics and a manifest are created. The result stores links among these components.
+
+The backend object remains available through an explicit escape hatch:
+
+```{r}
+#| eval: false
+native_fit <- smf_backend_object(result)
+```
+
+Ordinary package documentation should not require this escape hatch. It exists for expert inspection and differential validation.
+
+## 17. Validate the adapter against the backend
+
+A wrapper can be convenient while still being wrong. Therefore the package tests the adapter against direct backend predictions.
+
+```{r}
+#| eval: false
+x_test <- smf_apply_preprocessor(
+  result@fit@preprocessing,
+  d[result@split@test_index, ]
+)
+
+direct <- predict(
+  smf_backend_object(result),
+  newdata = x_test
+)
+
+all.equal(
+  result@prediction@estimate,
+  as.numeric(direct)
+)
+```
+
+This is differential testing. The comparison concerns numerical meaning, not formatting. Later adapters for external packages should follow the same principle: compare package-native predictions, scores, or posterior summaries with the established engine on frozen fixtures.
+
+## 18. Metrics answer a defined question
+
+RMSE and MAE summarize held-out point-prediction errors differently. RMSE gives more influence to large errors because residuals are squared. MAE remains on the response scale and has a linear loss. Neither metric says whether residual variance is constant, probabilities are calibrated, intervals have nominal coverage, or the validation split represents a realistic deployment domain.
+
+```{r}
+#| eval: false
+result@metrics
+```
+
+The future benchmarking system therefore will not declare one universal winner from one metric. Probabilistic models will need proper scores and calibration. Classification under imbalance may require PR-AUC, MCC, class-specific operating characteristics, and threshold decisions. Computational cost and stability will be reported separately from scientific predictive quality.
+
+## 19. Diagnose before interpreting
+
+```{r}
+#| eval: false
+diag <- smf_diagnose(result)
+diag
+```
+
+The current diagnostic object remains intentionally modest. It records finite predictions, missing predictions, residuals for numeric responses, fitted values, and simple held-out evidence. The contract is more important than the current number of diagnostics: diagnostics are attached to the result and are expected to be inspected before scientific interpretation.
+
+If `ggplot2` is available:
+
+```{r}
+#| eval: false
+smf_plot(result, "observed_predicted")
+smf_plot(result, "residuals")
+```
+
+The figure layer returns reusable objects. It does not turn graphical output into evidence by itself. A visually attractive plot cannot correct leakage, pseudoreplication, or a validation domain that does not match the scientific claim.
+
+## 20. Use heteroscedastic Gold data to understand what point metrics miss
+
+```{r}
+#| eval: false
+h <- smf_load_dataset("gold_heteroscedastic_regression")
+```
+
+The mean is generated as a linear function, while residual standard deviation increases with `x`. A mean-only linear model can still make useful point predictions. Yet the residual plot should reveal changing spread. This distinction motivates the later probabilistic layer.
+
+A future distributional model will be evaluated not only by the RMSE of its mean but by log score, CRPS, interval score, empirical coverage, interval width, and calibration. The stable architecture reserves `ProbabilisticSpec` and `PredictionDistribution` so that those capabilities can be added without inventing an unrelated output object.
+
+## 21. Binary probability prediction is not threshold classification
+
+The binary Gold dataset has known logistic event probabilities.
+
+```{r}
+#| eval: false
+b <- smf_load_dataset("gold_binary_calibration")
+```
+
+For binary prediction, `glm(..., family = binomial())` produces probabilities. A probability is not automatically a class decision. Converting 0.49 to one class and 0.51 to another imposes a threshold and therefore a decision rule. The reference engine refuses to compute accuracy from probabilities without an explicit threshold policy.
+
+This conservative behavior prepares later calibration and decision modules. Scientific users should be able to distinguish a model that ranks risks well from one whose predicted probabilities are calibrated, and both from a management rule that chooses a threshold based on costs or consequences.
+
+The `true_probability` column in the Gold dataset is generator metadata. It is intentionally a pedagogical trap: using it as a predictor would leak the generating probability into the prediction problem.
+
+## 22. Grouped data change the meaning of validation
+
+```{r}
+#| eval: false
+g <- smf_load_dataset("gold_grouped_fields")
+
+group_design <- smf_design_spec(
+  id_column = "obs_id",
+  group_columns = "field",
+  experimental_unit = "field"
+)
+```
+
+Plots within the same synthetic field share an unobserved field effect. If rows from one field appear in both training and testing, the model is evaluated partly on groups it has already encountered. That may be useful for some within-field prediction questions, but it is not evidence of transfer to new fields.
+
+Version 0.2.0 blocks ordinary row-wise holdout or K-fold validation by default when declared groups or repeated units require group-level separation. `smf_group_vfold_cv()` creates folds from complete groups, while external split manifests remain available when the scientific partition was defined outside the package.
+
+The important point is already enforceable: grouping metadata belong to the experiment and survive serialization. The later resampling engine can read the design rather than asking the user to remember the same constraint again.
+
+## 23. Temporal data require an information direction
+
+```{r}
+#| eval: false
+t <- smf_load_dataset("gold_time_climate")
+
+time_design <- smf_design_spec(
+  id_column = "obs_id",
+  time_column = "time_index"
+)
+```
+
+The Gold series contains trend, seasonality, and AR-like residual dependence. A random holdout can place future observations in training and past observations in testing. That may answer an interpolation question, but it is invalid for a forecasting claim in which future information was unavailable at training time.
+
+The temporal resampling module implements expanding and sliding training windows with forward assessment. The training time must precede the assessment time. Random shuffled validation remains incompatible with a declared ordered prediction problem unless an explicit scientifically justified override is recorded.
+
+This illustrates a general principle: the correct validation method is defined by the intended prediction problem, not by a universal preference for one cross-validation algorithm.
+
+## 24. Spatial data require separation beyond row identity
+
+```{r}
+#| eval: false
+s <- smf_load_dataset("gold_spatial_soil")
+
+spatial_design <- smf_design_spec(
+  id_column = "obs_id",
+  coordinate_columns = c("x", "y")
+)
+```
+
+Nearby soil observations can be similar because of spatial structure. Random cross-validation often places near neighbors in opposite folds. This can be appropriate for interpolation into gaps within a sampled field, yet overly optimistic for extrapolation to distant farms, regions, or pedoclimatic domains.
+
+Version 0.2.0 adds spatial block, cluster, buffered, and leave-location-out validation pathways. The current grid-based block implementation assumes numeric coordinate units, so projected coordinates are preferred when block dimensions are intended to represent physical distance. More advanced distance-aware engines can later attach to the same coordinate contract.
+
+When reporting spatial performance, users should describe the block geometry, separation, target domain, and whether the prediction task is interpolation or transfer. A single global RMSE without validation geometry is incomplete evidence.
+
+## 25. Scientific warnings are data, not console decoration
+
+```{r}
+#| eval: false
+result@meta@warnings
+```
+
+A structured warning has a code, severity, message, evidence, suggested action, and whether an override is permissible. Storing warnings inside results prevents them from disappearing after a long console session. It also lets reports distinguish informational notes from blocking defects.
+
+The severity levels are `info`, `warning`, `high`, and `blocking`. Blocking conditions are reserved for managed situations where continuing would contradict a core contract, such as an exact target copy in the predictors. A high warning can permit continuation while documenting that the result requires caution.
+
+Overrides should never mean that a warning did not exist. Future manifests record whether a scientist explicitly overrode a safeguard and why. This is especially important in expert workflows where unusual but defensible designs may not fit simple automated rules.
+
+## 26. Reproducibility is an output
+
+```{r}
+#| eval: false
+manifest <- smf_manifest(result)
+manifest
+```
+
+The manifest records identifiers, timestamps, package and R versions, platform, core dependency versions, backend, RNG kind, seed, data hash, schema hash, spec hash, split hash, preprocessing hash, model specification, metrics, warnings, and duration.
+
+A manifest is not a substitute for preserving data and code. It is an index that connects them. A hash can detect whether a file or specification changed; it cannot recreate an unavailable dataset. A seed can reproduce a deterministic pathway only when algorithm, software versions, and execution conditions permit it.
+
+For stochastic GPU workloads, future releases will classify determinism rather than promising bitwise identity. Scientific reproducibility means documenting the level that can actually be achieved.
+
+## 27. Save portable manifests
+
+```{r}
+#| eval: false
+smf_save_manifest(result, "run-manifest.json")
+smf_save_manifest(result, "run-manifest.yaml")
+```
+
+JSON and YAML are used for portable metadata because they can be inspected outside R. Backend-native fitted states remain separate. This separation becomes critical when persistence is added: a model bundle should contain human-readable specs and hashes even if an engine also requires a binary state file.
+
+The package treats unsafe opaque serialization as a distinct security issue. Later persistence modules will prefer safe backend-native state formats when available and require explicit trust before loading unsafe serialized objects.
+
+## 28. Cross-language validation with the Python implementation
+
+The R and Python packages are paired scientific implementations, not syntactic translations. They should agree on task meaning, data roles, design, split membership, metrics, uncertainty labels, Gold datasets, and portable schemas. They do not need identical object internals or RNG streams.
+
+The source includes a shared fixture containing the linear Gold CSV, a fixed ID-based holdout manifest, a portable experiment schema, and independent expected OLS values. Version 0.2.0 retains this cross-language fixture and extends package-native split manifests so resampling membership can be frozen by stable IDs without requiring R and Python to share RNG streams.
+
+A useful cross-language assertion is that held-out predictions and metrics match within a declared numeric tolerance when both implementations use an equivalent linear model. An unhelpful assertion would require an R object and a Python object to serialize to the same bytes.
+
+## 29. Gold validation is different from model evaluation
+
+```{r}
+#| eval: false
+smf_run_gold_validation()
+```
+
+Gold validation first checks artifact integrity. If a frozen CSV changes without an intentional generator/version update, its SHA-256 no longer matches. Numerical Gold tests then ask whether known properties are recovered within defensible tolerances.
+
+Exact snapshots are appropriate for deterministic metadata and small fixtures. Stochastic statistical behavior should use tolerance bands rather than exact numbers. For example, a future conformal simulation can test whether empirical marginal coverage falls within a preregistered band around the target coverage across repeated simulations.
+
+The package keeps numerical tests, golden artifact tests, property tests, and simulation tests conceptually separate so that a passing screenshot cannot substitute for a correct formula.
+
+## 30. Property-based thinking
+
+Even without a dedicated property-testing package, many scientific invariants can be stated clearly:
+
+- train and test indices never overlap;
+- stable IDs map to one partition at a time;
+- a target is not also a predictor;
+- preprocessing fitted-state hashes are derived from training data;
+- probabilities remain in their mathematical domain;
+- interval lower bounds must not exceed upper bounds;
+- group-aware methods must not split a declared group;
+- time-forward validation must not train on future rows;
+- serialization should preserve scientific meaning.
+
+Later releases can expand automated property-based testing. The important design step is to phrase invariants before complex engines make failures difficult to localize.
+
+## 31. Why advanced schemas already exist
+
+```{r}
+#| eval: false
+smf_bootstrap_spec()
+smf_probabilistic_spec()
+smf_bayesian_spec()
+smf_dl_spec()
+smf_uncertainty_spec()
+```
+
+These constructors do not imply that every later engine is implemented in 0.2.0. They reserve the grammar. If Bayesian concepts were added only in 0.7.0, the package might discover too late that an ordinary point-prediction result cannot represent posterior draws, prior information, or posterior predictive checks. If deep learning were treated as a separate ecosystem, checkpoint provenance and training histories might bypass the main experiment object.
+
+By reserving the schemas early, later capabilities can attach to the same data, design, uncertainty, provenance, and result contracts. This is an architectural promise, not a claim of current executable support.
+
+## 32. Bootstrap is not a synonym for repeated resampling
+
+The future bootstrap module distinguishes case, stratified, residual, parametric, wild, cluster, hierarchical, moving-block, stationary-block, and spatial-block schemes. The sampling unit must reflect dependence.
+
+If observations are nested within fields, sampling individual rows with replacement changes the scientific experiment. A cluster bootstrap resamples fields. For a temporal series, blocks preserve local dependence better than independent row sampling. For spatial data, block geometry must be documented.
+
+`SMFBootstrapResult` records requested and successful replicates, failures, sampling unit, interval type, statistic definition, original estimate, replicate distribution, and stability with respect to the number of replicates. Version 0.2.0 implements the first design-aware bootstrap engine rather than collapsing all schemes into `bootstrap = TRUE`.
+
+## 33. Probabilistic prediction needs proper scoring
+
+A point prediction summarizes one aspect of a conditional distribution. In agriculture and environmental science, the width and calibration of predictive uncertainty can be as important as the mean. A management decision may depend on the probability of yield falling below a threshold, not only on expected yield.
+
+Probabilistic workflows represent conditional distributions, quantiles, class probabilities, empirical ensemble distributions, posterior samples, and conformal sets through a common prediction-distribution interface. Proper scoring rules such as log score and CRPS reward coherent distributions rather than only their means.
+
+Calibration and sharpness should be considered together. Extremely wide intervals can obtain high coverage while being useless. Very narrow intervals can look precise while under-covering. The package therefore treats coverage, width, scoring, and calibration as separate evidence.
+
+## 34. Conformal intervals are their own uncertainty type
+
+Conformal prediction can provide finite-sample marginal coverage guarantees under stated exchangeability conditions or method-specific extensions. That does not make a conformal interval a Bayesian credible interval or a classical model-based prediction interval.
+
+The future uncertainty descriptor stores the source, target, interval type, level, and conditioning information. Rendering functions then use that metadata to prevent an interval from being mislabeled merely because its nominal level is 95%.
+
+For grouped, temporal, or spatial settings, naive exchangeability may fail. Dependence-aware methods and diagnostics therefore belong to the scientific contract. The package should never advertise a stronger guarantee than the implemented method supports.
+
+## 35. Bayesian modeling is a prior-to-posterior workflow
+
+Bayesian adapters require more than posterior means. A complete result records priors, prior predictive behavior, inference method, chains or variational budget, R-hat where appropriate, effective sample sizes, Monte Carlo standard error, divergences, posterior summaries, posterior predictive checks, and model criticism such as PSIS-LOO when relevant.
+
+A Bayesian credible interval answers a probability question conditional on the model and data. A frequentist confidence interval has a repeated-sampling interpretation. The common result system preserves that distinction instead of translating both to an unlabeled pair of bounds.
+
+The initial R plan uses `brms` and Stan-oriented infrastructure as a principal future pathway while keeping backend state outside the core schemas. BART and Gaussian Processes receive their own adapters because their capabilities and diagnostics differ.
+
+## 36. Deep learning still needs design-aware validation
+
+Images and spectra can make pseudoreplication easier to overlook. Thousands of patches from one image do not create thousands of independent plants. Pixels from one plot should not be randomly distributed across train and test when the target claim concerns new plots.
+
+The future `torch` pathway therefore uses the same `DesignSpec` as tabular models. A CNN may change the representation, but it does not change the experimental unit. Training history, early stopping, checkpoints, device, deterministic mode, and seeds belong to the manifest.
+
+Probabilistic heads, MC dropout, and deep ensembles will report uncertainty according to their actual interpretation. Softmax confidence alone will not be presented as epistemic uncertainty.
+
+## 37. Explainability describes model behavior
+
+Permutation importance, SHAP, PDP, ICE, ALE, Integrated Gradients, Grad-CAM, and attention visualization can help scientists understand how a fitted model behaves. They do not establish causal effects by themselves.
+
+The future explanation result therefore carries a non-causal interpretation by default. It also records stability across folds, bootstrap replicates, seeds, or plausible preprocessing variants. A feature that is highly important in one fitted model but unstable across resamples should be reported differently from a consistently important feature.
+
+Correlated predictors create additional difficulties because importance can be redistributed among redundant features. The package will treat that as an interpretation issue, not hide it behind one ranking.
+
+## 38. Tuning belongs inside validation
+
+Hyperparameter optimization is another learned procedure. Selecting parameters on a test set converts the test set into training information. Reporting the best inner cross-validation score as unbiased generalization performance creates selection optimism.
+
+The later tuning subsystem will therefore use nested validation when unbiased performance estimation is required. Inner resamples choose hyperparameters; outer resamples estimate generalization. Preprocessing and feature selection remain inside the inner training pathway.
+
+Multiobjective optimization will record the Pareto set and the rule used to choose a compromise. The package will not pretend that accuracy, calibration, computation time, memory, and model simplicity can always be collapsed into one universal score.
+
+## 39. Reporting should expose limitations, not generate claims
+
+```{r}
+#| eval: false
+report_object <- smf_report(result)
+```
+
+The current report skeleton is a structured object containing the target, design, audit flags, split or resampling evidence, metrics, diagnostics, reproducibility information, and release limitations. It does not write a manuscript conclusion declaring that one treatment or model is scientifically superior.
+
+Later reporting layers can render Markdown, HTML, publication tables, and figures. Numerical data remain authoritative; rendering should not alter estimates. A report generator should help users remember what must be documented, not replace scientific judgment.
+
+## 40. A complete basic workflow
+
+```{r}
+#| eval: false
+library(sciModelFlowR)
+
+d <- smf_load_dataset("gold_linear_regression")
+
+spec <- smf_experiment_spec(
+  task = smf_task_spec("regression", "yield"),
+  data = smf_data_spec(
+    target = "yield",
+    predictors = c("nitrogen", "rainfall", "soil_n"),
+    id_column = "obs_id"
+  ),
+  design = smf_design_spec(
+    id_column = "obs_id",
+    experimental_unit = "obs_id"
+  ),
+  preprocessing = smf_preprocess_spec(
+    impute_numeric = "median",
+    center = TRUE,
+    scale = TRUE
+  ),
+  resampling = smf_resampling_spec(
+    method = "holdout",
+    train_prop = 0.80,
+    seed = 260915L
+  ),
+  model = smf_model_spec(
+    family = "linear_regression",
+    engine = "stats"
+  ),
+  metrics = list(
+    smf_metric_spec("rmse"),
+    smf_metric_spec("mae")
+  ),
+  reproducibility = smf_reproducibility_spec(
+    seed = 260915L
+  )
+)
+
+result <- smf_fit_experiment(spec, d)
+print(result)
+smf_diagnose(result)
+smf_plot(result, "observed_predicted")
+smf_manifest(result)
+```
+
+The code is short because the important choices are encoded in objects. Short code is not the same as automatic scientific reasoning. The user still has to define the right unit, predictors, validation target, and interpretation.
+
+## 41. A complete design-risk workflow
+
+```{r}
+#| eval: false
+g <- smf_load_dataset("gold_grouped_fields")
+
+design <- smf_design_spec(
+  id_column = "obs_id",
+  group_columns = "field",
+  experimental_unit = "field"
+)
+
+smf_design_summary(g, design)
+smf_check_pseudoreplication(g, design, treatment = "nitrogen")
+```
+
+The correct next step depends on the scientific question. If the goal is to predict new plots in fields already represented in training, a within-field design may be defensible. If the goal is prediction for new fields, field-level separation is necessary. Version 0.2.0 automates group-aware folds, but the scientific distinction still has to be declared correctly by the analyst.
+
+## 42. Common mistakes and corresponding safeguards
+
+### 42.1 Scaling before the split
+
+Problem: test data contribute to preprocessing parameters. Safeguard: fit the `Preprocessor` only with training role.
+
+### 42.2 Treating repeated measurements as independent rows
+
+Problem: one biological or experimental unit appears on both sides of validation. Safeguard: declare `repeated_unit` or grouping variables before resampling.
+
+### 42.3 Selecting features globally
+
+Problem: the response from validation folds influences feature selection. Safeguard: the future feature-selection engine is fold-fitted.
+
+### 42.4 Tuning on the test set
+
+Problem: reported test performance is no longer independent. Safeguard: test data are not accepted as a tuning resource in managed workflows.
+
+### 42.5 Ranking probabilistic models by mean RMSE only
+
+Problem: distribution quality is ignored. Safeguard: future probabilistic benchmarks require proper scores and calibration evidence.
+
+### 42.6 Calling SHAP causal
+
+Problem: model association is interpreted as intervention effect. Safeguard: explanation objects are non-causal by default.
+
+### 42.7 Ignoring warnings after a successful fit
+
+Problem: numerical convergence is mistaken for scientific validity. Safeguard: warnings remain attached to results and manifests.
+
+## 43. Function-selection guide for 0.2.0
+
+| Question | Function |
+|---|---|
+| What variables are target, predictors, and IDs? | `smf_data_spec()` |
+| What kind of modeling task is this? | `smf_task_spec()` |
+| What is grouped, repeated, temporal, spatial, or external? | `smf_design_spec()` |
+| Are required columns present? | `smf_validate_schema()` |
+| Are there duplicates, missingness, or leakage indicators? | `smf_audit_data()` |
+| Is a target copy present? | `smf_detect_leakage()` |
+| What preprocessing is allowed? | `smf_preprocess_spec()` |
+| Fit preprocessing safely | `smf_fit_preprocessor()` |
+| Apply learned preprocessing | `smf_apply_preprocessor()` |
+| Create a basic held-out split | `smf_holdout_split()` |
+| Share identical membership across languages | `smf_split_manifest()` |
+| Specify a reference model | `smf_model_spec()` |
+| Compose everything | `smf_experiment_spec()` |
+| Fit the managed workflow | `smf_fit_experiment()` |
+| Inspect diagnostics | `smf_diagnose()` |
+| Inspect provenance | `smf_manifest()` |
+| Check Gold integrity | `smf_run_gold_validation()` |
+| Inspect local capabilities | `smf_doctor()` |
+
+## 44. Minimum scientific reporting checklist
+
+Before a result leaves an analysis notebook, thesis, report, or manuscript, record:
+
+- [ ] scientific prediction or inference target;
+- [ ] observational and experimental units;
+- [ ] groups, blocks, repeated units, time, coordinates, or external domains when relevant;
+- [ ] train/validation/test structure and the scientific reason for it;
+- [ ] evidence that preprocessing was learned from training partitions only;
+- [ ] model family and backend version;
+- [ ] metric definitions and aggregation;
+- [ ] whether probabilities were calibrated and how a decision threshold was chosen, when relevant;
+- [ ] exact uncertainty type and nominal level;
+- [ ] bootstrap sampling unit and replicate count, when used;
+- [ ] prior and posterior diagnostic information for Bayesian workflows;
+- [ ] conformal calibration source and coverage target, when used;
+- [ ] observed data with estimates when scientifically defensible;
+- [ ] explanation method and stability assessment, when used;
+- [ ] external validation or an explicit statement that it is absent;
+- [ ] seeds, versions, data hash, spec hash, and split hash;
+- [ ] major warnings and documented overrides;
+- [ ] limits on extrapolation and causal interpretation.
+
+## 45. Suggested learning path
+
+A beginner should first complete the linear Gold workflow, then deliberately trigger the target-copy leakage safeguard, then inspect grouped, temporal, and spatial design declarations without fitting more complex algorithms. This sequence teaches that validation geometry is a scientific decision before it becomes a software option.
+
+An intermediate user can next compare the binary probability workflow with a threshold-based decision problem and explore the heteroscedastic dataset to see why point prediction does not exhaust uncertainty. In 0.2.0, the same users can replace the holdout with group, temporal, spatial, Monte Carlo, or nested resampling without changing the core experiment grammar, and can add fold-safe feature selection when the scientific problem requires it.
+
+An advanced user should inspect serialized specs and manifests, reproduce the cross-language fixture, and write an external split manifest for a real domain problem. That exercise reveals which parts of a modeling analysis are algorithm-specific and which are scientific contracts that should remain portable.
+
+## 46. What version 0.2.0 intentionally does not do
+
+Version 1.0.0 is the consolidated form of the 0.9.0 release-candidate grammar. It integrates protected external validation, domain workflows, publication reporting, API-freeze evidence, the formal Gold suite, compatibility/security metadata, and final release manifests. Remaining work before a fully certified distribution claim is execution of the final local validation campaign, not expansion of module families. Local tracking, inference bundles, guarded deployment adapters, and scalable batch inference are now implemented in source. Bayesian, BART, Gaussian-process, conformal, neural-network, XAI, tuning, resampling, and probabilistic contracts are implemented in source; their runtime and numerical certification remains deferred to the consolidated local validation cycle.
+
+Their absence is not a missing promise. It is a staged development decision. The package first validates its contracts, then adds complexity. Advanced schemas are present so future modules can join the same grammar without changing the meaning of earlier results.
+
+## 47. Reproducibility checklist for teaching and review
+
+When reproducing a run, first verify that the Gold or study dataset matches its recorded hash. Then inspect the serialized specification and confirm that the intended target and design are unchanged. Verify split membership by IDs rather than recreating it from memory. Check preprocessing provenance. Confirm backend and R versions. Recalculate metrics from stored truth and predictions when possible. Finally, inspect warnings and diagnostics rather than focusing only on the headline metric.
+
+When reviewing someone else's analysis, ask whether the claimed deployment domain is represented by the held-out data. A result can be computationally reproducible and scientifically inappropriate. Reproducibility makes the inappropriate choice easier to detect; it does not make the choice valid.
+
+## 48. API and object philosophy
+
+The public API is intentionally small relative to internal helpers. Users should work with meaningful verbs such as audit, fit, diagnose, predict, and report rather than navigating backend-specific internal folders. Package-native result objects hold the common scientific metadata, while an explicit escape hatch exposes the native fitted object for expert work.
+
+S7 classes validate the formal contracts at construction. Standard R ergonomics are preserved through familiar print and summary behavior. The package avoids using mutable application-style objects for specifications because the scientific configuration should be stable once a run begins. Updating a specification should conceptually create a new specification and therefore a new hash.
+
+## 48A. Version 0.5.0: tuning belongs inside validation
+
+Version 0.5.0 adds conditional `SearchSpace`, `TuningSpec`, and `BenchmarkSpec` contracts. The purpose is not to automate the search for a universally best algorithm. The purpose is to make model-selection decisions reproducible while preserving the information boundary established in earlier versions.
+
+A tuning workflow now follows the same scientific grammar as preprocessing and feature selection. Candidate configurations are evaluated only on development resamples. Grid and random search provide transparent baselines; racing can stop clearly inferior configurations early; Bayesian optimization uses previous evaluations to propose new configurations; and successive halving or Hyperband can allocate explicit training resources when a meaningful resource parameter exists.
+
+```r
+space <- smf_search_space(
+  params.max_depth = smf_param_int(2, 10),
+  params.eta = smf_param_dbl(0.01, 0.30, log = TRUE),
+  nrounds = smf_param_int(50, 800, resource = TRUE)
+)
+
+tuning <- smf_tuning_spec(
+  method = "random",
+  budget = 40,
+  inner_resampling = smf_resampling_spec("kfold", n_splits = 5),
+  objectives = list(smf_metric_spec("rmse", "minimize"))
+)
+```
+
+Nested model selection is used when the performance of the complete selection procedure must be estimated without reusing the same evidence for both selection and evaluation. `smf_nested_tune()` records inner and outer split hashes separately and labels inner selection scores separately from outer generalization scores.
+
+Multi-objective tuning retains a Pareto set. A single compromise is selected only when an explicit decision rule is supplied. Scientific benchmarking follows the same principle: all candidates use identical resampling geometry, performance uncertainty and rank stability are stored, compute is recorded, and `decision_rule = NULL` deliberately produces no universal winner.
+
+The focused tutorials are `v08-tuning-and-scientific-benchmarking.qmd` and `v19-complete-scientific-workflow.qmd`.
+
+## 49. Final perspective
+
+Scientific machine learning is strongest when predictive performance can be explained as a consequence of a valid information boundary and a defensible validation design. `sciModelFlowR` therefore treats the algorithm as one component in a larger experiment. Data roles, design, preprocessing, validation, diagnostics, uncertainty, warnings, and provenance remain visible from start to finish.
+
+For version 0.2.0, the recommended sequence is:
+
+**question -> data roles -> design -> audit -> design-aware resampling -> training-only preprocessing -> fold-safe feature learning when needed -> reference fit -> resampled metrics -> bootstrap/stability when justified -> diagnostics -> manifest.**
+
+For the mature package, the sequence expands rather than changes:
+
+**question -> design -> audit -> leakage-safe preprocessing -> design-aware resampling -> baseline -> tuning within resampling -> diagnostics -> bootstrap/probabilistic/Bayesian uncertainty -> calibration/conformal evaluation -> explanation stability -> external validation -> scientific reporting -> reproducibility manifest.**
+
+The value of the package is not that every user must run every advanced module. The value is that increasing complexity remains attached to the same scientific question and the same declared design.
+
+## Appendix A. Reading the result object during peer review
+
+An `ExperimentResult` should be read from the outside inward. Begin with the specification, because it states what analysis was intended. Then inspect the audit and warnings, because they reveal whether the intended analysis encountered known data-quality or design risks. Next inspect the split, because validation membership determines what the metrics mean. Review preprocessing provenance before the fitted model, especially when missing values, scaling, or categorical encoding are present. Only then inspect the model, predictions, diagnostics, and metrics. Finish with the manifest to connect the numerical result to software and data identities.
+
+This order is deliberately different from the common habit of opening a model summary first. A coefficient table or feature ranking is downstream of all earlier choices. Reviewers can use the object structure to ask whether those choices were appropriate before debating small numerical differences among algorithms.
+
+## Appendix B. Designing external split manifests
+
+External manifests are useful when a study team has already defined a scientifically meaningful train-test separation. Examples include leaving one farm completely external, reserving the latest growing season, holding out a geographic region, or separating all images from particular plants. The manifest should use stable IDs and should be version controlled with the analysis. If membership changes, the split hash changes.
+
+An external manifest should document why the held-out set is representative of the intended claim. A farm-level external test is stronger evidence for new-farm transfer than random plot splitting, but it may still fail to represent another climate zone. Validation is always conditional on the chosen domain.
+
+## Appendix C. Interpreting hashes correctly
+
+A cryptographic hash is useful for identity and integrity. Matching hashes provide strong evidence that two byte-level or canonicalized artifacts are the same under the hashing procedure. They do not validate whether the artifact was scientifically appropriate. A perfectly hashed but incorrectly defined target remains incorrect. Hashes should therefore be read as provenance evidence, not scientific approval.
+
+The package uses different hashes for data, specifications, splits, and preprocessing state so changes can be localized. If only the split changes, the data hash can remain stable while the split hash changes. If a variable role changes, the spec hash changes even if the CSV is identical. This separation is useful during audits and manuscript revisions.
+
+## Appendix D. Minimum questions before adding a more complex model
+
+Before escalating from a reference model, ask whether diagnostics show a problem the new model addresses, whether the scientific target requires a richer output, whether sufficient data exist to estimate the added flexibility, whether the validation scheme can fairly compare the candidates, and whether interpretation becomes more difficult. Complexity is justified when it solves a stated problem. It is not justified simply because a backend makes the method available.
+
+Examples include moving from a mean-only regression to a distributional model because residual scale changes, using a grouped learner because repeated units exist, adding a spatial process because residual spatial structure remains, or using Bayesian hierarchical modeling because partial pooling and direct posterior probability statements are scientifically useful. Each escalation should leave a trace in the specification and manifest.
+
+## Appendix E. Compact glossary
+
+**Experimental unit.** the smallest unit independently assigned to a treatment or intervention in an experiment. It determines the level of genuine replication and cannot be inferred reliably from row count alone.
+
+**Observational unit.** the entity represented by one measured row or record. Multiple observational units can belong to one experimental unit, which is why repeated measurements can create pseudoreplication if treated as independent replicates.
+
+**Information boundary.** the boundary separating information legitimately available during model fitting from information reserved for validation or future prediction. Preprocessing, selection, calibration, and tuning must respect this boundary.
+
+**Leakage.** use of information during model development that would not be legitimately available at the stated prediction time or validation stage. Leakage can arise through variables, preprocessing, group overlap, temporal look-ahead, or tuning.
+
+**Validation geometry.** the structure by which observations or units are separated for performance estimation. Random, grouped, temporal, spatial, and external validation answer different generalization questions.
+
+**External validation.** evaluation on a domain excluded from model development, such as another site, season, region, instrument, or population. Its strength depends on how well that domain represents the intended application.
+
+**Calibration.** agreement between probabilistic predictions and observed frequencies or outcomes. Calibration is distinct from discrimination and from point-prediction accuracy.
+
+**Sharpness.** concentration of predictive distributions or intervals, considered conditional on adequate calibration. Narrow predictions are not desirable if they systematically understate uncertainty.
+
+**Conformal prediction.** a family of methods that converts model residual or conformity information into prediction sets or intervals with method-specific coverage properties under stated assumptions.
+
+**Posterior predictive check.** a Bayesian model-criticism procedure comparing observed data features with data replicated from the fitted posterior predictive distribution.
+
+**Gold dataset.** a frozen synthetic or redistribution-safe validation fixture with documented generator, seed, known properties, expected behavior, and hash. Gold data are software evidence, not field evidence.
+
+**Differential test.** a test comparing package output with an independent or backend-native implementation on the same input, focusing on scientific quantities rather than formatting.
+
+**Manifest.** a machine-readable record connecting a run to software versions, hashes, seeds, specifications, backend identity, warnings, and outputs.
+
+**Capability registry.** a table-like software contract stating which operations an engine can support. It prevents a requested method from being silently replaced by a scientifically different one.
+
+**Typed uncertainty.** uncertainty labeled by its statistical source and target, such as confidence, credible, prediction, conformal, bootstrap, or resampling uncertainty, rather than represented by unlabeled lower and upper bounds.
+
+
+## Appendix F. Design-review scenarios
+
+### Repeated leaf measurements
+
+A greenhouse study records five leaves per plant after one plant-level treatment assignment. Randomly splitting leaves across train and test can make the model appear to generalize while seeing the same plants in both sets. The plant should be declared as the repeated or grouping unit, and validation for new-plant prediction should separate plants.
+
+In each case, the package should make the validation decision explicit in `DesignSpec` and the split record, then preserve that decision in the manifest so the performance claim can be audited later.
+
+### Hyperspectral pixels
+
+A hyperspectral cube yields thousands of labeled pixels per plot. Pixel count does not equal biological replication. A validation claim about new plots or fields should hold out those larger units, while within-image segmentation may justify a different geometry.
+
+In each case, the package should make the validation decision explicit in `DesignSpec` and the split record, then preserve that decision in the manifest so the performance claim can be audited later.
+
+### Multi-season yield prediction
+
+A model trained with measurements from 2020-2025 is intended for 2026 forecasting. Random folds mix earlier and later years and can leak regime information. Forward or external-year validation more closely matches the claim.
+
+In each case, the package should make the validation decision explicit in `DesignSpec` and the split record, then preserve that decision in the manifest so the performance claim can be audited later.
+
+### Regional soil mapping
+
+Nearby cores share spatial structure. Random CV estimates interpolation among sampled neighborhoods, not necessarily transfer across regions. Spatial blocks or external regions should be chosen according to the mapping objective.
+
+In each case, the package should make the validation decision explicit in `DesignSpec` and the split record, then preserve that decision in the manifest so the performance claim can be audited later.
+
+### Stress classification with repeated images
+
+Daily images of the same plant create strong within-plant similarity. A random image split may mostly test recognition of known plants. Plant-level splitting is required for a claim about new plants.
+
+In each case, the package should make the validation decision explicit in `DesignSpec` and the split record, then preserve that decision in the manifest so the performance claim can be audited later.
+
+### Instrument transfer
+
+Spectra from one instrument can differ systematically from another. If deployment uses a new instrument, an external instrument domain should be preserved for validation rather than blended into tuning.
+
+In each case, the package should make the validation decision explicit in `DesignSpec` and the split record, then preserve that decision in the manifest so the performance claim can be audited later.
+
+### Calibration after class imbalance handling
+
+Oversampling can improve learning but calibration should be evaluated on data reflecting the intended event prevalence. Synthetic samples belong only inside training folds, and final test labels must remain untouched.
+
+In each case, the package should make the validation decision explicit in `DesignSpec` and the split record, then preserve that decision in the manifest so the performance claim can be audited later.
+
+### Hyperparameter tuning
+
+Choosing the best settings on the same folds later reported as performance creates optimism. Nested validation separates selection from performance estimation when an unbiased estimate is required.
+
+In each case, the package should make the validation decision explicit in `DesignSpec` and the split record, then preserve that decision in the manifest so the performance claim can be audited later.
+
+
+## Appendix G. Structured peer-review questions
+
+### Review cycle 1
+
+- What future or external population does the held-out data represent, and would the same information have been available at prediction time?
+- Which row identifiers share a biological, experimental, temporal, spatial, or acquisition unit, and are those units kept together when the scientific claim requires it?
+- Which transformations estimate parameters from data, and can their fitted state be traced specifically to training rows?
+- Were candidate models and hyperparameters selected independently of the final test evidence?
+- Are reported intervals labeled according to their actual statistical interpretation and generation method?
+- Do diagnostics address the assumptions relevant to the chosen family rather than applying one generic checklist to every model?
+- Does a model explanation describe fitted behavior only, or is there a separate causal design supporting intervention language?
+- Can another analyst reconstruct the dataset identity, split membership, specification, preprocessing state, backend version, metrics, and warnings from the saved artifacts?
+
+A defensible analysis should answer these questions with stored evidence rather than relying on memory or undocumented notebook state. When an answer is uncertain, the appropriate action is to narrow the claim or revise the workflow before adding model complexity.
+
+### Review cycle 2
+
+- What future or external population does the held-out data represent, and would the same information have been available at prediction time?
+- Which row identifiers share a biological, experimental, temporal, spatial, or acquisition unit, and are those units kept together when the scientific claim requires it?
+- Which transformations estimate parameters from data, and can their fitted state be traced specifically to training rows?
+- Were candidate models and hyperparameters selected independently of the final test evidence?
+- Are reported intervals labeled according to their actual statistical interpretation and generation method?
+- Do diagnostics address the assumptions relevant to the chosen family rather than applying one generic checklist to every model?
+- Does a model explanation describe fitted behavior only, or is there a separate causal design supporting intervention language?
+- Can another analyst reconstruct the dataset identity, split membership, specification, preprocessing state, backend version, metrics, and warnings from the saved artifacts?
+
+A defensible analysis should answer these questions with stored evidence rather than relying on memory or undocumented notebook state. When an answer is uncertain, the appropriate action is to narrow the claim or revise the workflow before adding model complexity.
+
+### Review cycle 3
+
+- What future or external population does the held-out data represent, and would the same information have been available at prediction time?
+- Which row identifiers share a biological, experimental, temporal, spatial, or acquisition unit, and are those units kept together when the scientific claim requires it?
+- Which transformations estimate parameters from data, and can their fitted state be traced specifically to training rows?
+- Were candidate models and hyperparameters selected independently of the final test evidence?
+- Are reported intervals labeled according to their actual statistical interpretation and generation method?
+- Do diagnostics address the assumptions relevant to the chosen family rather than applying one generic checklist to every model?
+- Does a model explanation describe fitted behavior only, or is there a separate causal design supporting intervention language?
+- Can another analyst reconstruct the dataset identity, split membership, specification, preprocessing state, backend version, metrics, and warnings from the saved artifacts?
+
+A defensible analysis should answer these questions with stored evidence rather than relying on memory or undocumented notebook state. When an answer is uncertain, the appropriate action is to narrow the claim or revise the workflow before adding model complexity.
+
+### Review cycle 4
+
+- What future or external population does the held-out data represent, and would the same information have been available at prediction time?
+- Which row identifiers share a biological, experimental, temporal, spatial, or acquisition unit, and are those units kept together when the scientific claim requires it?
+- Which transformations estimate parameters from data, and can their fitted state be traced specifically to training rows?
+- Were candidate models and hyperparameters selected independently of the final test evidence?
+- Are reported intervals labeled according to their actual statistical interpretation and generation method?
+- Do diagnostics address the assumptions relevant to the chosen family rather than applying one generic checklist to every model?
+- Does a model explanation describe fitted behavior only, or is there a separate causal design supporting intervention language?
+- Can another analyst reconstruct the dataset identity, split membership, specification, preprocessing state, backend version, metrics, and warnings from the saved artifacts?
+
+A defensible analysis should answer these questions with stored evidence rather than relying on memory or undocumented notebook state. When an answer is uncertain, the appropriate action is to narrow the claim or revise the workflow before adding model complexity.
+
+### Review cycle 5
+
+- What future or external population does the held-out data represent, and would the same information have been available at prediction time?
+- Which row identifiers share a biological, experimental, temporal, spatial, or acquisition unit, and are those units kept together when the scientific claim requires it?
+- Which transformations estimate parameters from data, and can their fitted state be traced specifically to training rows?
+- Were candidate models and hyperparameters selected independently of the final test evidence?
+- Are reported intervals labeled according to their actual statistical interpretation and generation method?
+- Do diagnostics address the assumptions relevant to the chosen family rather than applying one generic checklist to every model?
+- Does a model explanation describe fitted behavior only, or is there a separate causal design supporting intervention language?
+- Can another analyst reconstruct the dataset identity, split membership, specification, preprocessing state, backend version, metrics, and warnings from the saved artifacts?
+
+A defensible analysis should answer these questions with stored evidence rather than relying on memory or undocumented notebook state. When an answer is uncertain, the appropriate action is to narrow the claim or revise the workflow before adding model complexity.
+
+### Review cycle 6
+
+- What future or external population does the held-out data represent, and would the same information have been available at prediction time?
+- Which row identifiers share a biological, experimental, temporal, spatial, or acquisition unit, and are those units kept together when the scientific claim requires it?
+- Which transformations estimate parameters from data, and can their fitted state be traced specifically to training rows?
+- Were candidate models and hyperparameters selected independently of the final test evidence?
+- Are reported intervals labeled according to their actual statistical interpretation and generation method?
+- Do diagnostics address the assumptions relevant to the chosen family rather than applying one generic checklist to every model?
+- Does a model explanation describe fitted behavior only, or is there a separate causal design supporting intervention language?
+- Can another analyst reconstruct the dataset identity, split membership, specification, preprocessing state, backend version, metrics, and warnings from the saved artifacts?
+
+A defensible analysis should answer these questions with stored evidence rather than relying on memory or undocumented notebook state. When an answer is uncertain, the appropriate action is to narrow the claim or revise the workflow before adding model complexity.
+

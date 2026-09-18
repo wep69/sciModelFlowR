@@ -1,0 +1,286 @@
+# Bayesian modeling contracts and package-native reference implementation.
+
+BayesFitResult <- S7::new_class(
+  "BayesFitResult",
+  properties = list(
+    backend=S7::class_character, fit=S7::class_any, draws=S7::class_any,
+    formula=S7::class_any, family=S7::class_character,
+    approximation=S7::class_character, meta=S7::class_any,
+    diagnostics=S7::class_any, provenance=S7::class_any
+  )
+)
+
+BayesianDiagnosticResult <- S7::new_class(
+  "BayesianDiagnosticResult",
+  properties = list(summary=S7::class_any, warnings=S7::class_any,
+    thresholds=S7::class_any, provenance=S7::class_any)
+)
+
+GPFitResult <- S7::new_class(
+  "GPFitResult",
+  properties = list(
+    backend=S7::class_character, fit=S7::class_any, predictors=S7::class_character,
+    x_center=S7::class_any, x_scale=S7::class_any,
+    length_scale=S7::class_numeric, signal_variance=S7::class_numeric,
+    noise_variance=S7::class_numeric, approximation=S7::class_character,
+    provenance=S7::class_any
+  )
+)
+
+BARTFitResult <- S7::new_class(
+  "BARTFitResult",
+  properties = list(backend=S7::class_character, fit=S7::class_any,
+    task=S7::class_character, predictors=S7::class_character,
+    approximation=S7::class_character, provenance=S7::class_any)
+)
+
+.smf_bayes_meta <- function(data, backend, spec) {
+  ResultMeta(
+    run_id=.smf_new_run_id(), created_at=.smf_now(), package_version=.smf_version(),
+    backend=backend, backend_version=if (.smf_package_available(backend)) as.character(utils::packageVersion(backend)) else character(),
+    data_hash=smf_data_hash(data), split_hash=character(), spec_hash=smf_hash(spec),
+    seed=as.integer(spec@seed), warnings=list(), provenance=list(operation="bayesian_fit")
+  )
+}
+
+.smf_inv_gamma <- function(n, shape, rate) 1 / stats::rgamma(n, shape=shape, rate=rate)
+
+.smf_mvn_draws <- function(n, mean, covariance, seed=NULL) {
+  p <- length(mean)
+  draw_fun <- function() {
+    R <- chol(covariance)
+    z <- matrix(stats::rnorm(n*p), nrow=n, ncol=p)
+    sweep(z %*% R, 2L, mean, "+")
+  }
+  if (is.null(seed)) draw_fun() else smf_with_seed(seed, draw_fun())
+}
+
+.smf_conjugate_fit <- function(formula, data, spec) {
+  mf <- stats::model.frame(formula, data=data, na.action=stats::na.fail)
+  y <- stats::model.response(mf)
+  if (!is.numeric(y) || is.matrix(y)) cli::cli_abort("The package-native conjugate reference model currently requires one numeric Gaussian response.")
+  tt <- stats::terms(formula, data=data)
+  X <- stats::model.matrix(tt, data=mf)
+  p <- ncol(X); n <- nrow(X)
+  pri <- spec@priors %||% list()
+  m0 <- as.numeric(pri$beta_mean %||% rep(0, p))
+  if (length(m0) != p) cli::cli_abort("{.code priors$beta_mean} must have one value per design-matrix coefficient.")
+  beta_sd <- as.numeric(pri$beta_sd %||% rep(10, p))
+  if (length(beta_sd)==1L) beta_sd <- rep(beta_sd,p)
+  if (length(beta_sd)!=p || any(!is.finite(beta_sd) | beta_sd<=0)) cli::cli_abort("{.code priors$beta_sd} must contain positive finite values.")
+  V0 <- diag(beta_sd^2, p)
+  V0inv <- diag(1/(beta_sd^2), p)
+  a0 <- as.numeric(pri$sigma_shape %||% 2)
+  b0 <- as.numeric(pri$sigma_rate %||% 1)
+  if (!is.finite(a0) || a0<=0 || !is.finite(b0) || b0<=0) cli::cli_abort("Inverse-gamma prior shape/rate must be positive.")
+  Vn <- solve(V0inv + crossprod(X))
+  mn <- as.numeric(Vn %*% (V0inv %*% m0 + crossprod(X,y)))
+  an <- a0 + n/2
+  bn <- as.numeric(b0 + 0.5*(crossprod(y) + crossprod(m0,V0inv %*% m0) - crossprod(mn, solve(Vn,mn))))
+  ndraw <- as.integer(spec@draws)
+  draw_fun <- function() {
+    sigma2 <- .smf_inv_gamma(ndraw, an, bn)
+    beta <- matrix(NA_real_, ndraw, p)
+    Rbase <- chol(Vn)
+    for (i in seq_len(ndraw)) beta[i,] <- mn + as.numeric(stats::rnorm(p) %*% (sqrt(sigma2[i])*Rbase))
+    colnames(beta) <- colnames(X)
+    cbind(beta, sigma=sqrt(sigma2))
+  }
+  draws <- smf_with_seed(spec@seed, draw_fun())
+  fit <- list(X=X, y=as.numeric(y), terms=tt, coefficient_names=colnames(X),
+    posterior=list(mean=mn, covariance_scale=Vn, shape=an, rate=bn),
+    prior=list(mean=m0, covariance=V0, shape=a0, rate=b0))
+  BayesFitResult(
+    backend="conjugate_gaussian", fit=fit, draws=draws, formula=formula,
+    family="gaussian", approximation="exact_conjugate_posterior",
+    meta=.smf_bayes_meta(data,"stats",spec), diagnostics=list(),
+    provenance=list(inference="closed_form", prior="normal_inverse_gamma", training_rows=n)
+  )
+}
+
+#' Inspect the Bayesian prior contract
+#' @export
+smf_bayes_prior <- function(spec=smf_bayesian_spec()) {
+  if (!S7::S7_inherits(spec, BayesianSpec)) cli::cli_abort("{.arg spec} must be a BayesianSpec.")
+  list(inference=spec@inference, priors=spec@priors, chains=spec@chains,
+    draws=spec@draws, warmup=spec@warmup, target_accept=spec@target_accept, seed=spec@seed)
+}
+
+#' Fit a Bayesian model through a package-native or optional backend
+#' @export
+smf_bayes_fit <- function(formula, data, bayesian=smf_bayesian_spec(), family="gaussian", backend=c("conjugate_gaussian","brms"), ...) {
+  backend <- match.arg(backend)
+  if (!S7::S7_inherits(bayesian, BayesianSpec)) cli::cli_abort("{.arg bayesian} must be a BayesianSpec.")
+  if (!inherits(formula,"formula")) cli::cli_abort("{.arg formula} must be a formula.")
+  if (!is.data.frame(data)) cli::cli_abort("{.arg data} must be a data frame.")
+  if (backend=="conjugate_gaussian") {
+    if (!identical(as.character(family)[1L],"gaussian")) cli::cli_abort("The package-native conjugate reference backend supports Gaussian regression only.")
+    return(.smf_conjugate_fit(formula,data,bayesian))
+  }
+  if (!.smf_package_available("brms")) .smf_abort("BAYES_BACKEND_UNAVAILABLE","The brms backend is not installed.",class="smf_capability_error")
+  algorithm <- switch(bayesian@inference, nuts="sampling", hmc="sampling", mcmc="sampling", vi="meanfield", svi="meanfield", laplace="laplace", "sampling")
+  args <- list(formula=formula, data=data, chains=bayesian@chains,
+    iter=bayesian@draws + bayesian@warmup, warmup=bayesian@warmup,
+    seed=bayesian@seed, algorithm=algorithm)
+  if (identical(algorithm,"sampling")) args$control <- list(adapt_delta=bayesian@target_accept)
+  if (length(family)) args$family <- family
+  if (length(bayesian@priors)) args$prior <- bayesian@priors
+  dots <- list(...); args[names(dots)] <- dots
+  obj <- do.call(brms::brm,args)
+  approx <- if (algorithm=="meanfield") "variational_meanfield" else if (algorithm=="laplace") "laplace" else "mcmc"
+  BayesFitResult(backend="brms",fit=obj,draws=NULL,formula=formula,family=as.character(family)[1L],
+    approximation=approx,meta=.smf_bayes_meta(data,"brms",bayesian),diagnostics=list(),
+    provenance=list(inference=bayesian@inference,approximation=approx,backend="Stan via brms"))
+}
+
+#' Generate prior-predictive draws
+#' @export
+smf_bayes_prior_predictive <- function(formula, data, bayesian=smf_bayesian_spec(), family="gaussian", backend=c("conjugate_gaussian","brms"), ndraws=500L, ...) {
+  backend <- match.arg(backend); ndraws <- as.integer(ndraws)
+  if (backend=="brms") {
+    if (!.smf_package_available("brms")) .smf_abort("BAYES_BACKEND_UNAVAILABLE","The brms backend is not installed.",class="smf_capability_error")
+    args <- list(formula=formula,data=data,family=family,prior=bayesian@priors,chains=bayesian@chains,
+      iter=bayesian@warmup + ndraws,warmup=bayesian@warmup,seed=bayesian@seed,sample_prior="only")
+    dots<-list(...); args[names(dots)]<-dots
+    fit<-do.call(brms::brm,args)
+    return(brms::posterior_predict(fit,ndraws=ndraws))
+  }
+  mf<-stats::model.frame(formula,data=data,na.action=stats::na.fail); tt<-stats::terms(formula,data=data); X<-stats::model.matrix(tt,data=mf)
+  p<-ncol(X); pri<-bayesian@priors %||% list(); m0<-as.numeric(pri$beta_mean %||% rep(0,p)); if(length(m0)==1L) m0<-rep(m0,p)
+  beta_sd<-as.numeric(pri$beta_sd %||% rep(10,p)); if(length(beta_sd)==1L) beta_sd<-rep(beta_sd,p)
+  a0<-as.numeric(pri$sigma_shape %||% 2); b0<-as.numeric(pri$sigma_rate %||% 1)
+  f<-function(){ sigma<-sqrt(.smf_inv_gamma(ndraws,a0,b0)); beta<-matrix(stats::rnorm(ndraws*p),ndraws,p); beta<-sweep(beta,2L,beta_sd,"*"); beta<-sweep(beta,2L,m0,"+"); mu<-X %*% t(beta); mu + matrix(stats::rnorm(nrow(X)*ndraws),nrow(X),ndraws)*rep(sigma,each=nrow(X)) }
+  smf_with_seed(bayesian@seed,f())
+}
+
+#' Extract posterior draws
+#' @export
+smf_bayes_draws <- function(fit, variables=NULL, format=c("matrix","posterior")) {
+  format<-match.arg(format)
+  if (!S7::S7_inherits(fit,BayesFitResult)) cli::cli_abort("{.arg fit} must be a BayesFitResult.")
+  if (fit@backend=="conjugate_gaussian") {
+    out<-fit@draws
+    if(!is.null(variables)) out<-out[,intersect(as.character(variables),colnames(out)),drop=FALSE]
+    if(format=="posterior") {
+      if(!.smf_package_available("posterior")) .smf_abort("POSTERIOR_PACKAGE_UNAVAILABLE","Package posterior is required for format='posterior'.",class="smf_capability_error")
+      return(posterior::as_draws_matrix(out))
+    }
+    return(out)
+  }
+  if (!.smf_package_available("posterior")) .smf_abort("POSTERIOR_PACKAGE_UNAVAILABLE","Package posterior is required to standardize backend draws.",class="smf_capability_error")
+  d<-posterior::as_draws_matrix(fit@fit)
+  if(!is.null(variables)) d<-posterior::subset_draws(d,variable=as.character(variables))
+  if(format=="matrix") as.matrix(d) else d
+}
+
+#' Summarize posterior draws
+#' @export
+smf_bayes_summary <- function(fit, probs=c(0.025,0.5,0.975)) {
+  d<-as.matrix(smf_bayes_draws(fit,format="matrix"))
+  out<-data.frame(variable=colnames(d),mean=colMeans(d),sd=apply(d,2L,stats::sd),row.names=NULL)
+  qs<-t(apply(d,2L,stats::quantile,probs=probs,names=FALSE,type=8))
+  colnames(qs)<-paste0("q",format(probs,trim=TRUE)); cbind(out,qs)
+}
+
+.smf_bayes_model_matrix <- function(fit,new_data) {
+  tt<-delete.response(fit@fit$terms); X<-stats::model.matrix(tt,data=new_data)
+  miss<-setdiff(fit@fit$coefficient_names,colnames(X)); if(length(miss)) cli::cli_abort("New data cannot reproduce training design-matrix columns: {paste(miss,collapse=', ')}")
+  X[,fit@fit$coefficient_names,drop=FALSE]
+}
+
+#' Draw expected posterior predictions
+#' @export
+smf_bayes_epred <- function(fit, new_data, ndraws=NULL, seed=NULL) {
+  if(!S7::S7_inherits(fit,BayesFitResult)) cli::cli_abort("{.arg fit} must be a BayesFitResult.")
+  if(fit@backend=="brms") return(t(brms::posterior_epred(fit@fit,newdata=new_data,ndraws=ndraws)))
+  X<-.smf_bayes_model_matrix(fit,new_data); d<-fit@draws; if(!is.null(ndraws) && ndraws<nrow(d)) d<-d[seq_len(ndraws),,drop=FALSE]
+  beta<-d[,fit@fit$coefficient_names,drop=FALSE]; X %*% t(beta)
+}
+
+#' Draw from the posterior predictive distribution
+#' @export
+smf_bayes_predict <- function(fit, new_data, ndraws=NULL, seed=NULL) {
+  if(!S7::S7_inherits(fit,BayesFitResult)) cli::cli_abort("{.arg fit} must be a BayesFitResult.")
+  if(fit@backend=="brms") {
+    s<-t(brms::posterior_predict(fit@fit,newdata=new_data,ndraws=ndraws))
+  } else {
+    mu<-smf_bayes_epred(fit,new_data,ndraws=ndraws,seed=seed); d<-fit@draws; if(!is.null(ndraws)) d<-d[seq_len(min(ndraws,nrow(d))),,drop=FALSE]
+    sigma<-d[,"sigma"]; f<-function() mu + matrix(stats::rnorm(length(mu)),nrow(mu),ncol(mu))*rep(sigma,each=nrow(mu)); s<-if(is.null(seed)) f() else smf_with_seed(seed,f())
+  }
+  smf_prediction_distribution("samples",list(samples=s),
+    uncertainty=UncertaintyDescriptor(source="bayesian_posterior",target="future_response",interval_type="posterior_predictive",level=0.95,conditional_on=paste0("model and prior; approximation=",fit@approximation)),
+    capabilities=list(mean=TRUE,variance=TRUE,quantile=TRUE,sample=TRUE))
+}
+
+#' Convert posterior diagnostic summaries into structured warnings
+#' @export
+smf_bayes_diagnostic_flags <- function(summary, divergences=0L, rhat_max=1.01, min_ess=400L) {
+  if(!is.data.frame(summary)) summary<-as.data.frame(summary)
+  warnings<-list()
+  if("rhat" %in% names(summary) && any(is.finite(summary$rhat) & summary$rhat>rhat_max,na.rm=TRUE)) warnings[[length(warnings)+1L]]<-smf_warning_record("MCMC_RHAT_HIGH","At least one posterior variable has R-hat above the declared threshold.","high",evidence=list(threshold=rhat_max),suggested_action="Increase effective sampling, inspect chains, and reconsider model geometry.")
+  low_ess <- ("ess_bulk" %in% names(summary) && any(is.finite(summary$ess_bulk) & summary$ess_bulk<min_ess,na.rm=TRUE)) || ("ess_tail" %in% names(summary) && any(is.finite(summary$ess_tail) & summary$ess_tail<min_ess,na.rm=TRUE))
+  if(low_ess) warnings[[length(warnings)+1L]]<-smf_warning_record("MCMC_ESS_LOW","At least one posterior variable has low effective sample size.","high",evidence=list(threshold=min_ess),suggested_action="Increase effective sampling and inspect posterior geometry.")
+  if(is.finite(divergences) && divergences>0L) warnings[[length(warnings)+1L]]<-smf_warning_record("MCMC_DIVERGENCES","Divergent transitions were detected.","blocking",evidence=list(n=as.integer(divergences)),suggested_action="Do not interpret the posterior until the sampling pathology is resolved.",override_allowed=FALSE)
+  warnings
+}
+
+#' Diagnose Bayesian posterior computation
+#' @export
+smf_bayes_diagnose <- function(fit, rhat_max=1.01, min_ess=400L) {
+  if(!S7::S7_inherits(fit,BayesFitResult)) cli::cli_abort("{.arg fit} must be a BayesFitResult.")
+  thresholds<-list(rhat_max=rhat_max,min_ess=as.integer(min_ess))
+  if(fit@backend=="conjugate_gaussian") {
+    sm<-smf_bayes_summary(fit); return(BayesianDiagnosticResult(summary=sm,warnings=list(),thresholds=thresholds,provenance=list(method="closed_form_no_mcmc")))
+  }
+  if(!.smf_package_available("posterior")) .smf_abort("POSTERIOR_PACKAGE_UNAVAILABLE","Package posterior is required for MCMC diagnostics.",class="smf_capability_error")
+  dr<-posterior::as_draws(fit@fit); sm<-posterior::summarise_draws(dr,mean,sd,posterior::rhat,posterior::ess_bulk,posterior::ess_tail)
+  divergences<-0L
+  if(fit@backend=="brms") {
+    np<-tryCatch(brms::nuts_params(fit@fit),error=function(e) NULL)
+    if(!is.null(np) && all(c("Parameter","Value") %in% names(np))) divergences<-sum(np$Parameter=="divergent__" & np$Value==1)
+  }
+  warnings<-smf_bayes_diagnostic_flags(sm,divergences=divergences,rhat_max=rhat_max,min_ess=min_ess)
+  BayesianDiagnosticResult(summary=sm,warnings=warnings,thresholds=thresholds,provenance=list(method="posterior_diagnostics",divergences=divergences,approximation=fit@approximation))
+}
+
+#' Posterior predictive checks using numerical summaries
+#' @export
+smf_bayes_pp_check <- function(fit, new_data, truth, ndraws=500L, seed=260917L) {
+  dist<-smf_bayes_predict(fit,new_data,ndraws=ndraws,seed=seed); s<-as.matrix(dist@payload$samples); y<-as.numeric(truth)
+  if(nrow(s)!=length(y)) cli::cli_abort("{.arg truth} length must match prediction rows.")
+  rep_mean<-colMeans(s); rep_sd<-apply(s,2L,stats::sd)
+  data.frame(statistic=c("mean","sd"),observed=c(mean(y),stats::sd(y)),posterior_predictive_mean=c(mean(rep_mean),mean(rep_sd)),
+    tail_probability=c(mean(rep_mean<=mean(y)),mean(rep_sd<=stats::sd(y))),row.names=NULL)
+}
+
+#' Compute PSIS-LOO for a Bayesian fit
+#' @export
+smf_bayes_loo <- function(fit) {
+  if(!.smf_package_available("loo")) .smf_abort("LOO_PACKAGE_UNAVAILABLE","Package loo is required for PSIS-LOO.",class="smf_capability_error")
+  if(fit@backend=="brms") return(brms::loo(fit@fit))
+  X<-fit@fit$X; y<-fit@fit$y; d<-fit@draws; beta<-d[,fit@fit$coefficient_names,drop=FALSE]; sigma<-d[,"sigma"]
+  mu<-beta %*% t(X); ll<-matrix(NA_real_,nrow(d),length(y)); for(i in seq_len(nrow(d))) ll[i,]<-stats::dnorm(y,mu[i,],sigma[i],log=TRUE)
+  loo::loo(ll)
+}
+
+#' Compare Bayesian models by PSIS-LOO
+#' @export
+smf_bayes_compare <- function(...) {
+  if(!.smf_package_available("loo")) .smf_abort("LOO_PACKAGE_UNAVAILABLE","Package loo is required for Bayesian model comparison.",class="smf_capability_error")
+  xs<-list(...); if(!length(xs)) cli::cli_abort("Provide at least one Bayesian fit or loo object.")
+  loos<-lapply(xs,function(x) if(S7::S7_inherits(x,BayesFitResult)) smf_bayes_loo(x) else x)
+  do.call(loo::loo_compare,loos)
+}
+
+#' Compute Bayesian stacking weights
+#' @export
+smf_bayes_stacking <- function(..., method="stacking") {
+  if(!.smf_package_available("loo")) .smf_abort("LOO_PACKAGE_UNAVAILABLE","Package loo is required for Bayesian model weights.",class="smf_capability_error")
+  xs<-list(...); loos<-lapply(xs,function(x) if(S7::S7_inherits(x,BayesFitResult)) smf_bayes_loo(x) else x)
+  loo::loo_model_weights(loos,method=method)
+}
+
+S7::method(print, BayesFitResult) <- function(x, ...) { cat("<sciModelFlowR BayesFitResult>\n  backend: ",x@backend,"\n  approximation: ",x@approximation,"\n",sep=""); invisible(x) }
+S7::method(print, BayesianDiagnosticResult) <- function(x, ...) { cat("<sciModelFlowR BayesianDiagnosticResult>\n  warnings: ",length(x@warnings),"\n",sep=""); invisible(x) }
+S7::method(print, GPFitResult) <- function(x, ...) { cat("<sciModelFlowR GPFitResult>\n  backend: ",x@backend,"\n  approximation: ",x@approximation,"\n",sep=""); invisible(x) }
+S7::method(print, BARTFitResult) <- function(x, ...) { cat("<sciModelFlowR BARTFitResult>\n  backend: ",x@backend,"\n  task: ",x@task,"\n",sep=""); invisible(x) }

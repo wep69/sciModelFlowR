@@ -1,0 +1,20 @@
+test_that("normal PredictionDistribution supports core operations", {
+  d <- smf_prediction_distribution("parametric", list(distribution="normal",mean=c(0,1),sd=c(1,2)))
+  expect_equal(smf_dist_mean(d),c(0,1))
+  expect_equal(smf_dist_variance(d),c(1,4))
+  q <- smf_dist_quantile(d,c(.025,.975))
+  expect_equal(dim(q),c(2,2))
+  expect_equal(smf_dist_interval(d,.95),q,tolerance=1e-8)
+  expect_true(all(is.finite(smf_dist_log_prob(d,c(0,1)))))
+})
+
+test_that("class probabilities are normalized and scoreable", {
+  p <- cbind(no=c(.8,.3,.2,.7), yes=c(.2,.7,.8,.3))
+  y <- factor(c("no","yes","yes","no"),levels=c("no","yes"))
+  d <- smf_prediction_distribution("class_probabilities",list(prob=p,classes=colnames(p)))
+  s <- smf_evaluate_probabilistic(y,d,c("log_loss","brier","ece"))
+  expect_equal(nrow(s),3L)
+  expect_true(all(is.finite(s$value)))
+  p[1,] <- c(.9,.2)
+  expect_error(sciModelFlowR::smf_calibration_report(y,p),class="smf_validation_error")
+})

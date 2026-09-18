@@ -1,0 +1,485 @@
+---
+title: "Validation, Gold Data, and Reproducibility"
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    code-fold: false
+execute:
+  echo: true
+  warning: true
+  message: false
+---
+
+# Validation, Gold Data, and Reproducibility
+
+Scientific package validation requires more than successful execution. It combines known-truth fixtures, independent numerical references, invariants, artifact integrity, environment capture, and honest separation between checks actually run and checks still pending.
+
+
+> This focused vignette uses `gold_linear_regression`, a frozen synthetic Gold dataset. It is instructional and validation material, not field evidence.
+
+## 1. Learning objectives
+
+By the end of this vignette, the reader should be able to:
+
+- distinguish unit, integration, numerical, golden, invariant, and simulation tests
+- verify Gold dataset hashes and documented known truth
+- perform backend differential testing
+- interpret hashes and seeds correctly
+- construct and save a reproducibility manifest
+- design R-Python cross-language tests around shared semantics
+
+## 2. Why this topic matters scientifically
+
+Scientific package validation requires more than successful execution. It combines known-truth fixtures, independent numerical references, invariants, artifact integrity, environment capture, and honest separation between checks actually run and checks still pending. A scientifically strong workflow makes the relevant information boundary explicit before model fitting. The package therefore represents this topic as a contract that can be inspected, serialized, tested, and carried into later modules.
+
+The main risk is not simply a software exception. A workflow can execute successfully and still answer a different scientific question from the one stated by the researcher. This vignette emphasizes how to detect that mismatch, how to document it, and how to avoid turning a convenient default into an unjustified assumption.
+
+## 3. Functions used
+
+```r
+smf_run_gold_validation()
+```
+
+## 4. Scientific target
+
+Begin by stating what future observation, group, time, or domain the analysis is intended to generalize to. A validation design is meaningful only relative to that target.
+
+For `gold_linear_regression`, this principle can be inspected directly because the generator and expected structure are documented. The exercise should begin with the scientific declaration, then use the package guard or result object to inspect evidence. The goal is not to make the software choose the scientific question automatically. The goal is to prevent that question from disappearing between data preparation and model reporting.
+
+When adapting the example to empirical data, document what differs from the Gold scenario: sampling frame, unit, dependence, missingness, measurement process, target domain, and any transformations performed outside the package. Those differences can change the correct validation strategy even when the R function call looks similar.
+
+```r
+#| eval: false
+smf_run_gold_validation()
+```
+
+## 5. Unit of analysis
+
+Rows are storage units, not automatically independent scientific units. Record the unit that was sampled, randomized, repeatedly measured, or spatially located.
+
+For `gold_linear_regression`, this principle can be inspected directly because the generator and expected structure are documented. The exercise should begin with the scientific declaration, then use the package guard or result object to inspect evidence. The goal is not to make the software choose the scientific question automatically. The goal is to prevent that question from disappearing between data preparation and model reporting.
+
+When adapting the example to empirical data, document what differs from the Gold scenario: sampling frame, unit, dependence, missingness, measurement process, target domain, and any transformations performed outside the package. Those differences can change the correct validation strategy even when the R function call looks similar.
+
+```r
+#| eval: false
+d <- smf_load_dataset("gold_linear_regression")
+smf_dataset_card("gold_linear_regression")
+```
+
+## 6. Specification before computation
+
+Use package-native specs to make assumptions inspectable before a model is fitted. This avoids reconstructing scientific intent from backend formulas after the fact.
+
+For `gold_linear_regression`, this principle can be inspected directly because the generator and expected structure are documented. The exercise should begin with the scientific declaration, then use the package guard or result object to inspect evidence. The goal is not to make the software choose the scientific question automatically. The goal is to prevent that question from disappearing between data preparation and model reporting.
+
+When adapting the example to empirical data, document what differs from the Gold scenario: sampling frame, unit, dependence, missingness, measurement process, target domain, and any transformations performed outside the package. Those differences can change the correct validation strategy even when the R function call looks similar.
+
+```r
+#| eval: false
+smf_hash(smf_task_spec("regression","yield"))
+```
+
+## 7. Evidence and severity
+
+Separate a detected violation from a heuristic warning. Strong evidence can block a managed workflow, whereas an ambiguous signal should trigger provenance review rather than automatic deletion.
+
+For `gold_linear_regression`, this principle can be inspected directly because the generator and expected structure are documented. The exercise should begin with the scientific declaration, then use the package guard or result object to inspect evidence. The goal is not to make the software choose the scientific question automatically. The goal is to prevent that question from disappearing between data preparation and model reporting.
+
+When adapting the example to empirical data, document what differs from the Gold scenario: sampling frame, unit, dependence, missingness, measurement process, target domain, and any transformations performed outside the package. Those differences can change the correct validation strategy even when the R function call looks similar.
+
+```r
+#| eval: false
+result <- smf_fit_experiment(spec, d)
+smf_manifest(result)
+```
+
+## 8. Portable metadata
+
+Stable IDs, hashes, and serialized specs allow another implementation or another analyst to reproduce membership and meaning without copying R internal objects.
+
+For `gold_linear_regression`, this principle can be inspected directly because the generator and expected structure are documented. The exercise should begin with the scientific declaration, then use the package guard or result object to inspect evidence. The goal is not to make the software choose the scientific question automatically. The goal is to prevent that question from disappearing between data preparation and model reporting.
+
+When adapting the example to empirical data, document what differs from the Gold scenario: sampling frame, unit, dependence, missingness, measurement process, target domain, and any transformations performed outside the package. Those differences can change the correct validation strategy even when the R function call looks similar.
+
+```r
+#| eval: false
+smf_save_manifest(result, "manifest.json")
+```
+
+## 9. Training boundary
+
+Any statistic learned from data belongs to a fitting boundary. Imputation, centering, encoding, feature selection, calibration, and tuning must not learn from final test labels.
+
+For `gold_linear_regression`, this principle can be inspected directly because the generator and expected structure are documented. The exercise should begin with the scientific declaration, then use the package guard or result object to inspect evidence. The goal is not to make the software choose the scientific question automatically. The goal is to prevent that question from disappearing between data preparation and model reporting.
+
+When adapting the example to empirical data, document what differs from the Gold scenario: sampling frame, unit, dependence, missingness, measurement process, target domain, and any transformations performed outside the package. Those differences can change the correct validation strategy even when the R function call looks similar.
+
+## 10. Diagnostics before interpretation
+
+A successful optimizer or model fit is only the start. Diagnostics ask whether the fitted object behaves consistently with the scientific assumptions and intended output.
+
+For `gold_linear_regression`, this principle can be inspected directly because the generator and expected structure are documented. The exercise should begin with the scientific declaration, then use the package guard or result object to inspect evidence. The goal is not to make the software choose the scientific question automatically. The goal is to prevent that question from disappearing between data preparation and model reporting.
+
+When adapting the example to empirical data, document what differs from the Gold scenario: sampling frame, unit, dependence, missingness, measurement process, target domain, and any transformations performed outside the package. Those differences can change the correct validation strategy even when the R function call looks similar.
+
+## 11. Observed data and estimates
+
+When feasible, show observations with fitted or predicted quantities. This makes scale, support, unusual cases, and uncertainty visible instead of hiding them behind one summary metric.
+
+For `gold_linear_regression`, this principle can be inspected directly because the generator and expected structure are documented. The exercise should begin with the scientific declaration, then use the package guard or result object to inspect evidence. The goal is not to make the software choose the scientific question automatically. The goal is to prevent that question from disappearing between data preparation and model reporting.
+
+When adapting the example to empirical data, document what differs from the Gold scenario: sampling frame, unit, dependence, missingness, measurement process, target domain, and any transformations performed outside the package. Those differences can change the correct validation strategy even when the R function call looks similar.
+
+## 12. Uncertainty language
+
+Name the source and target of uncertainty. Sampling variation, resampling variation, posterior uncertainty, predictive uncertainty, and conformal coverage have different interpretations.
+
+For `gold_linear_regression`, this principle can be inspected directly because the generator and expected structure are documented. The exercise should begin with the scientific declaration, then use the package guard or result object to inspect evidence. The goal is not to make the software choose the scientific question automatically. The goal is to prevent that question from disappearing between data preparation and model reporting.
+
+When adapting the example to empirical data, document what differs from the Gold scenario: sampling frame, unit, dependence, missingness, measurement process, target domain, and any transformations performed outside the package. Those differences can change the correct validation strategy even when the R function call looks similar.
+
+## 13. Reproducibility manifest
+
+Record versions, hashes, seeds, split membership, preprocessing identity, warnings, and outputs. Reproducibility metadata should be generated by the workflow, not reconstructed later.
+
+For `gold_linear_regression`, this principle can be inspected directly because the generator and expected structure are documented. The exercise should begin with the scientific declaration, then use the package guard or result object to inspect evidence. The goal is not to make the software choose the scientific question automatically. The goal is to prevent that question from disappearing between data preparation and model reporting.
+
+When adapting the example to empirical data, document what differs from the Gold scenario: sampling frame, unit, dependence, missingness, measurement process, target domain, and any transformations performed outside the package. Those differences can change the correct validation strategy even when the R function call looks similar.
+
+## 14. Failure mode
+
+A tempting shortcut can create optimistic evidence while leaving no software error. Teaching an incorrect path is useful when the package can explain why it is inappropriate.
+
+For `gold_linear_regression`, this principle can be inspected directly because the generator and expected structure are documented. The exercise should begin with the scientific declaration, then use the package guard or result object to inspect evidence. The goal is not to make the software choose the scientific question automatically. The goal is to prevent that question from disappearing between data preparation and model reporting.
+
+When adapting the example to empirical data, document what differs from the Gold scenario: sampling frame, unit, dependence, missingness, measurement process, target domain, and any transformations performed outside the package. Those differences can change the correct validation strategy even when the R function call looks similar.
+
+## 15. External validity
+
+Performance is conditional on the held-out domain. Avoid language about universal generalization when the validation data do not represent the intended population, season, region, instrument, or management context.
+
+For `gold_linear_regression`, this principle can be inspected directly because the generator and expected structure are documented. The exercise should begin with the scientific declaration, then use the package guard or result object to inspect evidence. The goal is not to make the software choose the scientific question automatically. The goal is to prevent that question from disappearing between data preparation and model reporting.
+
+When adapting the example to empirical data, document what differs from the Gold scenario: sampling frame, unit, dependence, missingness, measurement process, target domain, and any transformations performed outside the package. Those differences can change the correct validation strategy even when the R function call looks similar.
+
+## 16. Cross-language parity
+
+R and Python should agree on scientific semantics and frozen membership, not internal syntax. Shared CSV/JSON fixtures make meaningful differential tests possible.
+
+For `gold_linear_regression`, this principle can be inspected directly because the generator and expected structure are documented. The exercise should begin with the scientific declaration, then use the package guard or result object to inspect evidence. The goal is not to make the software choose the scientific question automatically. The goal is to prevent that question from disappearing between data preparation and model reporting.
+
+When adapting the example to empirical data, document what differs from the Gold scenario: sampling frame, unit, dependence, missingness, measurement process, target domain, and any transformations performed outside the package. Those differences can change the correct validation strategy even when the R function call looks similar.
+
+## 17. Testing strategy
+
+Combine unit, integration, numerical, golden, invariant, and simulation tests. Each catches a different class of defect; no one style substitutes for all others.
+
+For `gold_linear_regression`, this principle can be inspected directly because the generator and expected structure are documented. The exercise should begin with the scientific declaration, then use the package guard or result object to inspect evidence. The goal is not to make the software choose the scientific question automatically. The goal is to prevent that question from disappearing between data preparation and model reporting.
+
+When adapting the example to empirical data, document what differs from the Gold scenario: sampling frame, unit, dependence, missingness, measurement process, target domain, and any transformations performed outside the package. Those differences can change the correct validation strategy even when the R function call looks similar.
+
+## 18. Reporting discipline
+
+Report the design, validation geometry, preprocessing boundary, metrics, warnings, and limitations along with the fitted model. A model table alone is incomplete.
+
+For `gold_linear_regression`, this principle can be inspected directly because the generator and expected structure are documented. The exercise should begin with the scientific declaration, then use the package guard or result object to inspect evidence. The goal is not to make the software choose the scientific question automatically. The goal is to prevent that question from disappearing between data preparation and model reporting.
+
+When adapting the example to empirical data, document what differs from the Gold scenario: sampling frame, unit, dependence, missingness, measurement process, target domain, and any transformations performed outside the package. Those differences can change the correct validation strategy even when the R function call looks similar.
+
+## 19. Escalating complexity
+
+Add a more complex method only when it solves a stated problem. The package roadmap is staged so new engines do not redefine earlier scientific contracts.
+
+For `gold_linear_regression`, this principle can be inspected directly because the generator and expected structure are documented. The exercise should begin with the scientific declaration, then use the package guard or result object to inspect evidence. The goal is not to make the software choose the scientific question automatically. The goal is to prevent that question from disappearing between data preparation and model reporting.
+
+When adapting the example to empirical data, document what differs from the Gold scenario: sampling frame, unit, dependence, missingness, measurement process, target domain, and any transformations performed outside the package. Those differences can change the correct validation strategy even when the R function call looks similar.
+
+## 20. Review questions
+
+A reviewer should be able to ask which rows informed each learned step, which units crossed partitions, what the test set represents, and how warnings were handled.
+
+For `gold_linear_regression`, this principle can be inspected directly because the generator and expected structure are documented. The exercise should begin with the scientific declaration, then use the package guard or result object to inspect evidence. The goal is not to make the software choose the scientific question automatically. The goal is to prevent that question from disappearing between data preparation and model reporting.
+
+When adapting the example to empirical data, document what differs from the Gold scenario: sampling frame, unit, dependence, missingness, measurement process, target domain, and any transformations performed outside the package. Those differences can change the correct validation strategy even when the R function call looks similar.
+
+## 21. Connection to later versions
+
+The 0.1.0 contract becomes input to full resampling, bootstrap, tuning, probabilistic, Bayesian, and Deep-Learning modules. Preserving meaning now reduces migration later.
+
+For `gold_linear_regression`, this principle can be inspected directly because the generator and expected structure are documented. The exercise should begin with the scientific declaration, then use the package guard or result object to inspect evidence. The goal is not to make the software choose the scientific question automatically. The goal is to prevent that question from disappearing between data preparation and model reporting.
+
+When adapting the example to empirical data, document what differs from the Gold scenario: sampling frame, unit, dependence, missingness, measurement process, target domain, and any transformations performed outside the package. Those differences can change the correct validation strategy even when the R function call looks similar.
+
+## 22. Scientifically inappropriate workflow
+
+An inappropriate validation strategy is to declare the package validated because examples render or because a screenshot has not changed. Visual regression tests can detect presentation changes, but they cannot establish numerical correctness, coverage, absence of leakage, backend equivalence, or statistical calibration. Another error is to report a runtime test as passed when it was never executed in the current environment.
+
+The package should make this problem visible through a structured warning or blocking condition whenever enough evidence is available. If the situation is ambiguous, the correct response is to document the uncertainty and inspect provenance, not to silently repair the data.
+
+## 23. Interpretation guide
+
+Interpretation should move from design validity to data quality, then validation geometry, then fitted behavior, then performance, then uncertainty and limitations. This order reduces the chance that a favorable metric dominates decisions that should have been made earlier.
+
+A scientifically appropriate conclusion is conditional: it states what was predicted, for which held-out units or domain, under which preprocessing and model, with which uncertainty and diagnostic evidence. It should not claim causal effects from a predictive workflow or geographic/temporal transfer beyond the validation evidence.
+
+## 24. Reporting checklist
+
+- [ ] Gold generator and hash recorded;
+- [ ] known truth or expected behavior documented;
+- [ ] numerical comparison uses an independent or backend-native reference;
+- [ ] tolerances justified by deterministic or stochastic behavior;
+- [ ] split invariants tested;
+- [ ] serialization round-trip tested;
+- [ ] optional dependency absence tested;
+- [ ] R version and package versions captured;
+- [ ] runtime checks distinguished from static checks;
+- [ ] local commands supplied for checks not run here.
+
+## 25. Connection to the complete workflow
+
+- Freeze validation scenarios before generating publication evidence.
+- For statistical simulation tests, use predeclared acceptance bands designed to avoid both false confidence and flaky failures.
+
+The next vignette should be read as an extension of this contract rather than as an unrelated collection of functions. The stable scientific grammar is what allows the package to expand while keeping results comparable and auditable.
+
+## Appendix. Applied review cases
+
+### Case 1
+
+A researcher changes only the random seed and obtains another split. The package should make the changed split hash visible so the new estimate is not confused with the previous result.
+
+A useful review response should identify the affected contract, the evidence available, whether the issue changes the estimand or validation target, and what must be rerun. The response should not be reduced to whether the software produced an error.
+
+### Case 2
+
+A collaborator sends a CSV with identical values but rows in a different order. An ID-based external manifest can recover the intended membership without depending on row positions.
+
+A useful review response should identify the affected contract, the evidence available, whether the issue changes the estimand or validation target, and what must be rerun. The response should not be reduced to whether the software produced an error.
+
+### Case 3
+
+A high-performing predictor is later discovered to be recorded after the outcome. The correct action is to revise the predictor set and the scientific claim, not merely note the issue in discussion.
+
+A useful review response should identify the affected contract, the evidence available, whether the issue changes the estimand or validation target, and what must be rerun. The response should not be reduced to whether the software produced an error.
+
+### Case 4
+
+A model has slightly worse RMSE but cleaner external-domain behavior. The workflow should preserve both pieces of evidence rather than forcing a single automatic winner.
+
+A useful review response should identify the affected contract, the evidence available, whether the issue changes the estimand or validation target, and what must be rerun. The response should not be reduced to whether the software produced an error.
+
+### Case 5
+
+A manuscript reports a 95% interval without identifying its type. The result contract should provide enough metadata to label the interval correctly in tables and figures.
+
+A useful review response should identify the affected contract, the evidence available, whether the issue changes the estimand or validation target, and what must be rerun. The response should not be reduced to whether the software produced an error.
+
+### Case 6
+
+A reviewer asks whether preprocessing used held-out rows. The stored training hash and preprocessing provenance should answer the question directly.
+
+A useful review response should identify the affected contract, the evidence available, whether the issue changes the estimand or validation target, and what must be rerun. The response should not be reduced to whether the software produced an error.
+
+### Case 7
+
+Two language implementations use different RNG algorithms. They can still be tested on the same frozen split IDs and expected numerical quantities.
+
+A useful review response should identify the affected contract, the evidence available, whether the issue changes the estimand or validation target, and what must be rerun. The response should not be reduced to whether the software produced an error.
+
+### Case 8
+
+An optional backend is missing on one computer. Core auditing, design inspection, Gold data, and manifests should remain available rather than making the whole package unloadable.
+
+A useful review response should identify the affected contract, the evidence available, whether the issue changes the estimand or validation target, and what must be rerun. The response should not be reduced to whether the software produced an error.
+
+
+## Extended methodological notes
+
+### Note 1
+
+When a workflow is adapted to a new study, begin by rewriting the scientific question in terms of a target population and prediction time. This often reveals that a convenient random split is answering the wrong question. The package can encode constraints, but the user remains responsible for defining the intended domain.
+
+### Note 2
+
+Keep provenance columns even when they are excluded from model predictors. Site, season, instrument, plant, plot, subject, acquisition date, and processing batch can be essential for auditing dependence or shift. Removing them early may make leakage impossible to diagnose later.
+
+### Note 3
+
+Prefer explicit failure over a scientifically different fallback. If a requested method is unsupported, the workflow should name the missing capability and propose alternatives while preserving the scientific target. Silent substitution makes results difficult to compare and can change uncertainty semantics.
+
+### Note 4
+
+Separate descriptive summaries from inferential or predictive evidence. Descriptive means and missingness tables are useful for understanding support, but they do not account for design, validation, model uncertainty, or multiplicity. Documentation should label these roles clearly.
+
+### Note 5
+
+Use stable objects and manifests to make revisions auditable. When a manuscript revision changes predictors, grouping, preprocessing, or test membership, the corresponding hash should change. This makes it easier to identify why a result differs from an earlier draft.
+
+### Note 6
+
+Do not treat simulation as empirical validation of a substantive agricultural claim. Simulation can validate the statistical behavior of software under a known data-generating process. Evidence about real crops, soils, climates, sensors, or populations requires appropriately collected empirical data.
+
+### Note 7
+
+A warning should carry evidence and an action. Messages that merely say something is suspicious are difficult to review. Structured warnings allow reports to distinguish what was detected, why severity was assigned, and whether the user overrode the safeguard.
+
+### Note 8
+
+Testing should focus on meaning. A numerical adapter test should compare predictions or estimands with a trusted reference. A serialization test should compare reconstructed semantics. Exact formatting is only important when formatting itself is part of a stable public contract.
+
+### Note 9
+
+When a workflow is adapted to a new study, begin by rewriting the scientific question in terms of a target population and prediction time. This often reveals that a convenient random split is answering the wrong question. The package can encode constraints, but the user remains responsible for defining the intended domain.
+
+### Note 10
+
+Keep provenance columns even when they are excluded from model predictors. Site, season, instrument, plant, plot, subject, acquisition date, and processing batch can be essential for auditing dependence or shift. Removing them early may make leakage impossible to diagnose later.
+
+### Note 11
+
+Prefer explicit failure over a scientifically different fallback. If a requested method is unsupported, the workflow should name the missing capability and propose alternatives while preserving the scientific target. Silent substitution makes results difficult to compare and can change uncertainty semantics.
+
+### Note 12
+
+Separate descriptive summaries from inferential or predictive evidence. Descriptive means and missingness tables are useful for understanding support, but they do not account for design, validation, model uncertainty, or multiplicity. Documentation should label these roles clearly.
+
+### Note 13
+
+Use stable objects and manifests to make revisions auditable. When a manuscript revision changes predictors, grouping, preprocessing, or test membership, the corresponding hash should change. This makes it easier to identify why a result differs from an earlier draft.
+
+### Note 14
+
+Do not treat simulation as empirical validation of a substantive agricultural claim. Simulation can validate the statistical behavior of software under a known data-generating process. Evidence about real crops, soils, climates, sensors, or populations requires appropriately collected empirical data.
+
+### Note 15
+
+A warning should carry evidence and an action. Messages that merely say something is suspicious are difficult to review. Structured warnings allow reports to distinguish what was detected, why severity was assigned, and whether the user overrode the safeguard.
+
+### Note 16
+
+Testing should focus on meaning. A numerical adapter test should compare predictions or estimands with a trusted reference. A serialization test should compare reconstructed semantics. Exact formatting is only important when formatting itself is part of a stable public contract.
+
+### Note 17
+
+When a workflow is adapted to a new study, begin by rewriting the scientific question in terms of a target population and prediction time. This often reveals that a convenient random split is answering the wrong question. The package can encode constraints, but the user remains responsible for defining the intended domain.
+
+### Note 18
+
+Keep provenance columns even when they are excluded from model predictors. Site, season, instrument, plant, plot, subject, acquisition date, and processing batch can be essential for auditing dependence or shift. Removing them early may make leakage impossible to diagnose later.
+
+### Note 19
+
+Prefer explicit failure over a scientifically different fallback. If a requested method is unsupported, the workflow should name the missing capability and propose alternatives while preserving the scientific target. Silent substitution makes results difficult to compare and can change uncertainty semantics.
+
+### Note 20
+
+Separate descriptive summaries from inferential or predictive evidence. Descriptive means and missingness tables are useful for understanding support, but they do not account for design, validation, model uncertainty, or multiplicity. Documentation should label these roles clearly.
+
+### Note 21
+
+Use stable objects and manifests to make revisions auditable. When a manuscript revision changes predictors, grouping, preprocessing, or test membership, the corresponding hash should change. This makes it easier to identify why a result differs from an earlier draft.
+
+### Note 22
+
+Do not treat simulation as empirical validation of a substantive agricultural claim. Simulation can validate the statistical behavior of software under a known data-generating process. Evidence about real crops, soils, climates, sensors, or populations requires appropriately collected empirical data.
+
+### Note 23
+
+A warning should carry evidence and an action. Messages that merely say something is suspicious are difficult to review. Structured warnings allow reports to distinguish what was detected, why severity was assigned, and whether the user overrode the safeguard.
+
+### Note 24
+
+Testing should focus on meaning. A numerical adapter test should compare predictions or estimands with a trusted reference. A serialization test should compare reconstructed semantics. Exact formatting is only important when formatting itself is part of a stable public contract.
+
+### Note 25
+
+When a workflow is adapted to a new study, begin by rewriting the scientific question in terms of a target population and prediction time. This often reveals that a convenient random split is answering the wrong question. The package can encode constraints, but the user remains responsible for defining the intended domain.
+
+### Note 26
+
+Keep provenance columns even when they are excluded from model predictors. Site, season, instrument, plant, plot, subject, acquisition date, and processing batch can be essential for auditing dependence or shift. Removing them early may make leakage impossible to diagnose later.
+
+### Note 27
+
+Prefer explicit failure over a scientifically different fallback. If a requested method is unsupported, the workflow should name the missing capability and propose alternatives while preserving the scientific target. Silent substitution makes results difficult to compare and can change uncertainty semantics.
+
+### Note 28
+
+Separate descriptive summaries from inferential or predictive evidence. Descriptive means and missingness tables are useful for understanding support, but they do not account for design, validation, model uncertainty, or multiplicity. Documentation should label these roles clearly.
+
+### Note 29
+
+Use stable objects and manifests to make revisions auditable. When a manuscript revision changes predictors, grouping, preprocessing, or test membership, the corresponding hash should change. This makes it easier to identify why a result differs from an earlier draft.
+
+### Note 30
+
+Do not treat simulation as empirical validation of a substantive agricultural claim. Simulation can validate the statistical behavior of software under a known data-generating process. Evidence about real crops, soils, climates, sensors, or populations requires appropriately collected empirical data.
+
+### Note 31
+
+A warning should carry evidence and an action. Messages that merely say something is suspicious are difficult to review. Structured warnings allow reports to distinguish what was detected, why severity was assigned, and whether the user overrode the safeguard.
+
+### Note 32
+
+Testing should focus on meaning. A numerical adapter test should compare predictions or estimands with a trusted reference. A serialization test should compare reconstructed semantics. Exact formatting is only important when formatting itself is part of a stable public contract.
+
+### Note 33
+
+When a workflow is adapted to a new study, begin by rewriting the scientific question in terms of a target population and prediction time. This often reveals that a convenient random split is answering the wrong question. The package can encode constraints, but the user remains responsible for defining the intended domain.
+
+### Note 34
+
+Keep provenance columns even when they are excluded from model predictors. Site, season, instrument, plant, plot, subject, acquisition date, and processing batch can be essential for auditing dependence or shift. Removing them early may make leakage impossible to diagnose later.
+
+### Note 35
+
+Prefer explicit failure over a scientifically different fallback. If a requested method is unsupported, the workflow should name the missing capability and propose alternatives while preserving the scientific target. Silent substitution makes results difficult to compare and can change uncertainty semantics.
+
+### Note 36
+
+Separate descriptive summaries from inferential or predictive evidence. Descriptive means and missingness tables are useful for understanding support, but they do not account for design, validation, model uncertainty, or multiplicity. Documentation should label these roles clearly.
+
+### Note 37
+
+Use stable objects and manifests to make revisions auditable. When a manuscript revision changes predictors, grouping, preprocessing, or test membership, the corresponding hash should change. This makes it easier to identify why a result differs from an earlier draft.
+
+### Note 38
+
+Do not treat simulation as empirical validation of a substantive agricultural claim. Simulation can validate the statistical behavior of software under a known data-generating process. Evidence about real crops, soils, climates, sensors, or populations requires appropriately collected empirical data.
+
+### Note 39
+
+A warning should carry evidence and an action. Messages that merely say something is suspicious are difficult to review. Structured warnings allow reports to distinguish what was detected, why severity was assigned, and whether the user overrode the safeguard.
+
+### Note 40
+
+Testing should focus on meaning. A numerical adapter test should compare predictions or estimands with a trusted reference. A serialization test should compare reconstructed semantics. Exact formatting is only important when formatting itself is part of a stable public contract.
+
+### Note 41
+
+When a workflow is adapted to a new study, begin by rewriting the scientific question in terms of a target population and prediction time. This often reveals that a convenient random split is answering the wrong question. The package can encode constraints, but the user remains responsible for defining the intended domain.
+
+
+### Final teaching note
+
+A focused vignette is intentionally shorter than the integrating tutorial, but it should still present a complete scientific workflow. The reader should be able to identify the question, declare the relevant design, inspect a tempting incorrect path, run the package safeguard, interpret the evidence, and finish with a reproducibility and reporting checklist. The aim is not to repeat the central tutorial verbatim. It is to deepen one decision while preserving the same analysis grammar, terminology, warning semantics, Gold-data policy, and distinction between descriptive summaries and inferential or predictive evidence.
+
+
+## Release-series validation principle
+
+Validation evidence must remain traceable to the exact source state that produced it. A later package version may preserve an earlier contract while changing implementation details, optional backend versions, numerical defaults, or dependency behavior. For that reason, the final consolidated validation cycle should execute version-specific fixtures and record which claims are inherited, which are rechecked, and which require new numerical evidence. Cross-language agreement should be evaluated on frozen scientific quantities and tolerances rather than on incidental object layouts or identical random-number streams. When an optional backend is unavailable, the corresponding claim remains unvalidated rather than being inferred from another engine. This separation between implementation completeness, static audit, numerical validation, and release certification is part of the scientific provenance of `sciModelFlowR`.
+
+## Release 0.4 note: validation evidence for adaptive search
+
+Reproducibility of tuning requires more than the selected parameter vector. Preserve the search-space definition, conditional rules, candidate or acquisition history, objective directions, inner split hashes, random seed, budget, failed trials, Pareto set, and any explicit compromise rule. For nested validation, preserve outer and inner manifests separately and label inner selection scores separately from outer generalization estimates. Cross-language validation should compare frozen configurations and scientific quantities rather than assuming identical pseudorandom sequences between R and Python.
+
+Validation logs should also record the compute environment used for adaptive search, because parallelism, backend versions, and stochastic learners can alter the exact path even when the scientific procedure is unchanged.
+
+Preserve those differences as provenance rather than silently normalizing them away.
+
+## 1.0.0 consolidation note
+
+In the 1.0.0 Consolidated Scientific Release, this workflow keeps the same scientific semantics established during development. The public function contract is frozen from 0.9.0; final certification changes evidence and backend status, not the design, leakage, uncertainty, or provenance rules taught in this vignette.
+

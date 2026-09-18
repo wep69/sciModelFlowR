@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "parameters": {
+    "nrounds": {"type": "int", "lower": 50, "upper": 800, "log": true, "resource": true},
+    "params.eta": {"type": "dbl", "lower": 0.01, "upper": 0.30, "log": true},
+    "params.max_depth": {"type": "int", "lower": 2, "upper": 10, "log": false},
+    "params.booster": {"type": "fct", "values": ["gbtree", "dart"]},
+    "params.rate_drop": {"type": "dbl", "lower": 0.0, "upper": 0.5, "depends_on": {"param": "params.booster", "values": ["dart"]}}
+  }
+}

@@ -1,0 +1,12 @@
+id: deep-learning-architectures
+dataset: gold_dl_sequence
+learning_objectives:
+  - distinguish tabular, convolutional, recurrent, TCN, and attention input contracts
+  - validate tensor shape before training
+  - avoid silent flattening of structured modalities
+seed: 260916
+required_outputs:
+  - DLArchitecture
+required_assertions:
+  - tensor_shape_contract_enforced
+expected_warnings: []

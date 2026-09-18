@@ -1,0 +1,11 @@
+{
+  "fixture": "sciModelFlowR_batch_manifest_v1",
+  "schema_version": "1.0.0",
+  "n_rows": 12,
+  "batch_size": 5,
+  "batch_ranges": [[1,5],[6,10],[11,12]],
+  "resume_requires_same_data_hash": true,
+  "resume_requires_same_bundle_hash": true,
+  "checkpoint_checksum_required": true,
+  "row_order_must_be_preserved": true
+}

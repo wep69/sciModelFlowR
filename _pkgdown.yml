@@ -1,0 +1,56 @@
+url: https://walterufpb.github.io/sciModelFlowR/
+destination: docs
+template:
+  bootstrap: 5
+navbar:
+  structure:
+    left: [intro, reference, articles, news]
+articles:
+  - title: Foundations and validation
+    contents:
+      - v00-overview
+      - v01-foundations-to-advanced-scientific-modeling
+      - v02-data-audit-and-leakage
+      - v27-validation-and-reproducibility
+  - title: Resampling, bootstrap, and features
+    contents:
+      - v03-resampling-and-scientific-design
+      - v04-bootstrap-and-stability
+      - v05-feature-engineering-and-selection
+  - title: Supervised, probabilistic, and imbalance workflows
+    contents:
+      - v06-supervised-machine-learning
+      - v07-probabilistic-machine-learning
+      - v09-imbalance-calibration-and-thresholds
+  - title: Tuning and scientific benchmarking
+    contents:
+      - v08-tuning-and-scientific-benchmarking
+      - v19-complete-scientific-workflow
+  - title: Explainable AI and stability
+    contents:
+      - v10-explainable-ai-and-stability
+  - title: Deep Learning
+    contents:
+      - v11-deep-learning-foundations
+      - v12-deep-learning-architectures
+      - v13-probabilistic-deep-learning
+      - v14-deep-learning-xai-and-reproducibility
+  - title: Bayesian, conformal, and uncertainty
+    contents:
+      - v15-bayesian-modeling
+      - v16-bayesian-diagnostics-and-predictive-checking
+      - v17-conformal-prediction
+      - v18-full-uncertainty
+  - title: Tracking, persistence, and scalable inference
+    contents:
+      - v20-tracking-persistence-and-scalable-inference
+  - title: Scientific domain workflows
+    contents:
+      - v21-agronomy-soil-workflow
+      - v22-spectroscopy-phenotyping-workflow
+      - v23-spatial-environmental-workflow
+      - v24-protected-external-validation
+  - title: API, migration, and release governance
+    contents:
+      - v25-api-catalog
+      - v26-migration-and-deprecation

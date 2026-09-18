@@ -1,0 +1,20 @@
+test_that("conjugate Gaussian reference model recovers Gold coefficients", {
+  d <- smf_load_dataset("gold_bayesian_linear")
+  sp <- smf_bayesian_spec(priors=list(beta_mean=c(0,0,0),beta_sd=c(10,10,10),sigma_shape=2,sigma_rate=1),draws=3000L,seed=260917L)
+  fit <- smf_bayes_fit(y ~ x1 + x2,d,bayesian=sp,backend="conjugate_gaussian")
+  s <- smf_bayes_summary(fit)
+  expect_true(S7::S7_inherits(fit,sciModelFlowR:::BayesFitResult))
+  expect_lt(abs(s$mean[s$variable=="(Intercept)"]-1.5),0.20)
+  expect_lt(abs(s$mean[s$variable=="x1"]-2.0),0.15)
+  expect_lt(abs(s$mean[s$variable=="x2"]+1.0),0.15)
+  expect_lt(abs(s$mean[s$variable=="sigma"]-0.8),0.10)
+})
+
+test_that("posterior predictive distribution is typed", {
+  d <- smf_load_dataset("gold_bayesian_linear")
+  fit <- smf_bayes_fit(y ~ x1 + x2,d[1:400,],backend="conjugate_gaussian")
+  pr <- smf_bayes_predict(fit,d[401:410,c("x1","x2")],ndraws=200L)
+  expect_true(S7::S7_inherits(pr,sciModelFlowR:::PredictionDistribution))
+  expect_equal(pr@uncertainty@interval_type,"posterior_predictive")
+  expect_equal(dim(pr@payload$samples),c(10,200))
+})

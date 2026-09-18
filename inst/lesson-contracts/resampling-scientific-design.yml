@@ -1,0 +1,22 @@
+id: resampling-scientific-design-020
+release: 0.2.0
+datasets:
+  - gold_grouped_fields
+  - gold_time_climate
+  - gold_spatial_soil
+seed: 260915
+learning_objectives:
+  - choose validation geometry from scientific dependence
+  - prevent grouped entities from crossing folds
+  - preserve forward time ordering
+  - freeze split membership with stable IDs
+required_assertions:
+  - no_group_overlap
+  - temporal_train_precedes_assessment
+  - spatial_manifest_reproducible
+  - random_row_cv_blocked_for_grouped_design
+required_outputs:
+  - group_resample_manifest
+  - temporal_resample_manifest
+  - spatial_resample_manifest
+expected_warnings: []

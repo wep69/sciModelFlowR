@@ -1,0 +1,10 @@
+{
+  "fixture": "sciModelFlowR_tracking_run_v1",
+  "tracker": "local",
+  "status_transitions": ["running", "finished"],
+  "resume_running_run": true,
+  "resume_finished_run": false,
+  "required_run_fields": ["run_id", "experiment", "status", "started_at", "ended_at", "tags", "metadata"],
+  "metric_record_fields": ["name", "value", "step", "timestamp"],
+  "parameter_record_fields": ["name", "value"]
+}

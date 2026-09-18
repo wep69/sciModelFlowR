@@ -1,0 +1,13 @@
+test_that("local tracker starts, logs, ends, and resumes interrupted runs", {
+  root <- tempfile("tracker-"); tr <- smf_tracker_local(root,"demo")
+  run <- smf_start_run(tr,run_name="alpha",tags=list(stage="test"))
+  smf_log_metric(run,"rmse",1.2); smf_log_params(run,list(engine="stats"))
+  ended <- smf_end_run(run,"interrupted")
+  expect_equal(ended@status,"interrupted")
+  resumed <- smf_start_run(tr,resume_run_id=run@run_id)
+  expect_true(isTRUE(resumed@metadata$resumed))
+  final <- smf_end_run(resumed,"finished")
+  expect_equal(final@status,"finished")
+  expect_true(nrow(smf_list_runs(tr))==1L)
+  expect_error(smf_start_run(tr,resume_run_id=run@run_id),class="smf_tracking_error")
+})

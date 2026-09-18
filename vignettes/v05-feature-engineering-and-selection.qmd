@@ -1,0 +1,884 @@
+---
+title: "Feature Engineering and Selection: Learn Inside the Fold"
+format: html
+vignette: >
+  %\VignetteIndexEntry{Feature Engineering and Selection: Learn Inside the Fold}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# 1. Why this vignette exists
+
+Feature engineering and feature selection are often described as data preparation. That description is incomplete whenever a transformation learns something from the observed predictor distribution or from the response. In a predictive workflow, a learned preprocessing or selection step is part of model fitting and must obey the same training and validation boundaries as the estimator itself.
+
+This principle is central to `sciModelFlowR` 0.2.0. The package does not treat feature selection as an isolated convenience function. It records whether a step is supervised or unsupervised, whether it was learned from training data, whether it was fixed externally, and whether it was repeated inside resampling.
+
+The main rule is:
+
+**If a feature operation learns from the data used to evaluate the model, it can leak information. Fit it inside the training partition and apply the fitted state to assessment data.**
+
+This matters in agronomy, soil science, spectroscopy, remote sensing, phenotyping, climate modeling, and other domains where hundreds or thousands of correlated predictors are common. A small amount of leakage can make a model appear substantially more stable or accurate than it will be in a genuinely new field, year, specimen, image, or region.
+
+Version 0.2.0 completes the planned feature contract for this roadmap stage and provides fold-safe filters, subset selection, stability methods, and training-fitted PCA/PLS representations. Numerical and scientific certification of the full package remains part of the deferred consolidated local validation cycle.
+
+# 2. Learning objectives
+
+After completing this vignette, the reader should be able to:
+
+1. distinguish fixed domain transformations from data-learned feature operations;
+2. explain why supervised feature selection must be repeated inside resampling;
+3. use `SMFFeatureSpec` to declare feature processing before fitting;
+4. apply near-zero-variance and correlation filters on training data;
+5. interpret VIF as a collinearity diagnostic rather than a universal selection rule;
+6. use mutual information without treating a univariate association score as causal evidence;
+7. understand how regularized and tree-based selectors are exposed through optional backends;
+8. distinguish selection from representation learning;
+9. fit PCA and PLS only within the training boundary;
+10. quantify selection stability across resamples;
+11. understand why globally selected features produce optimistic validation;
+12. interpret correlated-feature instability scientifically;
+13. report selected features, selection frequency, resampling geometry, and uncertainty;
+14. recognize capabilities deliberately reserved for later certification;
+15. connect feature processing with the wider `sciModelFlowR` workflow.
+
+# 3. Function map
+
+The main 0.2.0 interfaces in this topic are:
+
+```r
+smf_feature_spec()
+smf_select_features()
+smf_build_representation()
+smf_feature_select_resamples()
+smf_feature_stability()
+smf_resample_experiment()
+```
+
+Related interfaces include:
+
+```r
+smf_resampling_spec()
+smf_make_resampler()
+smf_audit_data()
+smf_detect_leakage()
+smf_preprocess_spec()
+smf_experiment_spec()
+smf_resample_manifest()
+```
+
+The feature layer does not replace the resampling layer. It depends on it.
+
+# 4. The feature contract
+
+A feature operation is declared with `smf_feature_spec()`.
+
+```r
+feat <- smf_feature_spec(
+  method = "correlation",
+  threshold = 0.90,
+  supervised = FALSE
+)
+```
+
+Representative methods reserved by the public contract include:
+
+- `none`;
+- `nzv`;
+- `correlation`;
+- `vif`;
+- `mutual_information`;
+- `rfe`;
+- `sequential`;
+- `regularized`;
+- `tree`;
+- `stability`;
+- `pca`;
+- `pls`.
+
+The feature schema distinguishes filtering, subset search, model-based selection, stability selection, and representation learning. Version 0.2.0 implements near-zero-variance, correlation, VIF, mutual information, package-native RFE and sequential selection, optional regularized selection, optional tree selection, stability wrappers, PCA, and PLS. Optional engines remain capability-gated rather than silently substituted.
+
+This distinction is intentional. A public schema can remain stable while backend support matures behind the contract.
+
+# 5. Fixed transformations versus learned transformations
+
+Not every feature operation creates leakage.
+
+A transformation can be fixed by scientific definition before the data are observed. Examples include:
+
+- converting kilograms to grams;
+- expressing soil depth in centimetres;
+- calculating a vegetation index from a predefined physical formula;
+- applying a wavelength mask fixed by instrument specifications;
+- using a predeclared ratio motivated by domain knowledge.
+
+Other operations learn from the observed data:
+
+- centering by the sample mean;
+- scaling by the sample standard deviation;
+- estimating imputation values;
+- choosing a correlation threshold representative to keep;
+- ranking variables by mutual information with the response;
+- fitting a regularized regression path;
+- training a random forest to obtain importance;
+- estimating PCA loadings;
+- estimating PLS components.
+
+These operations must be fitted on training data only when their learned state can influence model evaluation.
+
+The distinction is not simply supervised versus unsupervised. PCA does not use the response, but fitting PCA on all observations before cross-validation still allows assessment observations to influence the coordinate system. That is leakage of predictor-distribution information.
+
+# 6. The correct workflow boundary
+
+The defensible sequence is:
+
+```text
+outer training fold
+      |
+      +-- fit preprocessing
+      |
+      +-- fit feature selection or representation
+      |
+      +-- fit model
+      |
+      +-- apply stored preprocessing state to assessment fold
+      |
+      +-- apply stored feature state to assessment fold
+      |
+      +-- predict assessment fold
+```
+
+The tempting but inappropriate sequence is:
+
+```text
+all data
+   |
+select features
+   |
+cross-validation
+   |
+report performance
+```
+
+The second workflow uses information from future assessment observations when deciding what the model is allowed to see. Even if no target values are used directly, a learned unsupervised representation can still leak information about the assessment distribution.
+
+# 7. Near-zero-variance filtering
+
+Near-zero-variance predictors can add computational burden and numerical instability without adding useful information.
+
+```r
+spec_nzv <- smf_feature_spec(
+  method = "nzv",
+  threshold = 0.01
+)
+
+sel_nzv <- smf_select_features(
+  data = train_data,
+  spec = spec_nzv,
+  context = "training"
+)
+```
+
+The result records selected variables, removed variables, method, and supporting scores when available.
+
+A low-variance variable should not be removed merely because its numerical variance is small in absolute units. Variance depends on scale. The scientific issue is whether the variable is essentially constant within the relevant training population.
+
+In designed experiments, a predictor can be constant within one fold because a treatment level or site is absent. That may be evidence of a problematic resampling geometry rather than a reason to silently remove the design variable.
+
+# 8. Correlation and redundancy filtering
+
+Strongly correlated predictors can create unstable coefficients, redundant model inputs, and diffuse importance across equivalent variables.
+
+```r
+spec_cor <- smf_feature_spec(
+  method = "correlation",
+  threshold = 0.90
+)
+
+sel_cor <- smf_select_features(
+  data = train_data,
+  spec = spec_cor,
+  context = "training"
+)
+```
+
+Correlation filtering is a redundancy rule, not a discovery of causal irrelevance. If wavelengths 720 and 722 nm are almost perfectly correlated, dropping one may improve numerical efficiency, but the retained wavelength should not be interpreted as uniquely biologically important.
+
+The selected representative can also vary across folds. That instability may reflect interchangeable correlated predictors rather than instability of the underlying signal.
+
+A scientifically useful report can therefore combine individual selection frequencies with grouped or domain-based interpretation.
+
+# 9. Variance inflation factor
+
+VIF is commonly used to diagnose linear collinearity. For a predictor \(X_j\),
+
+\[
+\mathrm{VIF}_j = \frac{1}{1-R_j^2},
+\]
+
+where \(R_j^2\) is obtained by regressing that predictor on the remaining predictors.
+
+A high VIF indicates that the predictor is well explained by the others under the linear auxiliary model. It does not prove that the variable is scientifically unnecessary, and a universal threshold should not be treated as a law.
+
+```r
+spec_vif <- smf_feature_spec(
+  method = "vif",
+  threshold = 10
+)
+```
+
+For highly dimensional data where the number of predictors approaches or exceeds the number of observations, classical VIF can become unstable or undefined. In such settings, regularization, latent representations, or domain grouping may be more appropriate.
+
+# 10. Mutual information
+
+Mutual information can capture univariate dependence that is not restricted to linear correlation.
+
+Conceptually,
+
+\[
+I(X;Y)
+=
+\int\int p(x,y)
+\log\left[\frac{p(x,y)}{p(x)p(y)}\right]dx\,dy.
+\]
+
+The initial `sciModelFlowR` implementation uses a transparent discretized estimator suitable for teaching and lightweight screening. It is not intended to replace specialized estimators for every high-dimensional continuous setting.
+
+```r
+spec_mi <- smf_feature_spec(
+  method = "mutual_information",
+  n_features = 15,
+  supervised = TRUE
+)
+
+sel_mi <- smf_select_features(
+  data = train_x,
+  y = train_y,
+  spec = spec_mi,
+  context = "training"
+)
+```
+
+Because the response is used, mutual-information selection outside the training fold is a clear leakage path. The package blocks a learned selection call when the declared context is not training unless the features were explicitly fixed externally.
+
+Mutual information is also not causal evidence. A predictor can have high mutual information because it is a proxy for site, time, acquisition batch, or another confounded structure.
+
+# 11. Regularized selection
+
+L1 and elastic-net models can shrink coefficients and produce sparse predictor sets. In 0.2.0 this route is exposed through optional `glmnet` support.
+
+```r
+spec_reg <- smf_feature_spec(
+  method = "regularized",
+  n_features = 20,
+  supervised = TRUE,
+  parameters = list(alpha = 1)
+)
+```
+
+Regularized selection is still part of model fitting. The regularization path and penalty choice must be learned within the training data. If the penalty itself is tuned, that tuning belongs in the inner resampling loop when an outer loop is used for unbiased performance estimation.
+
+A nonzero coefficient does not establish causal importance. With correlated predictors, the selected representative can change substantially across folds or penalty values.
+
+# 12. Tree-based selection
+
+Tree ensembles can provide importance measures that are useful for screening nonlinear relationships and interactions. The 0.2.0 optional route uses `ranger` when available.
+
+```r
+spec_tree <- smf_feature_spec(
+  method = "tree",
+  n_features = 20,
+  supervised = TRUE
+)
+```
+
+Tree importance can be biased by predictor scale, cardinality, correlation, and the specific importance definition. Therefore a feature selected by tree importance should not be described as a causal driver.
+
+A stronger workflow combines tree-based screening with resampling stability and, later in the package roadmap, explanation stability.
+
+# 13. RFE and sequential selection
+
+Recursive feature elimination and sequential selection are implemented in 0.2.0 through a package-native reference subset-search criterion fitted only on the training partition. The default criterion is AIC, with BIC available; later model-adapter versions may add backend-specific predictive search without changing the public feature contract.
+
+Requests currently return a capability error until the implementations have passed:
+
+- fold-boundary tests;
+- differential tests against trusted backends;
+- deterministic-seed tests;
+- edge-case tests for grouped and high-dimensional data;
+- computational-budget safeguards.
+
+This is preferable to exposing a method name that produces an unvalidated result.
+
+# 14. Selection versus representation
+
+Feature selection retains a subset of the original variables. Representation learning creates new variables.
+
+Examples of selection:
+
+```text
+120 wavelengths -> 18 retained wavelengths
+```
+
+Examples of representation:
+
+```text
+120 wavelengths -> 8 principal components
+```
+
+or
+
+```text
+120 wavelengths -> 6 PLS latent variables
+```
+
+The distinction matters for interpretation. A selected wavelength remains on the original physical scale. A principal component is a weighted combination of wavelengths and cannot be interpreted as a single measured band.
+
+# 15. Principal component analysis
+
+PCA is unsupervised but data-learned. Loadings must therefore be estimated from training observations only.
+
+```r
+pca_spec <- smf_feature_spec(
+  method = "pca",
+  n_features = 8,
+  representation = TRUE
+)
+
+pca_fit <- smf_build_representation(
+  data = train_x,
+  spec = pca_spec,
+  context = "training"
+)
+```
+
+PCA maximizes predictor variance, not predictive relevance. A component explaining little predictor variance can still be useful for the response, and a component explaining large variance can primarily represent nuisance variation.
+
+Centering and scaling choices should be explicit, especially for predictors measured in different units.
+
+Version 0.2.0 fits the PCA representation only on the training partition, stores the fitted centering/scaling/rotation state, and applies that unchanged state to assessment observations through `smf_apply_representation()`. Managed holdout and resampling workflows therefore do not recompute PCA using assessment data.
+
+# 16. Partial least squares
+
+PLS constructs latent components using both predictors and response. It is therefore supervised.
+
+```r
+pls_spec <- smf_feature_spec(
+  method = "pls",
+  n_features = 6,
+  supervised = TRUE,
+  representation = TRUE
+)
+```
+
+PLS is particularly relevant in spectroscopy because predictors are numerous and strongly correlated. The number of components is a tuning choice and should be selected within training resamples.
+
+PLS follows the same information-boundary rule: the representation is learned on the training partition, its projection state is retained, and assessment observations are projected through the stored state without outcome access or refitting.
+
+# 17. Selection stability
+
+A feature list from one fitted dataset can give a false impression of certainty. `sciModelFlowR` treats stability as a first-class output.
+
+```r
+stability <- smf_feature_stability(selection_results)
+```
+
+For feature \(j\), a basic selection frequency is
+
+\[
+\hat{\pi}_j
+=
+\frac{1}{K}
+\sum_{k=1}^{K}
+\mathbf{1}(j\text{ selected in resample }k).
+\]
+
+This frequency answers a procedural question: how often does this workflow select the feature under the specified resampling perturbation?
+
+It is not a posterior inclusion probability and not a causal probability.
+
+The resampling unit matters. Selection stability across randomly resampled pixels can be much higher than stability across independently held-out fields. The latter may be scientifically more relevant for geographic transfer.
+
+# 18. Fold-safe selection across resamples
+
+The dedicated helper fits the selector separately in each training fold.
+
+```r
+rs <- smf_group_vfold_cv(
+  data = d,
+  groups = "field",
+  v = 5,
+  seed = 260915
+)
+
+feat <- smf_feature_spec(
+  method = "correlation",
+  threshold = 0.90
+)
+
+fold_features <- smf_feature_select_resamples(
+  data = d,
+  resamples = rs,
+  spec = feat,
+  target = "yield"
+)
+```
+
+The output retains fold-level selections and an aggregated frequency table.
+
+This allows the analyst to distinguish:
+
+- features selected in nearly every fold;
+- interchangeable correlated features;
+- features selected only under particular site compositions;
+- unstable variables whose apparent importance depends on a small subset of observations.
+
+# 19. Integration with the resampled experiment
+
+For methods already integrated into the 0.2.0 reference pipeline, feature selection occurs after training-only preprocessing and before the model is fitted.
+
+```r
+exp_spec <- smf_experiment_spec(
+  task = smf_task_spec("regression", "yield"),
+  data = smf_data_spec(target = "yield", id = "obs_id"),
+  design = smf_design_spec(groups = "field"),
+  preprocessing = smf_preprocess_spec(scale = TRUE),
+  resampling = smf_resampling_spec(
+    method = "group",
+    n_splits = 5,
+    seed = 260915
+  ),
+  model = smf_model_spec("linear", backend = "stats"),
+  metrics = list(smf_metric_spec("rmse")),
+  features = smf_feature_spec(method = "nzv")
+)
+
+res <- smf_resample_experiment(exp_spec, d)
+```
+
+The critical point is that each fold receives its own fitted preprocessing and feature-selection state.
+
+# 20. The scientifically inappropriate workflow
+
+The following workflow is tempting:
+
+```r
+all_selected <- smf_select_features(
+  data = all_x,
+  y = all_y,
+  spec = smf_feature_spec(
+    method = "mutual_information",
+    n_features = 10,
+    supervised = TRUE
+  ),
+  context = "all_data"
+)
+```
+
+It is inappropriate for subsequent performance estimation because the response from future assessment observations influences the selected features.
+
+The package raises a leakage condition rather than assuming that the analyst intended exploratory analysis.
+
+If features were genuinely fixed externally, for example from a previous independent experiment or an instrument specification, the workflow can explicitly declare that status. The provenance should identify the external source.
+
+# 21. Selection and nested resampling
+
+When feature selection itself has tuning parameters, such as the number of features, correlation threshold, regularization penalty, or number of latent components, a single cross-validation loop is not sufficient for an unbiased final performance estimate if those choices are optimized using the same folds.
+
+A defensible nested structure is:
+
+```text
+outer training fold
+    |
+    +-- inner resampling
+            |
+            +-- preprocessing
+            +-- feature method / hyperparameter choice
+            +-- model tuning
+    |
+    +-- refit selected complete workflow on outer training data
+    |
+    +-- evaluate once on outer assessment data
+```
+
+The outer results estimate generalization of the selection procedure, not merely the final feature list.
+
+The 0.2.0 resampling layer already provides package-native nested manifests. More extensive automatic tuning arrives in later versions, but the geometry is established now so that tuning cannot redefine the scientific validation contract later.
+
+# 22. Correlated predictors and interpretation
+
+Correlation creates a common interpretability trap. Suppose five wavelengths measure nearly the same absorption feature. A selector may choose one wavelength in fold 1, another in fold 2, and a third in fold 3.
+
+An individual-variable stability report might label all five unstable. A domain-level interpretation may instead conclude that the spectral region is consistently informative but the exact representative is not identifiable.
+
+This distinction should be reflected in scientific writing. Do not state that a wavelength is uniquely important when several highly correlated bands are exchangeable under resampling.
+
+Future package versions can add grouped stability summaries, but 0.2.0 already records enough fold-level evidence to support this interpretation manually.
+
+# 23. Spectroscopy example
+
+Spectroscopy is a natural stress test for feature workflows because adjacent wavelengths are highly correlated and the number of predictors can be large relative to the number of independent specimens.
+
+A defensible sequence is:
+
+1. define the independent specimen or plot;
+2. keep technical replicate scans together during resampling;
+3. perform fixed instrument corrections that were defined before modeling;
+4. fit data-learned preprocessing on training specimens only;
+5. assess redundancy or fit a latent representation;
+6. tune component count or selection threshold in inner resampling;
+7. compare linear PLS baselines with nonlinear models only after the baseline is validated;
+8. evaluate on independent specimens or external domains;
+9. report wavelength or component stability.
+
+Randomly splitting individual scans from the same specimen across training and assessment can make feature stability and predictive performance appear unrealistically high.
+
+# 24. Soil covariates example
+
+Digital soil mapping often combines terrain derivatives, climate layers, remote-sensing indices, geology, land use, and spatial coordinates. Many covariates can be strongly redundant.
+
+A correlation filter can reduce duplication, but it should be fitted inside spatial resampling when the correlation structure can differ by region. A predictor that is redundant in one landscape may carry unique information in another.
+
+If the scientific target is transfer to a new region, feature stability across spatial blocks or external regions can be more meaningful than stability across random folds.
+
+Coordinates require special care. A model can use them legitimately for spatial prediction, but they can also allow the algorithm to memorize spatial structure and produce misleading random-CV performance. Feature handling cannot substitute for spatially appropriate validation geometry.
+
+# 25. Remote-sensing imagery and derived tabular features
+
+Image workflows often begin with hundreds of derived texture, spectral, and shape features. If feature extraction uses a fixed deterministic algorithm with no learned state, extraction can occur before splitting provided that no information crosses independent units.
+
+If extraction includes normalization estimated from the entire image collection, supervised dimensionality reduction, learned embeddings, or a neural encoder trained on the same study data, the representation must be treated as fitted.
+
+Patch-level splits can also leak information when patches from the same plant, plot, scene, or flight appear in both training and assessment sets. Feature selection cannot repair that design error. The group structure must be declared before resampling.
+
+# 26. Climate and environmental covariates
+
+Time-series prediction frequently includes lagged variables, moving averages, seasonal indicators, and climate indices.
+
+A lag defined from information available before the prediction time is a legitimate deterministic feature. A centered moving average that uses future observations is look-ahead leakage. A trend extracted using the full series can also use future information unless the procedure is refitted within each temporal training window.
+
+Feature engineering should therefore record not only which columns were produced but what information time was available when each feature was constructed.
+
+The temporal resampling guard in 0.2.0 protects the train-assessment ordering. It cannot infer every domain-specific look-ahead transformation automatically, so provenance remains essential.
+
+# 27. Feature selection under class imbalance
+
+A feature can appear predictive of a rare class because of a handful of observations. Selection stability should therefore be examined together with class counts in each training fold.
+
+Stratification can help preserve class representation, but it does not override group or temporal structure. If diseased leaves are nested within plants, stratifying individual leaves can split plants and create pseudoreplication.
+
+In later package versions, imbalance handling will also be fitted inside training folds. The same principle applies to oversampling and synthetic sampling as to feature selection.
+
+# 28. Missingness indicators as features
+
+Missingness can itself carry information. Adding an indicator for whether a measurement was missing can sometimes improve prediction, but interpretation requires care.
+
+If missingness reflects laboratory workflow, sensor failure, treatment assignment, or post-outcome processing, the indicator may act as a proxy for information that will not be available prospectively.
+
+The decision to create missingness features should therefore be part of the data and provenance audit. Their predictive value should be tested under the deployment or external-validation context, not only random cross-validation.
+
+# 29. Interaction features
+
+Interactions can be scientifically motivated, for example genotype by environment, treatment by time, or nutrient by soil moisture.
+
+Predeclared interactions based on the scientific design differ from automated interaction mining. Automated interaction discovery is supervised model fitting and belongs within resampling.
+
+Creating all pairwise interactions can dramatically increase dimensionality and instability. Use domain knowledge, hierarchical principles, and regularization where appropriate.
+
+The 0.2.0 feature schema reserves room for richer domain transformations, while automated interaction generation is not yet a general public engine.
+
+# 30. Feature-selection uncertainty is not coefficient uncertainty
+
+A coefficient confidence interval conditions on the model specification unless model-selection uncertainty is explicitly incorporated. Selection frequency describes how often a variable enters a workflow under resampling. These are different quantities.
+
+A feature can have a narrow coefficient interval when selected but be selected in only half the folds. Conversely, a feature can be selected nearly always while its coefficient remains uncertain because its effect is small.
+
+Reports should keep these dimensions separate.
+
+# 31. Stability thresholds
+
+It is tempting to define a universal rule such as retaining variables selected in more than 80% of folds. Such thresholds can be useful operationally but are not universally inferential.
+
+Selection frequency depends on:
+
+- resampling geometry;
+- number of folds and repeats;
+- sample size;
+- correlated alternatives;
+- selector tuning;
+- model stochasticity;
+- outcome prevalence;
+- domain shift.
+
+Therefore the threshold should be justified by the decision context or a validated stability-selection procedure rather than chosen only because it produces a convenient number of variables.
+
+# 32. Reproducibility record
+
+A feature-selection result should be reconstructible from the analysis record.
+
+Record at least:
+
+- dataset hash;
+- target and predictor roles;
+- independent unit and resampling design;
+- preprocessing state or hash;
+- feature method;
+- method parameters;
+- seed policy;
+- backend and version when optional engines are used;
+- selected features per fold;
+- aggregate selection frequencies;
+- external fixed features and their provenance;
+- warnings and overrides.
+
+This information belongs in the experiment manifest rather than only in narrative notes.
+
+# 33. Numerical and software validation
+
+Feature-selection software should be tested at multiple levels.
+
+Unit tests verify that:
+
+- returned columns exist;
+- selected count respects limits;
+- thresholds are validated;
+- context guards work;
+- empty or degenerate inputs fail clearly.
+
+Differential tests compare optional adapters with their backend-native results within tolerance.
+
+Property tests can verify invariants such as:
+
+- assessment labels never enter training-side supervised selection;
+- fold selections only use training row IDs;
+- selected columns are a subset of available predictors;
+- identical deterministic seeds produce identical stable pathways;
+- serialization preserves selection metadata.
+
+Simulation tests evaluate whether a selector recovers known signal and how often noise variables are selected under controlled data-generating processes. Recovery is not expected to be perfect in every sample; the purpose is to characterize behavior, not manufacture an ideal result.
+
+# 34. Current 0.2.0 certification boundary
+
+Version 0.2.0 should be interpreted as follows.
+
+### Implemented initial pathways
+
+- near-zero-variance filtering;
+- correlation filtering;
+- VIF filtering;
+- mutual-information screening;
+- optional regularized selection through `glmnet`;
+- optional tree-based selection through `ranger`;
+- resampling-based selection stability;
+- PCA training representation;
+- PLS training representation;
+- fold-local selection in the reference resampled experiment for supported selectors.
+
+### Capability boundaries retained by design
+
+- RFE;
+- sequential selection;
+- generic assessment-state transfer for PCA inside `smf_resample_experiment()`;
+- generic assessment-state transfer for PLS inside `smf_resample_experiment()`;
+- deep learned representations and autoencoders;
+- joint tuning of selection and model hyperparameters through the later tuning subsystem.
+
+This boundary is part of the scientific contract. Unsupported pathways must fail explicitly rather than produce an undocumented approximation.
+
+# 35. Reporting checklist
+
+Before reporting a feature-selected model, document:
+
+- [ ] scientific prediction target;
+- [ ] independent experimental or observational unit;
+- [ ] resampling geometry;
+- [ ] whether the feature method is supervised;
+- [ ] whether the feature method learns from predictor distribution;
+- [ ] exact location of the selection step relative to resampling;
+- [ ] preprocessing applied before selection;
+- [ ] selection method and parameters;
+- [ ] number of candidate and retained predictors;
+- [ ] selection frequency or other stability evidence;
+- [ ] treatment of correlated predictors;
+- [ ] tuning procedure for thresholds or component counts;
+- [ ] provenance of externally fixed features;
+- [ ] external-validation behavior when available;
+- [ ] limitations on causal interpretation;
+- [ ] software versions and seeds.
+
+# 36. Compact decision guide
+
+| Scientific need | Start with | Escalate when needed |
+|---|---|---|
+| Remove almost constant predictors | `nzv` | inspect fold-specific degeneracy |
+| Reduce simple redundancy | `correlation` | domain grouping or latent representation |
+| Diagnose linear collinearity | `vif` | regularization or PCA |
+| Screen nonlinear univariate association | `mutual_information` | resampling stability |
+| Sparse supervised linear selection | `regularized` | nested tuning |
+| Nonlinear supervised screening | `tree` | explanation stability in later release |
+| Reduce correlated predictor dimension | `pca` | validate component count inside resampling |
+| Supervised latent spectral components | `pls` | nested component selection |
+| Quantify reproducibility of selected set | `stability` | group or spatially aware stability |
+| Search feature subsets | `rfe` / `sequential` | package-native reference subset search; fit on training data only |
+
+# Applied scientific cases
+
+## Case A. Nitrogen-response experiment
+
+A dataset contains treatment, block, soil properties, and plant traits. Treatment and block are design variables and should not be discarded by an automatic variance filter simply because a fold contains limited variation. The feature layer should operate on predictors eligible for modeling while preserving design metadata separately.
+
+## Case B. Vis-NIR spectroscopy
+
+Adjacent wavelengths are highly correlated. Correlation filtering may choose different representatives in different folds. Interpret stability by spectral region, not only by exact wavelength. Keep replicate scans from the same specimen together.
+
+## Case C. Soil texture prediction
+
+Terrain derivatives can be redundant. Spatially blocked feature stability can reveal whether a covariate transfers across landscape positions. Random-fold stability may exaggerate reproducibility because nearby samples share environment.
+
+## Case D. Plant-stress classification
+
+A supervised selector identifies chlorophyll, canopy temperature, and several image features. If multiple measurements come from the same plant, plant-level folds are required. Feature stability across individual observations is not evidence of new-plant transfer.
+
+## Case E. Multi-environment yield prediction
+
+Weather variables may have site-specific correlation patterns. A correlation filter fitted globally can use information from external environments. Fit redundancy rules inside each training set and examine which environmental summaries remain stable.
+
+## Case F. Pest forecasting
+
+Lagged pest counts and climate variables are candidate predictors. Features using future rainfall or a centered rolling window create look-ahead leakage. Temporal feature construction must respect the prediction time.
+
+## Case G. Rare disease detection
+
+A mutual-information selector identifies features using very few positive cases. Repeat the selector inside defensible grouped folds and inspect variability. A single global top-ten list is not stable evidence.
+
+## Case H. PCA for sensor fusion
+
+Measurements from several sensors are on different scales. PCA loadings depend on scaling and the sampled population. Fit scaling and PCA on training units only, and store both states for later assessment transformation.
+
+## Case I. PLS component count
+
+A PLS model with twelve components fits training spectra extremely well. The component count should be tuned inside training resamples. Reporting the training-optimal component count and outer-fold performance from the same data is optimistic.
+
+## Case J. Regularized agronomic regression
+
+Elastic-net selection retains one of several correlated soil nutrients. The retained variable should not automatically be called the biological driver. Repeat selection across sites and inspect correlated alternatives.
+
+## Case K. Tree importance
+
+A categorical management variable with many levels receives high tree importance. Check whether importance definition and cardinality contribute to the ranking. Feature importance describes model behavior, not causal effect.
+
+## Case L. High-dimensional small-sample study
+
+There are 500 predictors and 40 independent plots. VIF may be undefined and exhaustive subset search is inappropriate. A regularized or latent representation may be more defensible, but validation uncertainty will remain large because the number of independent plots is limited.
+
+## Case M. External biomarker panel
+
+A panel of five biomarkers was fixed by a previous independent study. Using only those variables in a new validation study is not feature-selection leakage. Record the external provenance and do not reselect the panel using the validation outcomes before reporting primary performance.
+
+## Case N. Imaging patches
+
+A CNN-derived embedding is learned from all images before cross-validation. Even if the final classifier is cross-validated, the embedding has seen assessment images. Unless the encoder was pretrained on genuinely external data and frozen, representation learning belongs inside the training boundary.
+
+## Case O. Batch effects
+
+A feature selector chooses laboratory batch indicators because they correlate with the response. High predictive score can therefore reflect batch confounding. Data audit and external-domain validation are necessary before interpreting selected features scientifically.
+
+## Case P. Missing sensor channel
+
+A missingness indicator strongly predicts stress because one sensor failed primarily on hot afternoons. This can be useful for operational prediction only if the same missingness mechanism is expected prospectively. It is not evidence that missing data cause stress.
+
+## Case Q. Stability under seed variation
+
+A stochastic tree selector returns slightly different variables across seeds. Stability should be evaluated across both scientific resamples and model seeds when stochasticity is material. Seed reproducibility does not imply sampling stability.
+
+## Case R. Feature count as a tuning parameter
+
+Selecting the top 5, 10, 20, or 50 predictors and choosing the best option on the same validation folds uses those folds for selection. Move that choice to inner resampling when an unbiased outer estimate is required.
+
+## Case S. Correlated climate indices
+
+Several climate indices share low-frequency variation. A selector may alternate between them. Interpret the shared climatic signal cautiously and avoid assigning unique mechanistic meaning to the single retained index without separate scientific evidence.
+
+## Case T. Agronomic decision support
+
+A smaller feature set may be preferable if it uses inexpensive measurements while retaining nearly the same external performance. Model selection can therefore consider measurement cost and feasibility, not only predictive accuracy. The final decision rule should be explicit.
+
+# 37. Final perspective
+
+Feature engineering and selection are scientifically valid only when their information boundary matches the intended prediction or inference boundary. The question is not simply which algorithm chooses the best variables. The question is which information was available when the choice was made, what unit was independently resampled, and whether the selected representation remains stable under scientifically meaningful perturbations.
+
+The recommended sequence is:
+
+**declare predictor roles -> declare design -> define validation geometry -> fit preprocessing on training data -> fit selection or representation on training data -> fit model -> evaluate assessment data -> repeat across folds -> quantify feature stability -> validate externally when available -> report provenance and uncertainty.**
+
+A short feature list is not automatically a scientific discovery. A stable, leakage-safe, design-aware feature workflow is stronger evidence about what the model repeatedly uses under the declared validation conditions.
+
+# 38. Additional interpretation safeguards
+
+## 38.1 Stability across scientific domains
+
+A feature can be stable under repeated random folds and unstable under external-domain validation. These results are not contradictory. They represent different perturbations. Random folds ask whether the feature is reproducible when training samples are exchanged within the same population. Leave-site-out or external validation asks whether the feature remains useful when the environment itself changes.
+
+For agronomic applications, the second question is often the more difficult and more important one. A soil covariate may be consistently selected within one region because it is strongly correlated with an unmeasured regional process. When a new region is held out, that relationship can disappear. The feature result should therefore be interpreted together with the declared generalization target.
+
+## 38.2 Selection frequency and measurement feasibility
+
+Scientific value is not determined by selection frequency alone. A variable selected in 95% of folds may require an expensive instrument, destructive sampling, or laboratory processing unavailable in routine applications. Another variable selected in 85% of folds may provide almost the same predictive performance at much lower cost.
+
+A decision-oriented workflow can therefore compare nested feature panels. For example:
+
+```text
+Panel 1: weather + management
+Panel 2: Panel 1 + soil laboratory measurements
+Panel 3: Panel 2 + spectroscopy
+Panel 4: Panel 3 + imaging
+```
+
+The relevant question becomes how much predictive value and uncertainty reduction each measurement layer adds under the same external validation geometry. Later benchmarking modules can formalize this decision, but the feature layer should preserve the metadata needed for it.
+
+## 38.3 Scientific hierarchy of predictors
+
+Some studies contain logically dependent predictors. A derived ratio may only be meaningful when its component measurements are valid. An interaction may be scientifically interpretable only when its main effects remain represented. A compositional dataset may require log-ratio coordinates rather than independent selection of raw proportions.
+
+Automatic selection should not violate these scientific constraints merely because a numerical criterion improves. Domain rules can therefore be expressed as externally fixed inclusions, exclusions, or grouped transformations before the selector is fitted. Such restrictions are part of the model specification and should be reported.
+
+## 38.4 Selection under covariate shift
+
+When the predictor distribution changes between training and deployment domains, a selected subset can become unreliable even if the fitted model remains numerically valid. Feature stability should therefore be considered alongside shift diagnostics. Variables whose ranges do not overlap between domains can make apparently strong training associations difficult to extrapolate.
+
+A useful external report includes the training range, external range, missingness pattern, and whether the selected predictor requires extrapolation. The later diagnostics module will automate more of this workflow, but the 0.2.0 feature objects already preserve selected feature identities so those checks can be linked directly to the fitted pipeline.
+
+## 38.5 Why fewer features are not always better
+
+Parsimony is valuable when it improves interpretability, cost, numerical stability, or transfer. It is not a goal that overrides predictive adequacy or scientific completeness. Removing a scientifically essential design term to obtain a shorter model is not good feature selection.
+
+Similarly, a latent representation with ten components is not necessarily simpler scientifically than twenty measured variables if those components are difficult to interpret and reproduce. Simplicity should be evaluated on the scale relevant to the user: number of measurements, computational cost, interpretability, deployment requirements, or effective model complexity.
+
+# 39. Closing checklist for reviewers
+
+A reviewer assessing a feature-selected scientific model can ask:
+
+1. Were experimental units and groups declared before feature selection?
+2. Was every learned transformation fitted only on training data?
+3. If features were supervised, were assessment outcomes inaccessible to the selector?
+4. Were selection hyperparameters tuned in an inner resampling loop when necessary?
+5. Are correlated predictors discussed rather than overinterpreted individually?
+6. Is feature stability shown under scientifically meaningful resampling?
+7. Are externally fixed variables documented with provenance?
+8. Are latent components distinguished from measured variables?
+9. Are unsupported or uncertified selection methods identified transparently?
+10. Does external validation test the intended domain of generalization?
+
+If these questions cannot be answered from the analysis record, the feature-selection result is not yet sufficiently auditable for a strong scientific claim.
+
+## Release 0.4 note: feature selection inside hyperparameter tuning
+
+Feature selection is itself a learned operation and must remain inside the same inner analysis folds used to compare hyperparameter configurations. Selecting features once on the full development dataset and then tuning model parameters with cross-validation can still leak outcome information across folds. In `sciModelFlowR`, the intended order is fold split, preprocessing fit, feature learning, model fit, and assessment. When feature settings are themselves tuned, they should be represented as part of the search configuration so the complete selection procedure is evaluated rather than only the final learner.
+
+For high-dimensional studies, keep a simple no-selection baseline. If a tuned feature-selection pipeline produces only marginal gains, the simpler representation can provide stronger reproducibility and easier external validation.
+
+That comparison should be retained in the model-development archive and revisited during external validation before publication claims are finalized.
+
+## 1.0.0 consolidation note
+
+In the 1.0.0 Consolidated Scientific Release, this workflow keeps the same scientific semantics established during development. The public function contract is frozen from 0.9.0; final certification changes evidence and backend status, not the design, leakage, uncertainty, or provenance rules taught in this vignette.
+

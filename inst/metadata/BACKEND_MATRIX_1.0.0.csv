@@ -1,0 +1,15 @@
+backend,package,tier,implementation,release_status,scope
+stats,base R,core-reference,source-implemented,pending-final-local-certification,lm/glm differential reference
+tidymodels,parsnip/workflows,optional,source-implemented,pending-final-local-certification,supervised modeling
+mlr3,mlr3,optional,source-implemented,pending-final-local-certification,supervised modeling
+xgboost,xgboost,optional,source-implemented,pending-final-local-certification,tree boosting
+torch,torch,optional,source-implemented,pending-final-local-certification,Deep Learning
+luz,luz,optional,adapter-surface,pending-final-local-certification,DL trainer
+keras3,keras3,optional,adapter-surface,pending-final-local-certification,DL alternate backend
+brms,brms/cmdstanr,optional,source-implemented,pending-final-local-certification,Bayesian multilevel/distributional
+dbarts,dbarts,optional,source-implemented,pending-final-local-certification,BART
+DiceKriging,DiceKriging,optional,source-implemented,pending-final-local-certification,Gaussian process
+probably,probably,optional,source-implemented,pending-final-local-certification,calibration/conformal
+mlflow,mlflow,optional,source-implemented,pending-final-local-certification,tracking
+pins,pins,optional,source-implemented,pending-final-local-certification,artifact registry
+vetiver,vetiver,optional,source-implemented,pending-final-local-certification,deployment

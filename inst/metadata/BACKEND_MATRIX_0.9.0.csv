@@ -1,0 +1,15 @@
+backend,package,tier,implementation,release_status,scope
+stats,base R,core-reference,source-implemented,pending-final-runtime,lm/glm differential reference
+tidymodels,parsnip/workflows,optional,source-implemented,quarantined-pending-local-validation,supervised modeling
+mlr3,mlr3,optional,source-implemented,quarantined-pending-local-validation,supervised modeling
+xgboost,xgboost,optional,source-implemented,quarantined-pending-local-validation,tree boosting
+torch,torch,optional,source-implemented,quarantined-pending-local-validation,Deep Learning
+luz,luz,optional,adapter-surface,quarantined-pending-local-validation,DL trainer
+keras3,keras3,optional,adapter-surface,quarantined-pending-local-validation,DL alternate backend
+brms,brms/cmdstanr,optional,source-implemented,quarantined-pending-local-validation,Bayesian multilevel/distributional
+dbarts,dbarts,optional,source-implemented,quarantined-pending-local-validation,BART
+DiceKriging,DiceKriging,optional,source-implemented,quarantined-pending-local-validation,Gaussian process
+probably,probably,optional,source-implemented,quarantined-pending-local-validation,calibration/conformal
+mlflow,mlflow,optional,source-implemented,quarantined-pending-local-validation,tracking
+pins,pins,optional,source-implemented,quarantined-pending-local-validation,artifact registry
+vetiver,vetiver,optional,source-implemented,quarantined-pending-local-validation,deployment

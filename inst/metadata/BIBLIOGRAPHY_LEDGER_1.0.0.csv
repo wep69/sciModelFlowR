@@ -1,0 +1,3 @@
+scope,claim_type,identifier,verification_source_1,verification_source_2,status,notes
+package methodological vignettes,formal DOI citation,,,,no-unverified-doi-asserted,Current instructional text intentionally avoids unverified DOI metadata.
+software paper bibliography,formal bibliography,,,,pending-dedicated-bibliographic-verification,Must be completed before software-paper submission; not equivalent to package runtime certification.

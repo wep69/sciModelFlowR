@@ -1,0 +1,16 @@
+{
+  "reference": "independent_numpy_ols_on_unscaled_predictors",
+  "coefficients": {
+    "intercept": 35.704381680794796,
+    "nitrogen": 0.1695602838988855,
+    "rainfall": 0.011491978859178244,
+    "soil_n": 3.1401884361294523
+  },
+  "rmse": 3.5731971951099646,
+  "mae": 2.982103662628401,
+  "tolerance": {
+    "coefficients_abs": 1e-08,
+    "metrics_abs": 1e-08
+  },
+  "note": "R preprocessing with centering/scaling changes coefficient parameterization but not linear predictions when all predictors are retained."
+}

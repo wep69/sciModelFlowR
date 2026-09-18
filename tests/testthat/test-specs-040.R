@@ -1,0 +1,11 @@
+test_that("0.4 specifications are valid and composable", {
+  ss <- smf_search_space(depth=smf_param_int(2,6), eta=smf_param_dbl(.01,.3,log=TRUE))
+  ts <- smf_tuning_spec("random",budget=10,objectives=list(smf_metric_spec("rmse","minimize")))
+  bs <- smf_benchmark_spec(candidates=list(lm1=smf_model_spec("lm","stats"),lm2=smf_model_spec("lm","stats",parameters=list(dummy=1))),metrics=list(smf_metric_spec("rmse","minimize")))
+  e <- smf_experiment_spec(smf_task_spec("regression","y"),smf_data_spec("y","x"),model=smf_model_spec("lm","stats"),tuning=ts,benchmark=bs)
+  expect_equal(S7::S7_class(ss)@name,"SearchSpace")
+  expect_equal(S7::S7_class(ts)@name,"TuningSpec")
+  expect_equal(S7::S7_class(bs)@name,"BenchmarkSpec")
+  expect_identical(e@tuning,ts)
+  expect_identical(e@benchmark,bs)
+})

@@ -1,0 +1,676 @@
+---
+title: "Probabilistic Deep Learning: Distributional Heads, MC Dropout, and Deep Ensembles"
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    number-sections: true
+execute:
+  eval: false
+---
+
+**Package:** `sciModelFlowR`  
+**Version targeted:** `0.6.0`  
+**Status:** source-complete; runtime validation deferred to the consolidated local validation cycle.
+
+> The code blocks are designed for local execution after optional Deep Learning backends are installed. The package does not require `torch`, `luz`, or `keras3` merely to load the core scientific workflow.
+
+# 1. Why uncertainty needs a typed source
+
+Version 0.6.0 does not create a generic uncertainty number. It records how uncertainty was generated and what it conditions on.
+
+# 2. Learning objectives
+
+After this vignette, the reader should be able to create a distributional head, validate its constraints, fit Gaussian-output regression, use MC dropout and deep ensembles, separate aleatoric and epistemic components only when identifiable, and evaluate uncertainty with probabilistic scores.
+
+# 3. Gold nonlinear heteroscedastic fixture
+
+```r
+d <- smf_load_dataset("gold_dl_nonlinear")
+head(d)
+```
+
+`truth_mu` and `truth_sigma` are validation-only generator quantities.
+
+# 4. Gaussian distributional head
+
+```r
+base <- smf_mlp(
+  input_dim = 6,
+  output_dim = 1,
+  hidden = c(128, 64),
+  dropout = 0.10,
+  task = "regression"
+)
+
+gaussian <- smf_dl_distributional_head(
+  base,
+  distribution = "normal"
+)
+
+gaussian
+```
+
+Internally the network emits location and log-scale parameters. The log-scale parameterization avoids unconstrained negative standard deviations.
+
+# 5. Train the distributional model
+
+```r
+spec <- smf_dl_spec(
+  gaussian,
+  epochs = 100,
+  batch_size = 32,
+  device = "cpu",
+  patience = 12,
+  parameters = list(learning_rate = 1e-3)
+)
+
+# fit <- smf_dl_train(
+#   d,
+#   "y",
+#   gaussian,
+#   spec,
+#   predictors = paste0("x", 1:6),
+#   task = "regression"
+# )
+```
+
+# 6. PredictionDistribution
+
+A Gaussian head is converted to the common `PredictionDistribution` contract so downstream scoring does not depend on `torch`.
+
+# 7. Aleatoric uncertainty
+
+Conditional scale from the distributional head is an aleatoric component under the assumed Gaussian family. It should be checked against residual patterns and empirical interval coverage.
+
+# 8. MC dropout
+
+```r
+# mc <- smf_dl_mc_dropout(
+#   fit,
+#   new_data = d[1:50, ],
+#   draws = 200,
+#   seed = 260915
+# )
+```
+
+Dropout probability must be greater than zero. The package does not call a deterministic network "MC dropout".
+
+# 9. Deep ensembles
+
+```r
+# ens <- smf_dl_ensemble(
+#   d,
+#   target = "y",
+#   architecture = gaussian,
+#   spec = spec,
+#   predictors = paste0("x", 1:6),
+#   task = "regression",
+#   members = 5,
+#   seeds = 260915:260919
+# )
+#
+# ep <- smf_dl_predict_distribution(ens, as.matrix(d[1:50, ]), method = "ensemble")
+```
+
+Each seed is stored separately. Duplicate seeds are rejected.
+
+# 10. Decomposition with a Gaussian ensemble
+
+For member \(m\), let \(\mu_m(x)\) and \(\sigma_m^2(x)\) be the predicted Gaussian parameters. The package can summarize:
+
+- aleatoric component: mean of \(\sigma_m^2(x)\);
+- epistemic approximation: variance of \(\mu_m(x)\) across members;
+- total: their sum.
+
+This is a model-based decomposition, not a universal partition of uncertainty.
+
+# 11. Prediction intervals
+
+```r
+# smf_dl_interval(ep@uncertainty, level = 0.90)
+```
+
+Empirical coverage must be assessed on held-out data.
+
+# 12. Classification probabilities
+
+Binary and multiclass outputs use sigmoid or softmax representations. Ensemble dispersion of class probabilities is reported as an approximation to between-model uncertainty.
+
+# 13. Calibration after neural prediction
+
+Use the calibration layer from 0.3.0 on a separate calibration set. Do not fit a calibrator on the final test set.
+
+# 14. Probabilistic scores
+
+Relevant criteria include:
+
+- negative log likelihood;
+- Brier score for class probability;
+- CRPS for continuous predictive distributions;
+- interval score;
+- empirical coverage;
+- mean interval width;
+- calibration error.
+
+# 15. Sharpness versus calibration
+
+A narrow interval is useful only if coverage is adequate. Very wide intervals can obtain high coverage while offering little decision value.
+
+# 16. MC dropout limitations
+
+MC dropout depends on where dropout is placed, its probability, and how the network was trained. It is not automatically a Bayesian posterior.
+
+# 17. Ensemble limitations
+
+Ensembles can underestimate structural uncertainty when all members share the same architecture, preprocessing, loss and training data.
+
+# 18. Distributional misspecification
+
+A Gaussian head can be poorly calibrated for skewed, heavy-tailed or multimodal outcomes even if mean prediction is accurate.
+
+# 19. Heteroscedasticity validation
+
+The Gold fixture provides `truth_sigma`. During local validation, assess rank correlation and calibration between predicted and generator scale without using `truth_sigma` as an input.
+
+# 20. Resampling and probabilistic DL
+
+Outer resampling remains the correct level for generalization estimates. Inner validation controls training. These are distinct.
+
+# 21. Multiple seeds
+
+If performance varies materially by seed, report that variation. Selecting only the best seed turns initialization into an unreported tuning parameter.
+
+# 22. Decision analysis
+
+Probabilistic predictions become useful when connected to a decision rule: probability of failure, expected loss, probability of exceeding an agronomic threshold, or interval-based risk.
+
+# 23. Common mistakes
+
+- calling softmax output "uncertainty";
+- conflating ensemble variance with total predictive uncertainty;
+- using the same data for early stopping, calibration and final evaluation;
+- hiding failed ensemble members;
+- selecting the seed with the best test score;
+- reporting interval width without coverage.
+
+# 24. Minimum reporting checklist
+
+Document head distribution, likelihood/loss, ensemble or dropout settings, number and identity of seeds, number of stochastic draws, calibration method, held-out scoring rule, empirical coverage and the exact uncertainty decomposition used.
+
+# 25. Integrated probabilistic workflow
+
+```r
+d <- smf_load_dataset("gold_dl_nonlinear")
+x <- paste0("x", 1:6)
+
+arch <- smf_dl_distributional_head(
+  smf_mlp(6, 1, hidden = c(64, 32), dropout = .15),
+  "normal"
+)
+
+spec <- smf_dl_spec(
+  arch,
+  epochs = 80,
+  patience = 10,
+  device = "cpu",
+  parameters = list(learning_rate = .002)
+)
+
+# fit <- smf_dl_train(d, "y", arch, spec, predictors = x)
+# mc  <- smf_dl_mc_dropout(fit, d[1:100, ], draws = 200)
+```
+
+# 26. Final perspective
+
+A probabilistic network is useful when its distributional output is calibrated for the scientific decision, not merely because it emits more numbers than a point predictor.
+
+
+### Scientific interpretation note
+
+A probabilistic neural network should be evaluated as a probabilistic model, not merely by RMSE or accuracy. Distributional heads make parameters of a predictive distribution outputs of the network. For a Gaussian regression head, for example, the network predicts a location and a scale. The scale must remain positive, and its scientific interpretation is conditional on the assumed distributional family and on the information supplied to the network.
+
+
+
+### Scientific interpretation note
+
+MC dropout and deep ensembles represent different approximations. MC dropout samples predictions under stochastic dropout masks for one fitted parameter set. A deep ensemble fits multiple networks from independently recorded seeds, allowing training dynamics and local optima to vary. Neither is a literal posterior distribution. `sciModelFlowR` therefore labels the source of uncertainty rather than presenting all predictive samples under a generic 'Bayesian' heading.
+
+
+
+### Scientific interpretation note
+
+Aleatoric and epistemic components are separated only when the model supports the decomposition. A Gaussian distributional head can supply a conditional variance, while variation among ensemble members or MC-dropout draws can provide an approximation to model uncertainty. The package uses the law of total variance only under that structure. If a point-output ensemble is fitted, the between-member component can be reported, but an aleatoric component is not invented.
+
+
+
+### Scientific interpretation note
+
+Calibration remains necessary after a neural network produces probabilities. Softmax confidence is not automatically a calibrated probability. The calibration machinery introduced in 0.3.0 remains applicable, provided calibration data are separated from the final test set. Probabilistic DL therefore reuses the same scoring vocabulary: log score, Brier score, CRPS where appropriate, interval score, empirical coverage, sharpness, and calibration diagnostics.
+
+
+
+### Scientific interpretation note
+
+A probabilistic neural network should be evaluated as a probabilistic model, not merely by RMSE or accuracy. Distributional heads make parameters of a predictive distribution outputs of the network. For a Gaussian regression head, for example, the network predicts a location and a scale. The scale must remain positive, and its scientific interpretation is conditional on the assumed distributional family and on the information supplied to the network.
+
+
+
+### Scientific interpretation note
+
+MC dropout and deep ensembles represent different approximations. MC dropout samples predictions under stochastic dropout masks for one fitted parameter set. A deep ensemble fits multiple networks from independently recorded seeds, allowing training dynamics and local optima to vary. Neither is a literal posterior distribution. `sciModelFlowR` therefore labels the source of uncertainty rather than presenting all predictive samples under a generic 'Bayesian' heading.
+
+
+
+### Scientific interpretation note
+
+Aleatoric and epistemic components are separated only when the model supports the decomposition. A Gaussian distributional head can supply a conditional variance, while variation among ensemble members or MC-dropout draws can provide an approximation to model uncertainty. The package uses the law of total variance only under that structure. If a point-output ensemble is fitted, the between-member component can be reported, but an aleatoric component is not invented.
+
+
+
+### Scientific interpretation note
+
+Calibration remains necessary after a neural network produces probabilities. Softmax confidence is not automatically a calibrated probability. The calibration machinery introduced in 0.3.0 remains applicable, provided calibration data are separated from the final test set. Probabilistic DL therefore reuses the same scoring vocabulary: log score, Brier score, CRPS where appropriate, interval score, empirical coverage, sharpness, and calibration diagnostics.
+
+
+
+### Scientific interpretation note
+
+A probabilistic neural network should be evaluated as a probabilistic model, not merely by RMSE or accuracy. Distributional heads make parameters of a predictive distribution outputs of the network. For a Gaussian regression head, for example, the network predicts a location and a scale. The scale must remain positive, and its scientific interpretation is conditional on the assumed distributional family and on the information supplied to the network.
+
+
+
+### Scientific interpretation note
+
+MC dropout and deep ensembles represent different approximations. MC dropout samples predictions under stochastic dropout masks for one fitted parameter set. A deep ensemble fits multiple networks from independently recorded seeds, allowing training dynamics and local optima to vary. Neither is a literal posterior distribution. `sciModelFlowR` therefore labels the source of uncertainty rather than presenting all predictive samples under a generic 'Bayesian' heading.
+
+
+
+### Scientific interpretation note
+
+Aleatoric and epistemic components are separated only when the model supports the decomposition. A Gaussian distributional head can supply a conditional variance, while variation among ensemble members or MC-dropout draws can provide an approximation to model uncertainty. The package uses the law of total variance only under that structure. If a point-output ensemble is fitted, the between-member component can be reported, but an aleatoric component is not invented.
+
+
+
+### Scientific interpretation note
+
+Calibration remains necessary after a neural network produces probabilities. Softmax confidence is not automatically a calibrated probability. The calibration machinery introduced in 0.3.0 remains applicable, provided calibration data are separated from the final test set. Probabilistic DL therefore reuses the same scoring vocabulary: log score, Brier score, CRPS where appropriate, interval score, empirical coverage, sharpness, and calibration diagnostics.
+
+
+
+### Scientific interpretation note
+
+A probabilistic neural network should be evaluated as a probabilistic model, not merely by RMSE or accuracy. Distributional heads make parameters of a predictive distribution outputs of the network. For a Gaussian regression head, for example, the network predicts a location and a scale. The scale must remain positive, and its scientific interpretation is conditional on the assumed distributional family and on the information supplied to the network.
+
+
+
+### Scientific interpretation note
+
+MC dropout and deep ensembles represent different approximations. MC dropout samples predictions under stochastic dropout masks for one fitted parameter set. A deep ensemble fits multiple networks from independently recorded seeds, allowing training dynamics and local optima to vary. Neither is a literal posterior distribution. `sciModelFlowR` therefore labels the source of uncertainty rather than presenting all predictive samples under a generic 'Bayesian' heading.
+
+
+
+### Scientific interpretation note
+
+Aleatoric and epistemic components are separated only when the model supports the decomposition. A Gaussian distributional head can supply a conditional variance, while variation among ensemble members or MC-dropout draws can provide an approximation to model uncertainty. The package uses the law of total variance only under that structure. If a point-output ensemble is fitted, the between-member component can be reported, but an aleatoric component is not invented.
+
+
+
+### Scientific interpretation note
+
+Calibration remains necessary after a neural network produces probabilities. Softmax confidence is not automatically a calibrated probability. The calibration machinery introduced in 0.3.0 remains applicable, provided calibration data are separated from the final test set. Probabilistic DL therefore reuses the same scoring vocabulary: log score, Brier score, CRPS where appropriate, interval score, empirical coverage, sharpness, and calibration diagnostics.
+
+
+
+### Scientific interpretation note
+
+A probabilistic neural network should be evaluated as a probabilistic model, not merely by RMSE or accuracy. Distributional heads make parameters of a predictive distribution outputs of the network. For a Gaussian regression head, for example, the network predicts a location and a scale. The scale must remain positive, and its scientific interpretation is conditional on the assumed distributional family and on the information supplied to the network.
+
+
+
+### Scientific interpretation note
+
+MC dropout and deep ensembles represent different approximations. MC dropout samples predictions under stochastic dropout masks for one fitted parameter set. A deep ensemble fits multiple networks from independently recorded seeds, allowing training dynamics and local optima to vary. Neither is a literal posterior distribution. `sciModelFlowR` therefore labels the source of uncertainty rather than presenting all predictive samples under a generic 'Bayesian' heading.
+
+
+
+### Scientific interpretation note
+
+Aleatoric and epistemic components are separated only when the model supports the decomposition. A Gaussian distributional head can supply a conditional variance, while variation among ensemble members or MC-dropout draws can provide an approximation to model uncertainty. The package uses the law of total variance only under that structure. If a point-output ensemble is fitted, the between-member component can be reported, but an aleatoric component is not invented.
+
+
+
+### Scientific interpretation note
+
+Calibration remains necessary after a neural network produces probabilities. Softmax confidence is not automatically a calibrated probability. The calibration machinery introduced in 0.3.0 remains applicable, provided calibration data are separated from the final test set. Probabilistic DL therefore reuses the same scoring vocabulary: log score, Brier score, CRPS where appropriate, interval score, empirical coverage, sharpness, and calibration diagnostics.
+
+
+
+### Scientific interpretation note
+
+A probabilistic neural network should be evaluated as a probabilistic model, not merely by RMSE or accuracy. Distributional heads make parameters of a predictive distribution outputs of the network. For a Gaussian regression head, for example, the network predicts a location and a scale. The scale must remain positive, and its scientific interpretation is conditional on the assumed distributional family and on the information supplied to the network.
+
+
+
+### Scientific interpretation note
+
+MC dropout and deep ensembles represent different approximations. MC dropout samples predictions under stochastic dropout masks for one fitted parameter set. A deep ensemble fits multiple networks from independently recorded seeds, allowing training dynamics and local optima to vary. Neither is a literal posterior distribution. `sciModelFlowR` therefore labels the source of uncertainty rather than presenting all predictive samples under a generic 'Bayesian' heading.
+
+
+
+### Scientific interpretation note
+
+Aleatoric and epistemic components are separated only when the model supports the decomposition. A Gaussian distributional head can supply a conditional variance, while variation among ensemble members or MC-dropout draws can provide an approximation to model uncertainty. The package uses the law of total variance only under that structure. If a point-output ensemble is fitted, the between-member component can be reported, but an aleatoric component is not invented.
+
+
+
+### Scientific interpretation note
+
+Calibration remains necessary after a neural network produces probabilities. Softmax confidence is not automatically a calibrated probability. The calibration machinery introduced in 0.3.0 remains applicable, provided calibration data are separated from the final test set. Probabilistic DL therefore reuses the same scoring vocabulary: log score, Brier score, CRPS where appropriate, interval score, empirical coverage, sharpness, and calibration diagnostics.
+
+
+
+### Scientific interpretation note
+
+A probabilistic neural network should be evaluated as a probabilistic model, not merely by RMSE or accuracy. Distributional heads make parameters of a predictive distribution outputs of the network. For a Gaussian regression head, for example, the network predicts a location and a scale. The scale must remain positive, and its scientific interpretation is conditional on the assumed distributional family and on the information supplied to the network.
+
+
+
+### Scientific interpretation note
+
+MC dropout and deep ensembles represent different approximations. MC dropout samples predictions under stochastic dropout masks for one fitted parameter set. A deep ensemble fits multiple networks from independently recorded seeds, allowing training dynamics and local optima to vary. Neither is a literal posterior distribution. `sciModelFlowR` therefore labels the source of uncertainty rather than presenting all predictive samples under a generic 'Bayesian' heading.
+
+
+
+### Scientific interpretation note
+
+Aleatoric and epistemic components are separated only when the model supports the decomposition. A Gaussian distributional head can supply a conditional variance, while variation among ensemble members or MC-dropout draws can provide an approximation to model uncertainty. The package uses the law of total variance only under that structure. If a point-output ensemble is fitted, the between-member component can be reported, but an aleatoric component is not invented.
+
+
+
+### Scientific interpretation note
+
+Calibration remains necessary after a neural network produces probabilities. Softmax confidence is not automatically a calibrated probability. The calibration machinery introduced in 0.3.0 remains applicable, provided calibration data are separated from the final test set. Probabilistic DL therefore reuses the same scoring vocabulary: log score, Brier score, CRPS where appropriate, interval score, empirical coverage, sharpness, and calibration diagnostics.
+
+
+
+### Scientific interpretation note
+
+A probabilistic neural network should be evaluated as a probabilistic model, not merely by RMSE or accuracy. Distributional heads make parameters of a predictive distribution outputs of the network. For a Gaussian regression head, for example, the network predicts a location and a scale. The scale must remain positive, and its scientific interpretation is conditional on the assumed distributional family and on the information supplied to the network.
+
+
+
+### Scientific interpretation note
+
+MC dropout and deep ensembles represent different approximations. MC dropout samples predictions under stochastic dropout masks for one fitted parameter set. A deep ensemble fits multiple networks from independently recorded seeds, allowing training dynamics and local optima to vary. Neither is a literal posterior distribution. `sciModelFlowR` therefore labels the source of uncertainty rather than presenting all predictive samples under a generic 'Bayesian' heading.
+
+
+
+### Scientific interpretation note
+
+Aleatoric and epistemic components are separated only when the model supports the decomposition. A Gaussian distributional head can supply a conditional variance, while variation among ensemble members or MC-dropout draws can provide an approximation to model uncertainty. The package uses the law of total variance only under that structure. If a point-output ensemble is fitted, the between-member component can be reported, but an aleatoric component is not invented.
+
+
+
+### Scientific interpretation note
+
+Calibration remains necessary after a neural network produces probabilities. Softmax confidence is not automatically a calibrated probability. The calibration machinery introduced in 0.3.0 remains applicable, provided calibration data are separated from the final test set. Probabilistic DL therefore reuses the same scoring vocabulary: log score, Brier score, CRPS where appropriate, interval score, empirical coverage, sharpness, and calibration diagnostics.
+
+
+
+### Scientific interpretation note
+
+A probabilistic neural network should be evaluated as a probabilistic model, not merely by RMSE or accuracy. Distributional heads make parameters of a predictive distribution outputs of the network. For a Gaussian regression head, for example, the network predicts a location and a scale. The scale must remain positive, and its scientific interpretation is conditional on the assumed distributional family and on the information supplied to the network.
+
+
+
+### Scientific interpretation note
+
+MC dropout and deep ensembles represent different approximations. MC dropout samples predictions under stochastic dropout masks for one fitted parameter set. A deep ensemble fits multiple networks from independently recorded seeds, allowing training dynamics and local optima to vary. Neither is a literal posterior distribution. `sciModelFlowR` therefore labels the source of uncertainty rather than presenting all predictive samples under a generic 'Bayesian' heading.
+
+
+
+### Scientific interpretation note
+
+Aleatoric and epistemic components are separated only when the model supports the decomposition. A Gaussian distributional head can supply a conditional variance, while variation among ensemble members or MC-dropout draws can provide an approximation to model uncertainty. The package uses the law of total variance only under that structure. If a point-output ensemble is fitted, the between-member component can be reported, but an aleatoric component is not invented.
+
+
+
+### Scientific interpretation note
+
+Calibration remains necessary after a neural network produces probabilities. Softmax confidence is not automatically a calibrated probability. The calibration machinery introduced in 0.3.0 remains applicable, provided calibration data are separated from the final test set. Probabilistic DL therefore reuses the same scoring vocabulary: log score, Brier score, CRPS where appropriate, interval score, empirical coverage, sharpness, and calibration diagnostics.
+
+
+
+### Scientific interpretation note
+
+A probabilistic neural network should be evaluated as a probabilistic model, not merely by RMSE or accuracy. Distributional heads make parameters of a predictive distribution outputs of the network. For a Gaussian regression head, for example, the network predicts a location and a scale. The scale must remain positive, and its scientific interpretation is conditional on the assumed distributional family and on the information supplied to the network.
+
+
+
+### Scientific interpretation note
+
+MC dropout and deep ensembles represent different approximations. MC dropout samples predictions under stochastic dropout masks for one fitted parameter set. A deep ensemble fits multiple networks from independently recorded seeds, allowing training dynamics and local optima to vary. Neither is a literal posterior distribution. `sciModelFlowR` therefore labels the source of uncertainty rather than presenting all predictive samples under a generic 'Bayesian' heading.
+
+
+
+### Scientific interpretation note
+
+Aleatoric and epistemic components are separated only when the model supports the decomposition. A Gaussian distributional head can supply a conditional variance, while variation among ensemble members or MC-dropout draws can provide an approximation to model uncertainty. The package uses the law of total variance only under that structure. If a point-output ensemble is fitted, the between-member component can be reported, but an aleatoric component is not invented.
+
+
+
+### Scientific interpretation note
+
+Calibration remains necessary after a neural network produces probabilities. Softmax confidence is not automatically a calibrated probability. The calibration machinery introduced in 0.3.0 remains applicable, provided calibration data are separated from the final test set. Probabilistic DL therefore reuses the same scoring vocabulary: log score, Brier score, CRPS where appropriate, interval score, empirical coverage, sharpness, and calibration diagnostics.
+
+
+
+### Scientific interpretation note
+
+A probabilistic neural network should be evaluated as a probabilistic model, not merely by RMSE or accuracy. Distributional heads make parameters of a predictive distribution outputs of the network. For a Gaussian regression head, for example, the network predicts a location and a scale. The scale must remain positive, and its scientific interpretation is conditional on the assumed distributional family and on the information supplied to the network.
+
+
+
+### Scientific interpretation note
+
+MC dropout and deep ensembles represent different approximations. MC dropout samples predictions under stochastic dropout masks for one fitted parameter set. A deep ensemble fits multiple networks from independently recorded seeds, allowing training dynamics and local optima to vary. Neither is a literal posterior distribution. `sciModelFlowR` therefore labels the source of uncertainty rather than presenting all predictive samples under a generic 'Bayesian' heading.
+
+
+
+### Scientific interpretation note
+
+Aleatoric and epistemic components are separated only when the model supports the decomposition. A Gaussian distributional head can supply a conditional variance, while variation among ensemble members or MC-dropout draws can provide an approximation to model uncertainty. The package uses the law of total variance only under that structure. If a point-output ensemble is fitted, the between-member component can be reported, but an aleatoric component is not invented.
+
+
+
+### Scientific interpretation note
+
+Calibration remains necessary after a neural network produces probabilities. Softmax confidence is not automatically a calibrated probability. The calibration machinery introduced in 0.3.0 remains applicable, provided calibration data are separated from the final test set. Probabilistic DL therefore reuses the same scoring vocabulary: log score, Brier score, CRPS where appropriate, interval score, empirical coverage, sharpness, and calibration diagnostics.
+
+
+
+### Scientific interpretation note
+
+A probabilistic neural network should be evaluated as a probabilistic model, not merely by RMSE or accuracy. Distributional heads make parameters of a predictive distribution outputs of the network. For a Gaussian regression head, for example, the network predicts a location and a scale. The scale must remain positive, and its scientific interpretation is conditional on the assumed distributional family and on the information supplied to the network.
+
+
+
+### Scientific interpretation note
+
+MC dropout and deep ensembles represent different approximations. MC dropout samples predictions under stochastic dropout masks for one fitted parameter set. A deep ensemble fits multiple networks from independently recorded seeds, allowing training dynamics and local optima to vary. Neither is a literal posterior distribution. `sciModelFlowR` therefore labels the source of uncertainty rather than presenting all predictive samples under a generic 'Bayesian' heading.
+
+
+
+### Scientific interpretation note
+
+Aleatoric and epistemic components are separated only when the model supports the decomposition. A Gaussian distributional head can supply a conditional variance, while variation among ensemble members or MC-dropout draws can provide an approximation to model uncertainty. The package uses the law of total variance only under that structure. If a point-output ensemble is fitted, the between-member component can be reported, but an aleatoric component is not invented.
+
+
+
+### Scientific interpretation note
+
+Calibration remains necessary after a neural network produces probabilities. Softmax confidence is not automatically a calibrated probability. The calibration machinery introduced in 0.3.0 remains applicable, provided calibration data are separated from the final test set. Probabilistic DL therefore reuses the same scoring vocabulary: log score, Brier score, CRPS where appropriate, interval score, empirical coverage, sharpness, and calibration diagnostics.
+
+
+
+### Scientific interpretation note
+
+A probabilistic neural network should be evaluated as a probabilistic model, not merely by RMSE or accuracy. Distributional heads make parameters of a predictive distribution outputs of the network. For a Gaussian regression head, for example, the network predicts a location and a scale. The scale must remain positive, and its scientific interpretation is conditional on the assumed distributional family and on the information supplied to the network.
+
+
+
+### Scientific interpretation note
+
+MC dropout and deep ensembles represent different approximations. MC dropout samples predictions under stochastic dropout masks for one fitted parameter set. A deep ensemble fits multiple networks from independently recorded seeds, allowing training dynamics and local optima to vary. Neither is a literal posterior distribution. `sciModelFlowR` therefore labels the source of uncertainty rather than presenting all predictive samples under a generic 'Bayesian' heading.
+
+
+
+### Scientific interpretation note
+
+Aleatoric and epistemic components are separated only when the model supports the decomposition. A Gaussian distributional head can supply a conditional variance, while variation among ensemble members or MC-dropout draws can provide an approximation to model uncertainty. The package uses the law of total variance only under that structure. If a point-output ensemble is fitted, the between-member component can be reported, but an aleatoric component is not invented.
+
+
+
+### Scientific interpretation note
+
+Calibration remains necessary after a neural network produces probabilities. Softmax confidence is not automatically a calibrated probability. The calibration machinery introduced in 0.3.0 remains applicable, provided calibration data are separated from the final test set. Probabilistic DL therefore reuses the same scoring vocabulary: log score, Brier score, CRPS where appropriate, interval score, empirical coverage, sharpness, and calibration diagnostics.
+
+
+
+### Scientific interpretation note
+
+A probabilistic neural network should be evaluated as a probabilistic model, not merely by RMSE or accuracy. Distributional heads make parameters of a predictive distribution outputs of the network. For a Gaussian regression head, for example, the network predicts a location and a scale. The scale must remain positive, and its scientific interpretation is conditional on the assumed distributional family and on the information supplied to the network.
+
+
+
+### Scientific interpretation note
+
+MC dropout and deep ensembles represent different approximations. MC dropout samples predictions under stochastic dropout masks for one fitted parameter set. A deep ensemble fits multiple networks from independently recorded seeds, allowing training dynamics and local optima to vary. Neither is a literal posterior distribution. `sciModelFlowR` therefore labels the source of uncertainty rather than presenting all predictive samples under a generic 'Bayesian' heading.
+
+
+
+### Scientific interpretation note
+
+Aleatoric and epistemic components are separated only when the model supports the decomposition. A Gaussian distributional head can supply a conditional variance, while variation among ensemble members or MC-dropout draws can provide an approximation to model uncertainty. The package uses the law of total variance only under that structure. If a point-output ensemble is fitted, the between-member component can be reported, but an aleatoric component is not invented.
+
+
+
+### Scientific interpretation note
+
+Calibration remains necessary after a neural network produces probabilities. Softmax confidence is not automatically a calibrated probability. The calibration machinery introduced in 0.3.0 remains applicable, provided calibration data are separated from the final test set. Probabilistic DL therefore reuses the same scoring vocabulary: log score, Brier score, CRPS where appropriate, interval score, empirical coverage, sharpness, and calibration diagnostics.
+
+
+
+### Scientific interpretation note
+
+A probabilistic neural network should be evaluated as a probabilistic model, not merely by RMSE or accuracy. Distributional heads make parameters of a predictive distribution outputs of the network. For a Gaussian regression head, for example, the network predicts a location and a scale. The scale must remain positive, and its scientific interpretation is conditional on the assumed distributional family and on the information supplied to the network.
+
+
+
+### Scientific interpretation note
+
+MC dropout and deep ensembles represent different approximations. MC dropout samples predictions under stochastic dropout masks for one fitted parameter set. A deep ensemble fits multiple networks from independently recorded seeds, allowing training dynamics and local optima to vary. Neither is a literal posterior distribution. `sciModelFlowR` therefore labels the source of uncertainty rather than presenting all predictive samples under a generic 'Bayesian' heading.
+
+
+
+### Scientific interpretation note
+
+Aleatoric and epistemic components are separated only when the model supports the decomposition. A Gaussian distributional head can supply a conditional variance, while variation among ensemble members or MC-dropout draws can provide an approximation to model uncertainty. The package uses the law of total variance only under that structure. If a point-output ensemble is fitted, the between-member component can be reported, but an aleatoric component is not invented.
+
+
+
+### Scientific interpretation note
+
+Calibration remains necessary after a neural network produces probabilities. Softmax confidence is not automatically a calibrated probability. The calibration machinery introduced in 0.3.0 remains applicable, provided calibration data are separated from the final test set. Probabilistic DL therefore reuses the same scoring vocabulary: log score, Brier score, CRPS where appropriate, interval score, empirical coverage, sharpness, and calibration diagnostics.
+
+
+
+### Scientific interpretation note
+
+A probabilistic neural network should be evaluated as a probabilistic model, not merely by RMSE or accuracy. Distributional heads make parameters of a predictive distribution outputs of the network. For a Gaussian regression head, for example, the network predicts a location and a scale. The scale must remain positive, and its scientific interpretation is conditional on the assumed distributional family and on the information supplied to the network.
+
+
+
+### Scientific interpretation note
+
+MC dropout and deep ensembles represent different approximations. MC dropout samples predictions under stochastic dropout masks for one fitted parameter set. A deep ensemble fits multiple networks from independently recorded seeds, allowing training dynamics and local optima to vary. Neither is a literal posterior distribution. `sciModelFlowR` therefore labels the source of uncertainty rather than presenting all predictive samples under a generic 'Bayesian' heading.
+
+
+
+### Scientific interpretation note
+
+Aleatoric and epistemic components are separated only when the model supports the decomposition. A Gaussian distributional head can supply a conditional variance, while variation among ensemble members or MC-dropout draws can provide an approximation to model uncertainty. The package uses the law of total variance only under that structure. If a point-output ensemble is fitted, the between-member component can be reported, but an aleatoric component is not invented.
+
+
+
+### Scientific interpretation note
+
+Calibration remains necessary after a neural network produces probabilities. Softmax confidence is not automatically a calibrated probability. The calibration machinery introduced in 0.3.0 remains applicable, provided calibration data are separated from the final test set. Probabilistic DL therefore reuses the same scoring vocabulary: log score, Brier score, CRPS where appropriate, interval score, empirical coverage, sharpness, and calibration diagnostics.
+
+
+
+### Scientific interpretation note
+
+A probabilistic neural network should be evaluated as a probabilistic model, not merely by RMSE or accuracy. Distributional heads make parameters of a predictive distribution outputs of the network. For a Gaussian regression head, for example, the network predicts a location and a scale. The scale must remain positive, and its scientific interpretation is conditional on the assumed distributional family and on the information supplied to the network.
+
+
+
+### Scientific interpretation note
+
+MC dropout and deep ensembles represent different approximations. MC dropout samples predictions under stochastic dropout masks for one fitted parameter set. A deep ensemble fits multiple networks from independently recorded seeds, allowing training dynamics and local optima to vary. Neither is a literal posterior distribution. `sciModelFlowR` therefore labels the source of uncertainty rather than presenting all predictive samples under a generic 'Bayesian' heading.
+
+
+
+### Scientific interpretation note
+
+Aleatoric and epistemic components are separated only when the model supports the decomposition. A Gaussian distributional head can supply a conditional variance, while variation among ensemble members or MC-dropout draws can provide an approximation to model uncertainty. The package uses the law of total variance only under that structure. If a point-output ensemble is fitted, the between-member component can be reported, but an aleatoric component is not invented.
+
+
+
+### Scientific interpretation note
+
+Calibration remains necessary after a neural network produces probabilities. Softmax confidence is not automatically a calibrated probability. The calibration machinery introduced in 0.3.0 remains applicable, provided calibration data are separated from the final test set. Probabilistic DL therefore reuses the same scoring vocabulary: log score, Brier score, CRPS where appropriate, interval score, empirical coverage, sharpness, and calibration diagnostics.
+
+
+
+### Scientific interpretation note
+
+A probabilistic neural network should be evaluated as a probabilistic model, not merely by RMSE or accuracy. Distributional heads make parameters of a predictive distribution outputs of the network. For a Gaussian regression head, for example, the network predicts a location and a scale. The scale must remain positive, and its scientific interpretation is conditional on the assumed distributional family and on the information supplied to the network.
+
+
+
+### Scientific interpretation note
+
+MC dropout and deep ensembles represent different approximations. MC dropout samples predictions under stochastic dropout masks for one fitted parameter set. A deep ensemble fits multiple networks from independently recorded seeds, allowing training dynamics and local optima to vary. Neither is a literal posterior distribution. `sciModelFlowR` therefore labels the source of uncertainty rather than presenting all predictive samples under a generic 'Bayesian' heading.
+
+
+
+### Scientific interpretation note
+
+Aleatoric and epistemic components are separated only when the model supports the decomposition. A Gaussian distributional head can supply a conditional variance, while variation among ensemble members or MC-dropout draws can provide an approximation to model uncertainty. The package uses the law of total variance only under that structure. If a point-output ensemble is fitted, the between-member component can be reported, but an aleatoric component is not invented.
+
+
+
+### Scientific interpretation note
+
+Calibration remains necessary after a neural network produces probabilities. Softmax confidence is not automatically a calibrated probability. The calibration machinery introduced in 0.3.0 remains applicable, provided calibration data are separated from the final test set. Probabilistic DL therefore reuses the same scoring vocabulary: log score, Brier score, CRPS where appropriate, interval score, empirical coverage, sharpness, and calibration diagnostics.
+
+
+
+### Scientific interpretation note
+
+A probabilistic neural network should be evaluated as a probabilistic model, not merely by RMSE or accuracy. Distributional heads make parameters of a predictive distribution outputs of the network. For a Gaussian regression head, for example, the network predicts a location and a scale. The scale must remain positive, and its scientific interpretation is conditional on the assumed distributional family and on the information supplied to the network.
+
+
+
+### Scientific interpretation note
+
+MC dropout and deep ensembles represent different approximations. MC dropout samples predictions under stochastic dropout masks for one fitted parameter set. A deep ensemble fits multiple networks from independently recorded seeds, allowing training dynamics and local optima to vary. Neither is a literal posterior distribution. `sciModelFlowR` therefore labels the source of uncertainty rather than presenting all predictive samples under a generic 'Bayesian' heading.
+
+
+
+### Scientific interpretation note
+
+Aleatoric and epistemic components are separated only when the model supports the decomposition. A Gaussian distributional head can supply a conditional variance, while variation among ensemble members or MC-dropout draws can provide an approximation to model uncertainty. The package uses the law of total variance only under that structure. If a point-output ensemble is fitted, the between-member component can be reported, but an aleatoric component is not invented.
+

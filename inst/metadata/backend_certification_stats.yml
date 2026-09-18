@@ -1,0 +1,21 @@
+backend: stats
+adapter_version: 1
+release: 0.1.0
+package: stats
+status: core-reference
+validation_tier: 1
+capabilities:
+  regression: true
+  classification: true
+  probabilities: true
+  multiclass: false
+  posterior_sampling: false
+  conformal: false
+  gpu: false
+known_limitations:
+  - Reference adapters only; not a general modeling registry.
+  - Binary classification returns probabilities and does not silently impose a threshold.
+validation:
+  unit_tests: specified
+  differential_tests: specified
+  runtime_status_this_environment: not_run

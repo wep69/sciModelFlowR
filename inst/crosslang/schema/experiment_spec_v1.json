@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "task": {
+    "kind": "regression",
+    "target": [
+      "yield"
+    ]
+  },
+  "data": {
+    "target": [
+      "yield"
+    ],
+    "predictors": [
+      "nitrogen",
+      "rainfall",
+      "soil_n"
+    ],
+    "id_column": [
+      "obs_id"
+    ]
+  },
+  "design": {
+    "id_column": [
+      "obs_id"
+    ],
+    "group_columns": [],
+    "time_column": [],
+    "coordinate_columns": []
+  },
+  "preprocessing": {
+    "impute_numeric": "median",
+    "center": true,
+    "scale": true,
+    "one_hot": true
+  },
+  "model": {
+    "family": "linear_regression",
+    "engine": "stats"
+  },
+  "metrics": [
+    "rmse",
+    "mae"
+  ]
+}

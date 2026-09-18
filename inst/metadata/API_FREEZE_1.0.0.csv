@@ -1,0 +1,247 @@
+function_name,category,status,api_freeze,source_file,signature_prefix
+smf_ale,explainability,stable_1x,1.0.0,explain.R,"smf_ale (result, data, features=character(), bins=20L, class=NULL) {"
+smf_api_catalog,core,stable_1x,1.0.0,release-candidate.R,smf_api_catalog () {
+smf_apply_calibration,modeling,stable_1x,1.0.0,calibration.R,"smf_apply_calibration (calibration,probabilities) {"
+smf_apply_imbalance,modeling,stable_1x,1.0.0,imbalance.R,"smf_apply_imbalance (data,outcome,spec=smf_imbalance_spec(),context=c(""analysis"",""training"",""assessment"",""test""),seed=260915L) {"
+smf_apply_preprocessor,core,stable_1x,1.0.0,preprocess.R,"smf_apply_preprocessor (preprocessor, data) {"
+smf_apply_representation,resampling-features,stable_1x,1.0.0,features-core.R,"smf_apply_representation (result, newdata) {"
+smf_audit_data,data-design,stable_1x,1.0.0,data-audit.R,"smf_audit_data (data, spec, design=NULL) {"
+smf_autoencoder,core,stable_1x,1.0.0,deep-learning-core.R,"smf_autoencoder (input_dim, latent_dim=8L, hidden=c(64L,32L)) {"
+smf_available_model_adapters,modeling,stable_1x,1.0.0,model-adapters.R,smf_available_model_adapters () {
+smf_backend_capabilities,core,stable_1x,1.0.0,core-capabilities.R,smf_backend_capabilities (name) {
+smf_backend_matrix,core,stable_1x,1.0.0,release-candidate.R,smf_backend_matrix () {
+smf_backend_object,core,stable_1x,1.0.0,experiment.R,smf_backend_object (result) {
+smf_bart_fit,modeling,stable_1x,1.0.0,bayesian-adapters.R,"smf_bart_fit (x, y, task=c(""regression"",""binary""), ndpost=1000L, nskip=500L, ntree=200L, seed=260917L, ...) {"
+smf_bart_predict,modeling,stable_1x,1.0.0,bayesian-adapters.R,"smf_bart_predict (fit, new_data) {"
+smf_batch_predict,modeling,stable_1x,1.0.0,scalability.R,"smf_batch_predict (object, new_data, batch_size=1000L, workers=1L, strict_schema=TRUE,"
+smf_bayes_compare,inference-uncertainty,stable_1x,1.0.0,bayesian-core.R,smf_bayes_compare (...) {
+smf_bayes_diagnose,inference-uncertainty,stable_1x,1.0.0,bayesian-core.R,"smf_bayes_diagnose (fit, rhat_max=1.01, min_ess=400L) {"
+smf_bayes_diagnostic_flags,inference-uncertainty,stable_1x,1.0.0,bayesian-core.R,"smf_bayes_diagnostic_flags (summary, divergences=0L, rhat_max=1.01, min_ess=400L) {"
+smf_bayes_draws,inference-uncertainty,stable_1x,1.0.0,bayesian-core.R,"smf_bayes_draws (fit, variables=NULL, format=c(""matrix"",""posterior"")) {"
+smf_bayes_epred,inference-uncertainty,stable_1x,1.0.0,bayesian-core.R,"smf_bayes_epred (fit, new_data, ndraws=NULL, seed=NULL) {"
+smf_bayes_fit,modeling,stable_1x,1.0.0,bayesian-core.R,"smf_bayes_fit (formula, data, bayesian=smf_bayesian_spec(), family=""gaussian"", backend=c(""conjugate_gaussian"",""brms""), ...) {"
+smf_bayes_loo,inference-uncertainty,stable_1x,1.0.0,bayesian-core.R,smf_bayes_loo (fit) {
+smf_bayes_pp_check,inference-uncertainty,stable_1x,1.0.0,bayesian-core.R,"smf_bayes_pp_check (fit, new_data, truth, ndraws=500L, seed=260917L) {"
+smf_bayes_predict,modeling,stable_1x,1.0.0,bayesian-core.R,"smf_bayes_predict (fit, new_data, ndraws=NULL, seed=NULL) {"
+smf_bayes_prior,inference-uncertainty,stable_1x,1.0.0,bayesian-core.R,smf_bayes_prior (spec=smf_bayesian_spec()) {
+smf_bayes_prior_predictive,modeling,stable_1x,1.0.0,bayesian-core.R,"smf_bayes_prior_predictive (formula, data, bayesian=smf_bayesian_spec(), family=""gaussian"", backend=c(""conjugate_gaussian"",""brms""), ndraws=500L, ...) {"
+smf_bayes_stacking,inference-uncertainty,stable_1x,1.0.0,bayesian-core.R,"smf_bayes_stacking (..., method=""stacking"") {"
+smf_bayes_summary,inference-uncertainty,stable_1x,1.0.0,bayesian-core.R,"smf_bayes_summary (fit, probs=c(0.025,0.5,0.975)) {"
+smf_bayesian_spec,inference-uncertainty,stable_1x,1.0.0,spec-constructors.R,"smf_bayesian_spec (inference=c(""nuts"",""hmc"",""mcmc"",""vi"",""svi"",""laplace""), priors=list(), chains=4L, draws=2000L, warmup=1000L, target_accept=0.9, seed=260915L) {"
+smf_benchmark,tuning-benchmark,stable_1x,1.0.0,benchmark.R,"smf_benchmark (spec, data, benchmark, resamples=NULL, override=FALSE) {"
+smf_benchmark_spec,tuning-benchmark,stable_1x,1.0.0,benchmark.R,"smf_benchmark_spec (candidates, metrics=list(), resampling=NULL, decision_rule=NULL,"
+smf_blocked_cv,core,stable_1x,1.0.0,resampling.R,"smf_blocked_cv (data, blocks, v=NULL, id_column=character(), seed=260915L, shuffle=FALSE) {"
+smf_bootstrap,resampling-features,stable_1x,1.0.0,bootstrap-core.R,"smf_bootstrap (data, spec, statistic, design=smf_design_spec(), override=FALSE) {"
+smf_bootstrap_interval,resampling-features,stable_1x,1.0.0,bootstrap-core.R,smf_bootstrap_interval (result) {
+smf_bootstrap_spec,resampling-features,stable_1x,1.0.0,spec-constructors.R,"smf_bootstrap_spec (method=c(""case"",""stratified"",""residual"",""parametric"",""wild"",""cluster"",""hierarchical"",""moving_block"",""stationary_block"",""spatial_block""), n_resamples=1999L, sampling_unit=character(), block_length=NULL, statistic=""metric"", interval=c(""percentile"",""basic"",""bca"",""studentized""), level=0.95, seed=260915L, parameters=list()) {"
+smf_bootstrap_stability,resampling-features,stable_1x,1.0.0,bootstrap-core.R,smf_bootstrap_stability (result) {
+smf_build_representation,resampling-features,stable_1x,1.0.0,features-core.R,"smf_build_representation (data, outcome=character(), spec=smf_feature_spec(""pca""), id_column=character(), context=c(""global"",""training"")) {"
+smf_bundle_info,operations,stable_1x,1.0.0,persistence.R,smf_bundle_info (path) {
+smf_calibrate,modeling,stable_1x,1.0.0,calibration.R,"smf_calibrate (truth,probabilities,spec=smf_calibration_spec(""platt""),training_data=NULL) {"
+smf_calibration_report,modeling,stable_1x,1.0.0,probabilistic-scoring.R,"smf_calibration_report (truth,probabilities,bins=10L,positive_label=NULL) {"
+smf_calibration_spec,modeling,stable_1x,1.0.0,spec-constructors.R,"smf_calibration_spec (method=c(""none"",""platt"",""isotonic"",""multinomial"",""beta""), source=c(""analysis_holdout"",""external_predictions""), calibration_prop=0.2, bins=10L, parameters=list()) {"
+smf_capabilities,core,stable_1x,1.0.0,core-capabilities.R,smf_capabilities () {
+smf_check_pseudoreplication,core,stable_1x,1.0.0,design.R,"smf_check_pseudoreplication (data, design, treatment=character()) {"
+smf_chunk_plan,core,stable_1x,1.0.0,scalability.R,"smf_chunk_plan (n, chunk_size=1000L) {"
+smf_cnn1d,core,stable_1x,1.0.0,deep-learning-core.R,"smf_cnn1d (input_shape, channels=c(32L,64L), kernel_size=3L, output_dim=1L, dropout=0, task=""regression"") {"
+smf_cnn2d,core,stable_1x,1.0.0,deep-learning-core.R,"smf_cnn2d (input_shape, channels=c(16L,32L), kernel_size=3L, output_dim=1L, dropout=0, task=""regression"") {"
+smf_compare_validation_domains,reporting-validation,stable_1x,1.0.0,external-validation.R,"smf_compare_validation_domains (internal_result, external_result) {"
+smf_conformal_coverage,inference-uncertainty,stable_1x,1.0.0,conformal.R,"smf_conformal_coverage (truth, prediction) {"
+smf_conformal_diagnose,inference-uncertainty,stable_1x,1.0.0,conformal.R,"smf_conformal_diagnose (object, truth, prediction, tolerance=NULL) {"
+smf_conformal_fit,modeling,stable_1x,1.0.0,conformal.R,"smf_conformal_fit (truth, prediction=NULL, spec=smf_conformal_spec(), design=NULL,"
+smf_conformal_predict,modeling,stable_1x,1.0.0,conformal.R,"smf_conformal_predict (object, prediction=NULL, fold_predictions=NULL, lower=NULL, upper=NULL, probabilities=NULL) {"
+smf_conformal_predict_probably,modeling,stable_1x,1.0.0,conformal.R,"smf_conformal_predict_probably (object, new_data, level=NULL, ...) {"
+smf_conformal_probably,inference-uncertainty,stable_1x,1.0.0,conformal.R,"smf_conformal_probably (object, method=c(""split"",""cv_plus"",""full"",""quantile""), cal_data=NULL, train_data=NULL, level=0.95, ...) {"
+smf_conformal_spec,inference-uncertainty,stable_1x,1.0.0,spec-constructors.R,"smf_conformal_spec (method=c(""split"",""cv_plus"",""full"",""quantile"",""aps""), level=0.95, score=""auto"", calibration_role=c(""calibration"",""out_of_fold""), exchangeability=c(""iid"",""group"",""time"",""spatial"",""custom""), randomized=FALSE, parameters=list()) {"
+smf_counterfactual,explainability,stable_1x,1.0.0,explain.R,"smf_counterfactual (result, new_data, reference, target_value=NULL, target_class=NULL, threshold=0.5, max_candidates=5L) {"
+smf_data_hash,data-design,stable_1x,1.0.0,core-serialization.R,"smf_data_hash (data, algo=""sha256"") {"
+smf_data_iterator,data-design,stable_1x,1.0.0,scalability.R,"smf_data_iterator (data, chunk_size=1000L) {"
+smf_data_spec,data-design,stable_1x,1.0.0,spec-constructors.R,"smf_data_spec (target, predictors = character(), id_column = character(), units = list(), categorical = character(), numeric = character(), missing_codes = list()) {"
+smf_dataset_card,data-design,stable_1x,1.0.0,datasets.R,smf_dataset_card (name) {
+smf_decide_benchmark,tuning-benchmark,stable_1x,1.0.0,benchmark.R,"smf_decide_benchmark (result, decision_rule) {"
+smf_deployment_spec,operations,stable_1x,1.0.0,persistence.R,"smf_deployment_spec (adapter=c(""local"",""none"",""pins"",""vetiver"",""onnx""), strict_schema=TRUE,"
+smf_deprecation_policy,core,stable_1x,1.0.0,release-candidate.R,smf_deprecation_policy () list(
+smf_design_spec,data-design,stable_1x,1.0.0,spec-constructors.R,"smf_design_spec (id_column=character(), group_columns=character(), block_columns=character(), repeated_unit=character(), time_column=character(), coordinate_columns=character(), external_domain_column=character(), hierarchy=list(), experimental_unit=character(), groups=NULL, blocks=NULL, time=NULL, coordinates=NULL) {"
+smf_design_summary,data-design,stable_1x,1.0.0,design.R,"smf_design_summary (data, design) {"
+smf_detect_leakage,data-design,stable_1x,1.0.0,data-audit.R,"smf_detect_leakage (data, spec, design=NULL) {"
+smf_diagnose,core,stable_1x,1.0.0,diagnostics.R,smf_diagnose (result) {
+smf_dist_cdf,core,stable_1x,1.0.0,probabilistic-core.R,"smf_dist_cdf (dist,value) {"
+smf_dist_interval,core,stable_1x,1.0.0,probabilistic-core.R,"smf_dist_interval (dist, level=0.95) {"
+smf_dist_log_prob,core,stable_1x,1.0.0,probabilistic-core.R,"smf_dist_log_prob (dist,value) {"
+smf_dist_mean,core,stable_1x,1.0.0,probabilistic-core.R,smf_dist_mean (dist) {
+smf_dist_median,core,stable_1x,1.0.0,probabilistic-core.R,smf_dist_median (dist) {
+smf_dist_quantile,core,stable_1x,1.0.0,probabilistic-core.R,"smf_dist_quantile (dist, probs) {"
+smf_dist_sample,core,stable_1x,1.0.0,probabilistic-core.R,"smf_dist_sample (dist,n=1L,seed=NULL) {"
+smf_dist_sd,core,stable_1x,1.0.0,probabilistic-core.R,smf_dist_sd (dist) sqrt(smf_dist_variance(dist))
+smf_dist_variance,core,stable_1x,1.0.0,probabilistic-core.R,smf_dist_variance (dist) {
+smf_dl_architecture,deep-learning,stable_1x,1.0.0,deep-learning-core.R,"smf_dl_architecture (kind, input_shape, output_dim=1L, parameters=list(), modality=""tabular"", task=""regression"") {"
+smf_dl_checkpoint,deep-learning,stable_1x,1.0.0,deep-learning-train.R,"smf_dl_checkpoint (path, backend=""torch"", metadata=list(), trusted=FALSE) {"
+smf_dl_determinism,deep-learning,stable_1x,1.0.0,deep-learning-train.R,"smf_dl_determinism (mode=c(""reproducible"",""strict_cpu"",""performance""), seed=260915L) {"
+smf_dl_device,deep-learning,stable_1x,1.0.0,deep-learning-train.R,"smf_dl_device (device=c(""auto"",""cpu"",""cuda"")) {"
+smf_dl_distributional_head,deep-learning,stable_1x,1.0.0,probabilistic-dl.R,"smf_dl_distributional_head (distribution=c(""gaussian"",""bernoulli"",""categorical""), parameters=list()) {"
+smf_dl_early_stopping,deep-learning,stable_1x,1.0.0,deep-learning-train.R,"smf_dl_early_stopping (monitor=""validation_loss"", mode=c(""min"",""max""), patience=10L, min_delta=0, restore_best=TRUE) {"
+smf_dl_ensemble,deep-learning,stable_1x,1.0.0,probabilistic-dl.R,"smf_dl_ensemble (x=NULL, y=NULL, architecture=NULL, fits=NULL, seeds=c(260915L,260916L,260917L), ...) {"
+smf_dl_gradcam,deep-learning,stable_1x,1.0.0,deep-learning-xai.R,"smf_dl_gradcam (object, x, layer, target_index=1L, activation_adapter=NULL) {"
+smf_dl_gradient_x_input,deep-learning,stable_1x,1.0.0,deep-learning-xai.R,"smf_dl_gradient_x_input (object, x, target_index=1L) {"
+smf_dl_integrated_gradients,deep-learning,stable_1x,1.0.0,deep-learning-xai.R,"smf_dl_integrated_gradients (object, x, baseline=NULL, steps=50L, target_index=1L) {"
+smf_dl_interval,deep-learning,stable_1x,1.0.0,probabilistic-dl.R,"smf_dl_interval (distribution, level=0.95) smf_dist_interval(distribution, level=level)"
+smf_dl_load_checkpoint,deep-learning,stable_1x,1.0.0,deep-learning-train.R,"smf_dl_load_checkpoint (checkpoint, model, trusted=FALSE, verify_hash=TRUE) {"
+smf_dl_mc_dropout,deep-learning,stable_1x,1.0.0,probabilistic-dl.R,"smf_dl_mc_dropout (object, newdata, draws=100L, seed=260915L) {"
+smf_dl_mixed_precision,deep-learning,stable_1x,1.0.0,deep-learning-train.R,"smf_dl_mixed_precision (precision=c(""float32"",""mixed16"",""float64""), device=""auto"") {"
+smf_dl_optimizer,deep-learning,stable_1x,1.0.0,deep-learning-train.R,"smf_dl_optimizer (name=c(""adam"",""adamw"",""sgd"",""rmsprop""), lr=1e-3, weight_decay=0, momentum=0.9, parameters=list()) {"
+smf_dl_predict,modeling,stable_1x,1.0.0,deep-learning-train.R,"smf_dl_predict (object, newdata) {"
+smf_dl_predict_distribution,modeling,stable_1x,1.0.0,probabilistic-dl.R,"smf_dl_predict_distribution (object, newdata, method=c(""ensemble"",""mc_dropout"",""gaussian_head""), draws=100L, level=0.95) {"
+smf_dl_predict_tensor,modeling,stable_1x,1.0.0,deep-learning-train.R,"smf_dl_predict_tensor (object, x) {"
+smf_dl_resume,deep-learning,stable_1x,1.0.0,deep-learning-train.R,"smf_dl_resume (object, checkpoint, trusted=FALSE, verify_hash=TRUE) {"
+smf_dl_saliency,deep-learning,stable_1x,1.0.0,deep-learning-xai.R,"smf_dl_saliency (object, x, target_index=1L) {"
+smf_dl_save_checkpoint,deep-learning,stable_1x,1.0.0,deep-learning-train.R,"smf_dl_save_checkpoint (model, path, metadata=list()) {"
+smf_dl_scheduler,deep-learning,stable_1x,1.0.0,deep-learning-train.R,"smf_dl_scheduler (name=c(""none"",""step"",""cosine"",""plateau""), parameters=list()) {"
+smf_dl_spec,deep-learning,stable_1x,1.0.0,spec-constructors.R,"smf_dl_spec (architecture=character(), trainer=""torch"", optimizer=""adam"", scheduler=character(), precision=""float32"", device=""auto"", epochs=100L, batch_size=32L, seed=260915L) {"
+smf_dl_train,deep-learning,stable_1x,1.0.0,deep-learning-train.R,"smf_dl_train (x, y, architecture=NULL, validation=NULL, validation_role=""analysis_validation"", epochs=100L, batch_size=32L,"
+smf_dl_train_tensor,deep-learning,stable_1x,1.0.0,deep-learning-train.R,"smf_dl_train_tensor (x, y, architecture, validation=NULL, validation_role=""analysis_validation"", epochs=100L, batch_size=32L,"
+smf_dl_uncertainty_decompose,deep-learning,stable_1x,1.0.0,probabilistic-dl.R,"smf_dl_uncertainty_decompose (distribution, aleatoric=NULL, level=0.95) {"
+smf_doctor,core,stable_1x,1.0.0,doctor.R,smf_doctor () {
+smf_end_run,core,stable_1x,1.0.0,tracking.R,"smf_end_run (run, status=c(""finished"",""failed"",""interrupted""), message=character()) {"
+smf_evaluate,modeling,stable_1x,1.0.0,metrics.R,"smf_evaluate (truth, estimate, metrics=list(smf_metric_spec(""rmse"")), positive_label=NULL, threshold=0.5) {"
+smf_evaluate_probabilistic,modeling,stable_1x,1.0.0,probabilistic-scoring.R,"smf_evaluate_probabilistic (truth,distribution,metrics=c(""log_loss"",""brier"",""ece""),level=0.95) {"
+smf_experiment_spec,core,stable_1x,1.0.0,spec-constructors.R,"smf_experiment_spec (task, data, design=smf_design_spec(), preprocessing=smf_preprocess_spec(), resampling=smf_resampling_spec(), model, metrics=list(smf_metric_spec(""rmse"")), features=NULL, bootstrap=NULL, probabilistic=NULL, calibration=NULL, imbalance=NULL, tuning=NULL, benchmark=NULL, explain=NULL, reporting=smf_reporting_spec(), bayesian=NULL, deep_learning=NULL, conformal=NULL, uncertainty=NULL, tracking=NULL, persistence=NULL, deployment=NULL, scalability=NULL, reproducibility=smf_reproducibility_spec()) {"
+smf_explain,explainability,stable_1x,1.0.0,explain.R,"smf_explain (result, data, spec=smf_explain_spec(), truth=NULL, new_data=NULL) {"
+smf_explain_spec,explainability,stable_1x,1.0.0,spec-constructors.R,"smf_explain_spec (methods=c(""permutation"",""pdp"",""ale""), scope=c(""both"",""global"",""local""),"
+smf_explanation_agreement,core,stable_1x,1.0.0,explain-stability.R,"smf_explanation_agreement (explanations, top_k=5L) {"
+smf_explanation_domain,core,stable_1x,1.0.0,explain.R,"smf_explanation_domain (reference, new_data, features=intersect(names(reference),names(new_data))) {"
+smf_explanation_stability,core,stable_1x,1.0.0,explain-stability.R,"smf_explanation_stability (spec, data, explain=smf_explain_spec(""permutation""), resamples=NULL, top_k=5L, override=FALSE) {"
+smf_export_onnx,core,stable_1x,1.0.0,deployment.R,"smf_export_onnx (result, file, exporter=NULL) {"
+smf_external_split,resampling-features,stable_1x,1.0.0,resampling.R,"smf_external_split (data, domain, assessment_values, id_column=character(), seed=260915L) {"
+smf_external_validate,reporting-validation,stable_1x,1.0.0,external-validation.R,"smf_external_validate (result, external_data, domain_name=""external"", metrics=NULL, truth=NULL, id_column=NULL) {"
+smf_feature_select_resamples,resampling-features,stable_1x,1.0.0,features-core.R,"smf_feature_select_resamples (data, outcome, feature_spec, resamples, id_column=character()) {"
+smf_feature_spec,resampling-features,stable_1x,1.0.0,spec-constructors.R,"smf_feature_spec (method=c(""none"",""nzv"",""correlation"",""vif"",""mutual_information"",""rfe"",""sequential"",""regularized"",""tree"",""stability"",""pca"",""pls""), n_features=NULL, threshold=0.95, supervised=NULL, representation=character(), parameters=list()) {"
+smf_feature_stability,resampling-features,stable_1x,1.0.0,features-core.R,smf_feature_stability (result) {
+smf_fit_experiment,modeling,stable_1x,1.0.0,experiment.R,"smf_fit_experiment (spec,data,split=NULL,calibration_data=NULL) {"
+smf_fit_model,modeling,stable_1x,1.0.0,model-adapters.R,"smf_fit_model (task, model, x, y, weights=NULL) {"
+smf_fit_preprocessor,modeling,stable_1x,1.0.0,preprocess.R,"smf_fit_preprocessor (data, spec, data_spec, role=c(""training"",""test"",""validation"")) {"
+smf_from_json,core,stable_1x,1.0.0,core-serialization.R,smf_from_json (x) {
+smf_from_list,core,stable_1x,1.0.0,core-serialization.R,smf_from_list (x) {
+smf_get_run,core,stable_1x,1.0.0,tracking.R,"smf_get_run (tracker, run_id) {"
+smf_gp_fit,modeling,stable_1x,1.0.0,bayesian-adapters.R,"smf_gp_fit (x, y, backend=c(""native"",""DiceKriging""), length_scale=1, signal_variance=NULL, noise_variance=0.1, optimize=FALSE, standardize=TRUE, jitter=1e-8, ...) {"
+smf_gp_predict,modeling,stable_1x,1.0.0,bayesian-adapters.R,"smf_gp_predict (fit, new_data, include_noise=TRUE, level=0.95) {"
+smf_group_vfold_cv,core,stable_1x,1.0.0,resampling.R,"smf_group_vfold_cv (data, groups, v=5L, id_column=character(), seed=260915L, shuffle=TRUE) {"
+smf_gru,core,stable_1x,1.0.0,deep-learning-core.R,"smf_gru (input_size, hidden_size=64L, layers=1L, output_dim=1L, bidirectional=FALSE, task=""regression"") {"
+smf_hardware_info,operations,stable_1x,1.0.0,provenance.R,smf_hardware_info () .smf_hardware_info()
+smf_hash,core,stable_1x,1.0.0,core-serialization.R,"smf_hash (x, algo=""sha256"") digest::digest(smf_to_json(x, pretty=FALSE), algo=algo, serialize=FALSE)"
+smf_holdout_split,resampling-features,stable_1x,1.0.0,resampling.R,"smf_holdout_split (data, train_prop=0.8, strata=character(), id_column=character(), seed=260915L) {"
+smf_ice,core,stable_1x,1.0.0,explain.R,"smf_ice (result, data, features=character(), grid_size=20L, n=50L, class=NULL, seed=260915L) {"
+smf_imbalance_spec,modeling,stable_1x,1.0.0,spec-constructors.R,"smf_imbalance_spec (method=c(""none"",""weights"",""downsample"",""upsample"",""smote"",""bsmote"",""smotenc"",""smoten""), ratio=1, neighbors=5L, threshold=0.5, parameters=list()) {"
+smf_import_split_manifest,resampling-features,stable_1x,1.0.0,resampling.R,"smf_import_split_manifest (data, manifest, id_column) {"
+smf_iterator_next,operations,stable_1x,1.0.0,scalability.R,smf_iterator_next (iterator) {
+smf_iterator_reset,operations,stable_1x,1.0.0,scalability.R,smf_iterator_reset (iterator) {
+smf_list_datasets,core,stable_1x,1.0.0,datasets.R,smf_list_datasets () .smf_gold_names
+smf_list_runs,core,stable_1x,1.0.0,tracking.R,smf_list_runs (tracker) {
+smf_load_bundle,operations,stable_1x,1.0.0,persistence.R,"smf_load_bundle (path, trusted=FALSE) {"
+smf_load_dataset,core,stable_1x,1.0.0,datasets.R,smf_load_dataset (name) {
+smf_local_explain,explainability,stable_1x,1.0.0,explain.R,"smf_local_explain (result, new_data, background, features=character(), class=NULL) {"
+smf_log_artifact,core,stable_1x,1.0.0,tracking.R,"smf_log_artifact (run, file, name=basename(file)) {"
+smf_log_metric,modeling,stable_1x,1.0.0,tracking.R,"smf_log_metric (run, key, value, step=0L, timestamp=NULL) {"
+smf_log_params,core,stable_1x,1.0.0,tracking.R,"smf_log_params (run, params) {"
+smf_log_result,core,stable_1x,1.0.0,tracking.R,"smf_log_result (run, result) {"
+smf_lstm,core,stable_1x,1.0.0,deep-learning-core.R,"smf_lstm (input_size, hidden_size=64L, layers=1L, output_dim=1L, bidirectional=FALSE, task=""regression"") {"
+smf_make_resampler,resampling-features,stable_1x,1.0.0,resampling.R,"smf_make_resampler (data, spec, design=smf_design_spec(), task=NULL, override=FALSE) {"
+smf_manifest,core,stable_1x,1.0.0,provenance.R,smf_manifest (x) {
+smf_map_iterator,operations,stable_1x,1.0.0,scalability.R,"smf_map_iterator (iterator, FUN, ..., reset=TRUE) {"
+smf_metric_spec,modeling,stable_1x,1.0.0,spec-constructors.R,"smf_metric_spec (name, direction=NULL, aggregation=""mean"", decision_role=""evaluation"") {"
+smf_missingness_report,reporting-validation,stable_1x,1.0.0,data-audit.R,smf_missingness_report (data) {
+smf_mlp,core,stable_1x,1.0.0,deep-learning-core.R,"smf_mlp (input_dim, hidden=c(64L,32L), output_dim=1L, activation=""relu"", dropout=0, task=""regression"") {"
+smf_model_spec,modeling,stable_1x,1.0.0,spec-constructors.R,"smf_model_spec (family, engine=""stats"", parameters=list(), seed=260915L) {"
+smf_monte_carlo_cv,core,stable_1x,1.0.0,resampling.R,"smf_monte_carlo_cv (data, times=10L, train_prop=0.8, strata=character(), id_column=character(), seed=260915L) {"
+smf_multimodal,core,stable_1x,1.0.0,deep-learning-core.R,"smf_multimodal (branches, fusion=c(""concatenate"",""sum""), hidden=64L, output_dim=1L, task=""regression"") {"
+smf_multitask,core,stable_1x,1.0.0,deep-learning-core.R,"smf_multitask (shared, heads, loss_weights=NULL) {"
+smf_nested_resampler,resampling-features,stable_1x,1.0.0,resampling.R,"smf_nested_resampler (data, outer, inner, design=smf_design_spec(), task=NULL, override=FALSE) {"
+smf_nested_tune,tuning-benchmark,stable_1x,1.0.0,tuning-core.R,"smf_nested_tune (spec, data, search_space, tuning, outer, inner, override=FALSE) {"
+smf_optimize_threshold,core,stable_1x,1.0.0,imbalance.R,"smf_optimize_threshold (truth,probability,metric=c(""balanced_accuracy"",""f1"",""mcc"",""sensitivity"",""specificity"",""accuracy""),grid=seq(0.05,0.95,by=0.01),positive_label=NULL) {"
+smf_param_dbl,core,stable_1x,1.0.0,tuning-core.R,"smf_param_dbl (lower=NULL, upper=NULL, values=NULL, log=FALSE, depends_on=NULL, resource=FALSE) {"
+smf_param_fct,core,stable_1x,1.0.0,tuning-core.R,"smf_param_fct (values, depends_on=NULL) .smf_param_domain(""fct"", values=.smf_chr(values), depends_on=depends_on)"
+smf_param_int,core,stable_1x,1.0.0,tuning-core.R,"smf_param_int (lower=NULL, upper=NULL, values=NULL, log=FALSE, depends_on=NULL, resource=FALSE) {"
+smf_param_lgl,core,stable_1x,1.0.0,tuning-core.R,"smf_param_lgl (values=c(FALSE,TRUE), depends_on=NULL) .smf_param_domain(""lgl"", values=as.logical(values), depends_on=depends_on)"
+smf_pareto_front,tuning-benchmark,stable_1x,1.0.0,tuning-core.R,"smf_pareto_front (data, objectives, directions) {"
+smf_pdp,core,stable_1x,1.0.0,explain.R,"smf_pdp (result, data, features=character(), grid_size=20L, class=NULL) {"
+smf_permutation_importance,core,stable_1x,1.0.0,explain.R,"smf_permutation_importance (result, data, truth=NULL, metric=NULL, features=character(), n_repeats=20L, seed=260915L) {"
+smf_persistence_spec,operations,stable_1x,1.0.0,persistence.R,"smf_persistence_spec (schema_version=.smf_bundle_schema_version,"
+smf_pins_fetch_bundle,operations,stable_1x,1.0.0,deployment.R,"smf_pins_fetch_bundle (board, name, version=NULL, destination=tempfile(fileext="".zip""), ...) {"
+smf_pins_publish_bundle,operations,stable_1x,1.0.0,deployment.R,"smf_pins_publish_bundle (board, bundle_path, name, tags=character(), ...) {"
+smf_plot,core,stable_1x,1.0.0,diagnostics.R,"smf_plot (result,type=c(""observed_predicted"",""residuals"",""calibration"")) {"
+smf_predict,modeling,stable_1x,1.0.0,experiment.R,"smf_predict (result,new_data) {"
+smf_predict_bundle,modeling,stable_1x,1.0.0,persistence.R,"smf_predict_bundle (bundle, new_data, strict_schema=TRUE, type=c(""auto"",""response"",""prob"")) {"
+smf_predict_distribution,modeling,stable_1x,1.0.0,probabilistic-core.R,"smf_predict_distribution (result,new_data=NULL) {"
+smf_predict_model,modeling,stable_1x,1.0.0,model-adapters.R,"smf_predict_model (fit, task, new_data, type=c(""auto"",""response"",""prob"")) {"
+smf_prediction_distribution,modeling,stable_1x,1.0.0,probabilistic-core.R,"smf_prediction_distribution (representation=c(""point"",""class_probabilities"",""samples"",""quantiles"",""parametric"",""interval""), payload, uncertainty=NULL, capabilities=list()) {"
+smf_preprocess_provenance,core,stable_1x,1.0.0,preprocess.R,"smf_preprocess_provenance (preprocessor) list(training_hash=preprocessor@training_hash, state_hash=smf_hash(preprocessor@state), fitted=preprocessor@fitted)"
+smf_preprocess_spec,core,stable_1x,1.0.0,spec-constructors.R,"smf_preprocess_spec (impute_numeric=c(""none"",""mean"",""median""), center=FALSE, scale=FALSE, one_hot=TRUE, transformations=list()) {"
+smf_probabilistic_spec,core,stable_1x,1.0.0,spec-constructors.R,"smf_probabilistic_spec (distribution=character(), quantiles=numeric(), objective=character(), scores=character()) {"
+smf_publication_plot,reporting-validation,stable_1x,1.0.0,reporting.R,"smf_publication_plot (result, type=c(""observed_predicted"",""residuals"",""calibration""), show_data=TRUE) {"
+smf_publication_table,reporting-validation,stable_1x,1.0.0,reporting.R,"smf_publication_table (result, component=c(""metrics"",""predictions"",""diagnostics"",""audit"",""manifest"",""external_validation""), digits=3L, format=c(""data.frame"",""markdown"",""csv"",""parquet""), file=NULL) {"
+smf_register_backend,core,stable_1x,1.0.0,core-capabilities.R,"smf_register_backend (name, capabilities=.smf_capability_defaults(), status=c(""validated"",""core"",""advanced"",""experimental"",""quarantined"",""unavailable""), package=character(), validation_tier=1L, overwrite=FALSE) {"
+smf_release_candidate_audit,reporting-validation,stable_1x,1.0.0,release-candidate.R,smf_release_candidate_audit (runtime_certified=FALSE) {
+smf_report,reporting-validation,stable_1x,1.0.0,reporting.R,"smf_report (result, spec=NULL, external_validation=NULL, file=NULL, title=""sciModelFlowR scientific analysis"", format=c(""object"",""markdown"",""quarto"",""html"",""pdf"",""docx"",""latex"")) {"
+smf_reporting_checklist,reporting-validation,stable_1x,1.0.0,reporting.R,"smf_reporting_checklist (result, external_validation=NULL) {"
+smf_reporting_spec,reporting-validation,stable_1x,1.0.0,spec-constructors.R,"smf_reporting_spec (sections=c(""scientific_target"",""design"",""audit"",""assessment"",""performance"",""diagnostics"",""uncertainty"",""calibration"",""external_validation"",""reproducibility"",""limitations""), formats=c(""markdown"",""quarto"",""html"",""pdf"",""docx"",""latex"",""csv"",""parquet""), include_manifest=TRUE, include_warnings=TRUE) {"
+smf_reproducibility_spec,core,stable_1x,1.0.0,spec-constructors.R,"smf_reproducibility_spec (seed=260915L, determinism=""seed_deterministic_cpu"", hash_data=TRUE, capture_environment=TRUE) {"
+smf_require_capability,core,stable_1x,1.0.0,core-capabilities.R,"smf_require_capability (name, capability) {"
+smf_resample_experiment,resampling-features,stable_1x,1.0.0,resampling-fit.R,"smf_resample_experiment (spec,data,resamples=NULL,override=FALSE) {"
+smf_resample_manifest,resampling-features,stable_1x,1.0.0,resampling.R,smf_resample_manifest (x) {
+smf_resampling_spec,resampling-features,stable_1x,1.0.0,spec-constructors.R,"smf_resampling_spec (method=c(""holdout"",""stratified_holdout"",""external"",""kfold"",""repeated_kfold"",""group"",""blocked"",""time_series"",""spatial"",""nested"",""monte_carlo""), train_prop=0.8, strata=character(), n_splits=5L, n_repeats=1L, seed=260915L, inner=NULL, parameters=list()) {"
+smf_rng_info,core,stable_1x,1.0.0,core-randomness.R,"smf_rng_info () list(kind=RNGkind(), has_seed=exists("".Random.seed"", envir=.GlobalEnv, inherits=FALSE))"
+smf_rnn,core,stable_1x,1.0.0,deep-learning-core.R,"smf_rnn (input_size, hidden_size=64L, layers=1L, output_dim=1L, bidirectional=FALSE, task=""regression"") {"
+smf_run_crosslang_validation,reporting-validation,stable_1x,1.0.0,release-candidate.R,smf_run_crosslang_validation (path=NULL) {
+smf_run_gold_validation,core,stable_1x,1.0.0,validation-gold.R,smf_run_gold_validation (stop_on_failure=FALSE) {
+smf_run_reference_validation,core,stable_1x,1.0.0,release-candidate.R,"smf_run_reference_validation (tolerance=list(prediction=1e-10, metric=1e-12)) {"
+smf_save_bundle,operations,stable_1x,1.0.0,persistence.R,"smf_save_bundle (result, path, mode=c(""auto"",""portable"",""opaque""), overwrite=FALSE) {"
+smf_save_manifest,core,stable_1x,1.0.0,provenance.R,"smf_save_manifest (x, file) {"
+smf_scalability_spec,core,stable_1x,1.0.0,persistence.R,"smf_scalability_spec (chunk_size=1000L, workers=1L, execution=c(""sequential"",""parallel""),"
+smf_search_grid,tuning-benchmark,stable_1x,1.0.0,tuning-core.R,"smf_search_grid (search_space, levels=5L, max_size=10000L) {"
+smf_search_random,tuning-benchmark,stable_1x,1.0.0,tuning-core.R,"smf_search_random (search_space, n=20L, seed=260915L) {"
+smf_search_space,tuning-benchmark,stable_1x,1.0.0,tuning-core.R,"smf_search_space (..., parameters=NULL, metadata=list()) {"
+smf_select_compromise,core,stable_1x,1.0.0,tuning-core.R,"smf_select_compromise (data, objectives, directions, rule) {"
+smf_select_features,resampling-features,stable_1x,1.0.0,features-core.R,"smf_select_features (data, outcome=character(), spec=smf_feature_spec(), id_column=character(), context=c(""global"",""training"")) {"
+smf_shap,explainability,stable_1x,1.0.0,explain.R,"smf_shap (result, background, new_data=background, nsim=100L, class=NULL, seed=260915L) {"
+smf_spatial_cv,core,stable_1x,1.0.0,resampling.R,"smf_spatial_cv (data, coords, v=5L, scheme=c(""block"",""cluster"",""buffered"",""leave_location_out""),"
+smf_spec_hash,core,stable_1x,1.0.0,core-serialization.R,smf_spec_hash (spec) smf_hash(spec)
+smf_split_manifest,resampling-features,stable_1x,1.0.0,resampling.R,smf_split_manifest (split) {
+smf_start_run,core,stable_1x,1.0.0,tracking.R,"smf_start_run (tracker, run_name=character(), tags=list(), resume_run_id=character()) {"
+smf_task_spec,core,stable_1x,1.0.0,spec-constructors.R,"smf_task_spec (kind = ""regression"", target, positive_label = NULL, objective = character()) {"
+smf_tcn,core,stable_1x,1.0.0,deep-learning-core.R,"smf_tcn (input_shape, channels=c(32L,32L), kernel_size=3L, dilation_base=2L, output_dim=1L, task=""regression"") {"
+smf_time_cv,core,stable_1x,1.0.0,resampling.R,"smf_time_cv (data, time, initial, assess=1L, skip=0L, cumulative=TRUE, id_column=character(), seed=260915L) {"
+smf_to_json,core,stable_1x,1.0.0,core-serialization.R,"smf_to_json (x, pretty=TRUE) {"
+smf_to_list,core,stable_1x,1.0.0,core-serialization.R,smf_to_list (x) {
+smf_to_yaml,core,stable_1x,1.0.0,core-serialization.R,smf_to_yaml (x) yaml::as.yaml(.smf_sort_list(smf_to_list(x)))
+smf_trace_features,resampling-features,stable_1x,1.0.0,explain.R,smf_trace_features (result) {
+smf_tracker_local,operations,stable_1x,1.0.0,tracking.R,"smf_tracker_local (path, experiment=""default"", tags=list()) {"
+smf_tracker_mlflow,operations,stable_1x,1.0.0,tracking.R,"smf_tracker_mlflow (uri=character(), experiment=""default"", tags=list()) {"
+smf_tracking_spec,operations,stable_1x,1.0.0,tracking.R,"smf_tracking_spec (provider=c(""local"",""none"",""mlflow""), uri=character(), experiment=""default"","
+smf_transfer_learning,core,stable_1x,1.0.0,deep-learning-core.R,"smf_transfer_learning (base, output_dim=1L, freeze_base=TRUE, unfreeze_last=0L, task=""regression"") {"
+smf_transformer,core,stable_1x,1.0.0,deep-learning-core.R,"smf_transformer (input_size, d_model=64L, heads=4L, layers=2L, ff_dim=128L, output_dim=1L, task=""regression"") {"
+smf_tune,tuning-benchmark,stable_1x,1.0.0,tuning-core.R,"smf_tune (spec, data, search_space, tuning=smf_tuning_spec(), resamples=NULL, override=FALSE) {"
+smf_tune_objective,tuning-benchmark,stable_1x,1.0.0,tuning-core.R,"smf_tune_objective (search_space, tuning, evaluator) {"
+smf_tuning_spec,core,stable_1x,1.0.0,tuning-core.R,"smf_tuning_spec (method=c(""grid"",""random"",""racing"",""bayesian"",""successive_halving"",""hyperband""), budget=20L,"
+smf_uncertainty_compare,inference-uncertainty,stable_1x,1.0.0,uncertainty.R,smf_uncertainty_compare (...) {
+smf_uncertainty_decompose,inference-uncertainty,stable_1x,1.0.0,uncertainty.R,"smf_uncertainty_decompose (aleatoric, epistemic, total=NULL, method, identified=FALSE, provenance=list(), tolerance=1e-8) {"
+smf_uncertainty_descriptor,inference-uncertainty,stable_1x,1.0.0,uncertainty.R,"smf_uncertainty_descriptor (source, target, interval_type, level=0.95, conditional_on=character()) {"
+smf_uncertainty_from_distribution,inference-uncertainty,stable_1x,1.0.0,uncertainty.R,smf_uncertainty_from_distribution (distribution) {
+smf_uncertainty_label,inference-uncertainty,stable_1x,1.0.0,uncertainty.R,smf_uncertainty_label (descriptor) {
+smf_uncertainty_report,inference-uncertainty,stable_1x,1.0.0,uncertainty.R,smf_uncertainty_report (...) {
+smf_uncertainty_semantics,inference-uncertainty,stable_1x,1.0.0,uncertainty.R,smf_uncertainty_semantics () {
+smf_uncertainty_spec,inference-uncertainty,stable_1x,1.0.0,spec-constructors.R,"smf_uncertainty_spec (target=""prediction"", methods=character(), level=0.95) {"
+smf_uncertainty_validate,inference-uncertainty,stable_1x,1.0.0,uncertainty.R,smf_uncertainty_validate (descriptor) {
+smf_vae,core,stable_1x,1.0.0,deep-learning-core.R,"smf_vae (input_dim, latent_dim=8L, hidden=c(64L,32L), beta=1) {"
+smf_validate_bootstrap_design,resampling-features,stable_1x,1.0.0,bootstrap-core.R,"smf_validate_bootstrap_design (data, spec, design=smf_design_spec(), override=FALSE) {"
+smf_validate_bundle,operations,stable_1x,1.0.0,persistence.R,"smf_validate_bundle (path, strict=TRUE) {"
+smf_validate_crosslang_fixtures,reporting-validation,stable_1x,1.0.0,release-candidate.R,smf_validate_crosslang_fixtures (path=NULL) {
+smf_validate_design,core,stable_1x,1.0.0,design.R,"smf_validate_design (data, design, resampling=NULL) {"
+smf_validate_resampling_design,resampling-features,stable_1x,1.0.0,resampling.R,"smf_validate_resampling_design (data, spec, design=smf_design_spec(), override=FALSE) {"
+smf_validate_schema,data-design,stable_1x,1.0.0,data-audit.R,"smf_validate_schema (data, spec) {"
+smf_validate_split,resampling-features,stable_1x,1.0.0,resampling.R,"smf_validate_split (split, n=NULL) {"
+smf_vetiver_model,modeling,stable_1x,1.0.0,deployment.R,"smf_vetiver_model (result, model_name, prototype_data) {"
+smf_vetiver_pin_write,operations,stable_1x,1.0.0,deployment.R,"smf_vetiver_pin_write (board, result, model_name, prototype_data, check_renv=FALSE, ...) {"
+smf_vfold_cv,core,stable_1x,1.0.0,resampling.R,"smf_vfold_cv (data, v=5L, repeats=1L, strata=character(), id_column=character(), seed=260915L) {"
+smf_vit,core,stable_1x,1.0.0,deep-learning-core.R,"smf_vit (input_shape, patch_size=16L, d_model=128L, heads=4L, layers=4L, output_dim=1L, task=""classification"") {"
+smf_warning_record,core,stable_1x,1.0.0,core-warnings.R,"smf_warning_record (code, message, severity=c(""warning"",""info"",""high"",""blocking""), evidence=list(), suggested_action=character(), override_allowed=TRUE) {"
+smf_with_seed,core,stable_1x,1.0.0,core-randomness.R,"smf_with_seed (seed, code) withr::with_seed(as.integer(seed), code)"
+smf_write_plumber,operations,stable_1x,1.0.0,deployment.R,"smf_write_plumber (bundle_path, file=""plumber.R"", trusted=FALSE) {"

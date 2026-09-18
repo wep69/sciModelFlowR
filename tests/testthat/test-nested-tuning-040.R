@@ -1,0 +1,12 @@
+test_that("nested resampling stores distinct outer and inner hashes", {
+  d <- smf_load_dataset("gold_linear_regression")
+  ds <- smf_data_spec("yield",c("nitrogen","rainfall","soil_n"),id_column="obs_id")
+  task <- smf_task_spec("regression","yield")
+  outer <- smf_resampling_spec("kfold",n_splits=3,seed=101)
+  inner <- smf_resampling_spec("kfold",n_splits=2,seed=202)
+  design <- smf_design_spec(id_column="obs_id")
+  nested <- smf_nested_resampler(d,outer,inner,design,task)
+  expect_equal(length(nested@splits),3)
+  expect_equal(length(nested@nested),3)
+  expect_true(all(vapply(seq_along(nested@splits),function(i) nested@splits[[i]]@hash != nested@nested[[i]]@manifest_hash,logical(1))))
+})

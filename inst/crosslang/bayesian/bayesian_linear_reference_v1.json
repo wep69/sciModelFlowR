@@ -1,0 +1,26 @@
+{
+  "schema_version": "1",
+  "dataset": "gold_bayesian_linear",
+  "formula": "y ~ x1 + x2",
+  "truth": {
+    "intercept": 1.5,
+    "x1": 2.0,
+    "x2": -1.0,
+    "sigma": 0.8
+  },
+  "reference_prior": {
+    "beta_mean": [
+      0,
+      0,
+      0
+    ],
+    "beta_sd": [
+      10,
+      10,
+      10
+    ],
+    "sigma_shape": 2,
+    "sigma_rate": 1
+  },
+  "comparison": "posterior summaries within preregistered numerical tolerances, not identical draws"
+}

@@ -1,0 +1,361 @@
+.smf_split_hash <- function(train, validation=integer(), test=integer()) {
+  smf_hash(list(train=as.integer(train), validation=as.integer(validation), test=as.integer(test)))
+}
+
+.smf_resample_ids <- function(data, id_column=character()) {
+  if (!length(id_column)) return(seq_len(nrow(data)))
+  .smf_abort_missing_columns(data, id_column, "resampling IDs")
+  ids <- data[[id_column]]
+  if (anyNA(ids)) .smf_abort("RESAMPLE_ID_MISSING", "Stable row IDs cannot contain missing values.", class="smf_resampling_error")
+  if (anyDuplicated(ids)) .smf_abort("RESAMPLE_ID_NOT_UNIQUE", "Stable row IDs must be unique; repeated units belong in DesignSpec, not the row ID column.", class="smf_resampling_error")
+  ids
+}
+
+.smf_new_split <- function(data, train, test, validation=integer(), method, id_column=character(), seed=NA_integer_, summary=list()) {
+  train <- sort(unique(as.integer(train)))
+  validation <- sort(unique(as.integer(validation)))
+  test <- sort(unique(as.integer(test)))
+  ids <- .smf_resample_ids(data, id_column)
+  h <- .smf_split_hash(train, validation, test)
+  out <- SplitRecord(
+    id=paste0(method, "-", substr(h,1,12)), method=method,
+    train_index=train, validation_index=validation, test_index=test,
+    train_ids=ids[train], validation_ids=ids[validation], test_ids=ids[test],
+    seed=as.integer(seed), hash=h,
+    summary=c(list(n=nrow(data), n_train=length(train), n_validation=length(validation), n_test=length(test)), summary)
+  )
+  smf_validate_split(out, nrow(data))
+  out
+}
+
+.smf_collection <- function(method, splits, seed, source_spec=NULL, design=NULL, diagnostics=list(), nested=list()) {
+  manifest_hash <- smf_hash(lapply(splits, smf_split_manifest))
+  ResampleCollection(method=method, splits=splits, seed=as.integer(seed), source_spec=source_spec,
+    design=design, manifest_hash=manifest_hash, diagnostics=diagnostics, nested=nested)
+}
+
+.smf_fold_units <- function(units, v, seed, shuffle=TRUE) {
+  units <- unique(as.character(units))
+  if (length(units) < 2L) .smf_abort("RESAMPLE_TOO_FEW_UNITS", "At least two independent resampling units are required.", class="smf_resampling_error")
+  v <- min(as.integer(v), length(units))
+  if (v < 2L) .smf_abort("RESAMPLE_V_TOO_SMALL", "At least two folds are required.", class="smf_resampling_error")
+  ordered <- if (isTRUE(shuffle)) smf_with_seed(seed, sample(units, length(units), replace=FALSE)) else units
+  setNames(rep(seq_len(v), length.out=length(ordered)), ordered)
+}
+
+#' Validate compatibility between scientific design and resampling geometry
+#' @export
+smf_validate_resampling_design <- function(data, spec, design=smf_design_spec(), override=FALSE) {
+  smf_validate_design(data, design)
+  method <- spec@method
+  rowwise <- method %in% c("holdout","stratified_holdout","kfold","repeated_kfold","monte_carlo")
+  warnings <- list()
+  block <- function(code, message, evidence=list(), suggestion=character()) {
+    rec <- smf_warning_record(code, message, if (override) "high" else "blocking", evidence=evidence,
+      suggested_action=suggestion, override_allowed=TRUE)
+    warnings[[length(warnings)+1L]] <<- rec
+    if (!override) .smf_abort(code, message, evidence=evidence, class="smf_design_mismatch_error")
+  }
+  dependent_units <- unique(c(design@repeated_unit, design@group_columns))
+  if (length(dependent_units) && rowwise) {
+    block("RESAMPLE_GROUP_ROW_SPLIT", "Row-wise random resampling is incompatible with declared grouped/repeated units by default.",
+      list(units=dependent_units, method=method), "Use group resampling on the independent unit or explicitly record an override.")
+  }
+  if (length(design@time_column) && rowwise) {
+    block("RESAMPLE_TIME_RANDOMIZATION", "Random row-wise resampling can train on future observations when time is declared.",
+      list(time_column=design@time_column, method=method), "Use expanding/sliding time-series validation or an external temporal split.")
+  }
+  if (length(design@coordinate_columns) && rowwise) {
+    block("RESAMPLE_SPATIAL_RANDOMIZATION", "Random row-wise resampling can produce spatial leakage when coordinates are declared.",
+      list(coordinates=design@coordinate_columns, method=method), "Use spatial block, cluster, buffered, or leave-location-out validation.")
+  }
+  if (method == "nested" && is.null(spec@inner) && is.null(spec@parameters$inner_spec)) {
+    .smf_abort("NESTED_INNER_MISSING", "Nested resampling requires an explicit inner ResamplingSpec.", class="smf_resampling_error")
+  }
+  warnings
+}
+
+#' Create a reproducible holdout split
+#' @export
+smf_holdout_split <- function(data, train_prop=0.8, strata=character(), id_column=character(), seed=260915L) {
+  if (!is.data.frame(data)) cli::cli_abort("{.arg data} must be a data.frame-like object.")
+  .smf_scalar_num(train_prop, "train_prop", lower=0, upper=1, open_lower=TRUE, open_upper=TRUE)
+  n <- nrow(data); if (n < 3L) cli::cli_abort("At least three rows are required for holdout splitting.")
+  idx <- seq_len(n)
+  if (!length(strata)) {
+    train <- smf_with_seed(seed, sample(idx, size=max(1L, floor(n*train_prop)), replace=FALSE))
+  } else {
+    .smf_abort_missing_columns(data, strata, "stratified split")
+    g <- interaction(data[strata], drop=TRUE, lex.order=TRUE)
+    pieces <- split(idx, g)
+    train <- unlist(smf_with_seed(seed, lapply(pieces, function(ii) {
+      if (length(ii)<=1L) ii else sample(ii, size=max(1L, min(length(ii)-1L, floor(length(ii)*train_prop))), replace=FALSE)
+    })), use.names=FALSE)
+  }
+  test <- setdiff(idx, train)
+  .smf_new_split(data, train, test, method=if(length(strata)) "stratified_holdout" else "holdout",
+    id_column=id_column, seed=seed, summary=list(strata=strata))
+}
+
+#' Create ordinary, repeated, or stratified V-fold cross-validation
+#' @export
+smf_vfold_cv <- function(data, v=5L, repeats=1L, strata=character(), id_column=character(), seed=260915L) {
+  if (!is.data.frame(data)) cli::cli_abort("{.arg data} must be a data.frame-like object.")
+  n <- nrow(data); v <- as.integer(v); repeats <- as.integer(repeats)
+  if (n < 2L || v < 2L || repeats < 1L) .smf_abort("VFOLD_INVALID", "V-fold cross-validation requires n >= 2, v >= 2, and repeats >= 1.", class="smf_resampling_error")
+  v <- min(v,n); idx <- seq_len(n); splits <- list(); k <- 0L
+  for (r in seq_len(repeats)) {
+    if (!length(strata)) {
+      ord <- smf_with_seed(seed+r-1L, sample(idx,n,replace=FALSE))
+      fold <- integer(n); fold[ord] <- rep(seq_len(v), length.out=n)
+    } else {
+      .smf_abort_missing_columns(data,strata,"stratified V-fold")
+      g <- interaction(data[strata], drop=TRUE, lex.order=TRUE)
+      fold <- integer(n)
+      for (lev in levels(g)) {
+        ii <- which(g==lev)
+        ord <- smf_with_seed(seed+r-1L+match(lev,levels(g))*1009L, sample(ii,length(ii),replace=FALSE))
+        fold[ord] <- rep(seq_len(v), length.out=length(ii))
+      }
+    }
+    for (j in seq_len(v)) {
+      k <- k+1L; test <- which(fold==j); train <- setdiff(idx,test)
+      splits[[k]] <- .smf_new_split(data,train,test,method=if(repeats>1L) "repeated_kfold" else "kfold",
+        id_column=id_column,seed=seed+r-1L,summary=list(repeat=r,fold=j,v=v,strata=strata))
+    }
+  }
+  .smf_collection(if(repeats>1L) "repeated_kfold" else "kfold",splits,seed,
+    diagnostics=list(v=v,repeats=repeats,strata=strata))
+}
+
+#' Create group-preserving V-fold cross-validation
+#' @export
+smf_group_vfold_cv <- function(data, groups, v=5L, id_column=character(), seed=260915L, shuffle=TRUE) {
+  .smf_abort_missing_columns(data,groups,"group V-fold")
+  key <- interaction(data[groups], drop=TRUE, lex.order=TRUE)
+  assignment <- .smf_fold_units(levels(key),v,seed,shuffle)
+  splits <- lapply(sort(unique(unname(assignment))), function(j) {
+    test_groups <- names(assignment)[assignment==j]
+    test <- which(as.character(key) %in% test_groups)
+    .smf_new_split(data,setdiff(seq_len(nrow(data)),test),test,method="group",
+      id_column=id_column,seed=seed,summary=list(fold=j,groups=groups,assessment_groups=test_groups))
+  })
+  .smf_collection("group",splits,seed,diagnostics=list(groups=groups,v=length(splits),shuffle=shuffle))
+}
+
+#' Create blocked cross-validation from declared block columns
+#' @export
+smf_blocked_cv <- function(data, blocks, v=NULL, id_column=character(), seed=260915L, shuffle=FALSE) {
+  .smf_abort_missing_columns(data,blocks,"blocked CV")
+  key <- interaction(data[blocks], drop=TRUE, lex.order=TRUE)
+  n_units <- nlevels(key); if (is.null(v)) v <- n_units
+  assignment <- .smf_fold_units(levels(key),as.integer(v),seed,shuffle)
+  splits <- lapply(sort(unique(unname(assignment))), function(j) {
+    held <- names(assignment)[assignment==j]; test <- which(as.character(key) %in% held)
+    .smf_new_split(data,setdiff(seq_len(nrow(data)),test),test,method="blocked",id_column=id_column,
+      seed=seed,summary=list(fold=j,blocks=blocks,assessment_blocks=held))
+  })
+  .smf_collection("blocked",splits,seed,diagnostics=list(blocks=blocks,v=length(splits),shuffle=shuffle))
+}
+
+#' Create expanding or sliding time-series validation
+#' @export
+smf_time_cv <- function(data, time, initial, assess=1L, skip=0L, cumulative=TRUE, id_column=character(), seed=260915L) {
+  .smf_abort_missing_columns(data,time,"time-series validation")
+  t <- data[[time]]
+  if (!(is.numeric(t) || inherits(t,c("Date","POSIXt")))) .smf_abort("TIME_NOT_ORDERED", "Time validation requires numeric or date/time values.", class="smf_resampling_error")
+  u <- sort(unique(t)); initial <- as.integer(initial); assess <- as.integer(assess); skip <- as.integer(skip)
+  if (initial<1L || assess<1L || length(u) < initial+assess) .smf_abort("TIME_WINDOW_INVALID", "Time window sizes are incompatible with the available unique time points.", class="smf_resampling_error")
+  starts <- seq.int(initial+1L, length(u)-assess+1L, by=assess+skip)
+  splits <- lapply(seq_along(starts), function(i) {
+    s <- starts[[i]]; test_times <- u[s:(s+assess-1L)]
+    train_times <- if (cumulative) u[seq_len(s-1L)] else u[max(1L,s-initial):(s-1L)]
+    train <- which(t %in% train_times); test <- which(t %in% test_times)
+    .smf_new_split(data,train,test,method="time_series",id_column=id_column,seed=seed,
+      summary=list(fold=i,time_column=time,train_min=min(train_times),train_max=max(train_times),test_min=min(test_times),test_max=max(test_times),cumulative=cumulative))
+  })
+  .smf_collection("time_series",splits,seed,diagnostics=list(time=time,initial=initial,assess=assess,skip=skip,cumulative=cumulative))
+}
+
+.smf_spatial_grid <- function(data, coords, n_x=2L, n_y=2L) {
+  x <- data[[coords[[1]]]]; y <- data[[coords[[2]]]]
+  if (!is.numeric(x) || !is.numeric(y)) .smf_abort("COORDINATES_NONNUMERIC", "Spatial coordinates must be numeric.", class="smf_resampling_error")
+  n_x <- as.integer(n_x); n_y <- as.integer(n_y)
+  if (n_x<1L || n_y<1L) .smf_abort("SPATIAL_GRID_INVALID", "Spatial grid dimensions must be positive integers.")
+  cut_equal <- function(z,n) {
+    if (diff(range(z,na.rm=TRUE))==0) return(rep(1L,length(z)))
+    br <- seq(min(z,na.rm=TRUE),max(z,na.rm=TRUE),length.out=n+1L); br[length(br)] <- br[length(br)] + sqrt(.Machine$double.eps)
+    as.integer(cut(z,breaks=br,include.lowest=TRUE,labels=FALSE))
+  }
+  gx <- cut_equal(x,n_x); gy <- cut_equal(y,n_y)
+  interaction(gx,gy,drop=TRUE,lex.order=TRUE)
+}
+
+#' Create spatial block, cluster, buffered, or leave-location-out CV
+#' @export
+smf_spatial_cv <- function(data, coords, v=5L, scheme=c("block","cluster","buffered","leave_location_out"),
+                           id_column=character(), seed=260915L, n_x=2L, n_y=2L, buffer=0,
+                           location_column=character()) {
+  scheme <- match.arg(scheme); .smf_abort_missing_columns(data,coords,"spatial CV")
+  idx <- seq_len(nrow(data)); splits <- list()
+  if (scheme=="leave_location_out") {
+    if (!length(location_column)) .smf_abort("SPATIAL_LOCATION_MISSING", "leave_location_out requires location_column.")
+    base <- smf_group_vfold_cv(data,location_column,v=length(unique(data[[location_column]])),id_column=id_column,seed=seed,shuffle=FALSE)
+    splits <- lapply(seq_along(base@splits),function(i) { s <- base@splits[[i]]; .smf_new_split(data,s@train_index,s@test_index,method="spatial",id_column=id_column,seed=seed,summary=c(s@summary,list(scheme="leave_location_out",location_column=location_column))) })
+    return(.smf_collection("spatial",splits,seed,diagnostics=list(scheme="leave_location_out",location_column=location_column,v=length(splits))))
+  }
+  if (scheme=="cluster") {
+    xy <- as.matrix(data[coords]); if (any(!is.finite(xy))) .smf_abort("SPATIAL_COORDINATE_MISSING", "Spatial clustering requires finite coordinates.")
+    centers <- min(as.integer(v), nrow(unique(xy))); if (centers<2L) .smf_abort("SPATIAL_TOO_FEW_LOCATIONS", "Spatial clustering requires at least two unique locations.")
+    km <- smf_with_seed(seed, stats::kmeans(xy, centers=centers, nstart=10L))
+    block <- factor(km$cluster)
+  } else {
+    block <- .smf_spatial_grid(data,coords,n_x,n_y)
+  }
+  assignment <- .smf_fold_units(levels(block),v,seed,TRUE)
+  xy <- as.matrix(data[coords])
+  for (j in sort(unique(unname(assignment)))) {
+    held <- names(assignment)[assignment==j]; test <- which(as.character(block) %in% held); train <- setdiff(idx,test)
+    if (scheme=="buffered" && buffer>0 && length(train) && length(test)) {
+      keep <- vapply(train,function(ii) {
+        dx <- xy[test,1]-xy[ii,1]; dy <- xy[test,2]-xy[ii,2]
+        all(sqrt(dx^2+dy^2) > buffer)
+      },logical(1))
+      train <- train[keep]
+    }
+    splits[[length(splits)+1L]] <- .smf_new_split(data,train,test,method="spatial",id_column=id_column,seed=seed,
+      summary=list(fold=j,scheme=scheme,coords=coords,assessment_blocks=held,buffer=buffer))
+  }
+  .smf_collection("spatial",splits,seed,diagnostics=list(scheme=scheme,coords=coords,v=length(splits),n_x=n_x,n_y=n_y,buffer=buffer))
+}
+
+#' Create external validation using a declared domain column
+#' @export
+smf_external_split <- function(data, domain, assessment_values, id_column=character(), seed=260915L) {
+  .smf_abort_missing_columns(data,domain,"external validation")
+  test <- which(data[[domain]] %in% assessment_values); train <- setdiff(seq_len(nrow(data)),test)
+  if (!length(test) || !length(train)) .smf_abort("EXTERNAL_DOMAIN_INVALID", "External validation requires non-empty development and external domains.", class="smf_resampling_error")
+  .smf_new_split(data,train,test,method="external",id_column=id_column,seed=seed,
+    summary=list(domain=domain,assessment_values=assessment_values))
+}
+
+#' Create Monte Carlo cross-validation
+#' @export
+smf_monte_carlo_cv <- function(data, times=10L, train_prop=0.8, strata=character(), id_column=character(), seed=260915L) {
+  times <- as.integer(times); if(times<1L) .smf_abort("MONTE_CARLO_TIMES_INVALID","times must be at least 1.")
+  splits <- lapply(seq_len(times),function(i) {
+    s <- smf_holdout_split(data,train_prop,strata,id_column,seed+i-1L)
+    SplitRecord(id=s@id,method="monte_carlo",train_index=s@train_index,validation_index=s@validation_index,test_index=s@test_index,
+      train_ids=s@train_ids,validation_ids=s@validation_ids,test_ids=s@test_ids,seed=s@seed,hash=s@hash,summary=c(s@summary,list(replicate=i)))
+  })
+  .smf_collection("monte_carlo",splits,seed,diagnostics=list(times=times,train_prop=train_prop,strata=strata))
+}
+
+.smf_map_collection_to_global <- function(collection, global_index, full_data, id_column) {
+  mapped <- lapply(collection@splits,function(s) {
+    train <- global_index[s@train_index]; test <- global_index[s@test_index]; validation <- global_index[s@validation_index]
+    .smf_new_split(full_data,train,test,validation,method=s@method,id_column=id_column,seed=s@seed,summary=s@summary)
+  })
+  .smf_collection(collection@method,mapped,collection@seed,source_spec=collection@source_spec,design=collection@design,diagnostics=collection@diagnostics)
+}
+
+#' Create nested resampling with explicit outer and inner specifications
+#' @export
+smf_nested_resampler <- function(data, outer, inner, design=smf_design_spec(), task=NULL, override=FALSE) {
+  outer_coll <- smf_make_resampler(data,outer,design,task,override=override)
+  nested <- lapply(outer_coll@splits,function(os) {
+    sub <- data[os@train_index,,drop=FALSE]
+    inner_local <- smf_make_resampler(sub,inner,design,task,override=override)
+    .smf_map_collection_to_global(inner_local,os@train_index,data,design@id_column)
+  })
+  ResampleCollection(method="nested",splits=outer_coll@splits,seed=outer@seed,source_spec=outer,design=design,
+    manifest_hash=smf_hash(list(outer=lapply(outer_coll@splits,smf_split_manifest),inner=lapply(nested,function(x)lapply(x@splits,smf_split_manifest)))),
+    diagnostics=list(outer_method=outer@method,inner_method=inner@method),nested=nested)
+}
+
+#' Build a design-aware resampling collection from ResamplingSpec
+#' @export
+smf_make_resampler <- function(data, spec, design=smf_design_spec(), task=NULL, override=FALSE) {
+  smf_validate_resampling_design(data,spec,design,override=override)
+  p <- spec@parameters; id <- design@id_column
+  if (spec@method=="holdout") return(.smf_collection("holdout",list(smf_holdout_split(data,spec@train_prop,id_column=id,seed=spec@seed)),spec@seed,source_spec=spec,design=design))
+  if (spec@method=="stratified_holdout") return(.smf_collection("stratified_holdout",list(smf_holdout_split(data,spec@train_prop,spec@strata,id,spec@seed)),spec@seed,source_spec=spec,design=design))
+  if (spec@method=="kfold") return(smf_vfold_cv(data,spec@n_splits,1L,spec@strata,id,spec@seed))
+  if (spec@method=="repeated_kfold") return(smf_vfold_cv(data,spec@n_splits,spec@n_repeats,spec@strata,id,spec@seed))
+  if (spec@method=="group") {
+    groups <- p$groups %||% design@group_columns %||% design@repeated_unit
+    if (!length(groups)) .smf_abort("GROUP_COLUMNS_MISSING","Group resampling requires group columns in parameters or DesignSpec.")
+    return(smf_group_vfold_cv(data,groups,spec@n_splits,id,spec@seed,isTRUE(p$shuffle %||% TRUE)))
+  }
+  if (spec@method=="blocked") {
+    blocks <- p$blocks %||% design@block_columns
+    if (!length(blocks)) .smf_abort("BLOCK_COLUMNS_MISSING","Blocked resampling requires block columns.")
+    return(smf_blocked_cv(data,blocks,spec@n_splits,id,spec@seed,isTRUE(p$shuffle %||% FALSE)))
+  }
+  if (spec@method=="time_series") {
+    time <- p$time %||% design@time_column
+    if (!length(time)) .smf_abort("TIME_COLUMN_MISSING","Time-series validation requires a time column.")
+    initial <- p$initial %||% max(1L,floor(length(unique(data[[time]]))*0.6))
+    return(smf_time_cv(data,time,initial,p$assess %||% 1L,p$skip %||% 0L,p$cumulative %||% TRUE,id,spec@seed))
+  }
+  if (spec@method=="spatial") {
+    coords <- p$coords %||% design@coordinate_columns
+    if (length(coords)!=2L) .smf_abort("SPATIAL_COORDINATES_MISSING","Spatial validation requires two coordinate columns.")
+    return(smf_spatial_cv(data,coords,spec@n_splits,p$scheme %||% "block",id,spec@seed,p$n_x %||% 2L,p$n_y %||% 2L,p$buffer %||% 0,p$location_column %||% character()))
+  }
+  if (spec@method=="external") {
+    domain <- p$domain %||% design@external_domain_column
+    if (!length(domain) || is.null(p$assessment_values)) .smf_abort("EXTERNAL_CONFIGURATION_MISSING","External validation requires a domain column and assessment_values.")
+    s <- smf_external_split(data,domain,p$assessment_values,id,spec@seed)
+    return(.smf_collection("external",list(s),spec@seed,source_spec=spec,design=design))
+  }
+  if (spec@method=="monte_carlo") return(smf_monte_carlo_cv(data,spec@n_repeats,spec@train_prop,spec@strata,id,spec@seed))
+  if (spec@method=="nested") {
+    outer <- p$outer_spec
+    inner <- spec@inner %||% p$inner_spec
+    if (is.null(outer) || is.null(inner)) .smf_abort("NESTED_CONFIGURATION_MISSING","Nested resampling requires parameters$outer_spec and inner/parameters$inner_spec.")
+    return(smf_nested_resampler(data,outer,inner,design,task,override))
+  }
+  .smf_abort("RESAMPLER_NOT_IMPLEMENTED",paste0("No resampler implemented for method: ",spec@method),class="smf_resampling_error")
+}
+
+#' Validate a split record
+#' @export
+smf_validate_split <- function(split, n=NULL) {
+  a <- split@train_index; b <- split@validation_index; c <- split@test_index
+  if (length(intersect(a,b)) || length(intersect(a,c)) || length(intersect(b,c))) .smf_abort("SPLIT_OVERLAP", "Train, validation, and test indices must be disjoint.", class="smf_resampling_error")
+  all_idx <- c(a,b,c)
+  if (anyDuplicated(all_idx)) .smf_abort("SPLIT_DUPLICATE_INDEX", "A split contains duplicated row indices.")
+  if (!is.null(n) && any(all_idx < 1L | all_idx > n)) .smf_abort("SPLIT_INDEX_OUT_OF_RANGE", "Split indices are outside the data range.")
+  if (!length(a) || !length(c)) .smf_abort("SPLIT_EMPTY_PARTITION", "Analysis and assessment partitions must both be non-empty.", class="smf_resampling_error")
+  invisible(TRUE)
+}
+
+#' Export a split manifest
+#' @export
+smf_split_manifest <- function(split) {
+  smf_validate_split(split)
+  list(id=split@id, method=split@method, train_ids=split@train_ids, validation_ids=split@validation_ids,
+    test_ids=split@test_ids, seed=split@seed, hash=split@hash, summary=split@summary)
+}
+
+#' Export all manifests in a resampling collection
+#' @export
+smf_resample_manifest <- function(x) {
+  if (!S7::S7_inherits(x,ResampleCollection)) cli::cli_abort("{.arg x} must be a ResampleCollection.")
+  list(method=x@method,seed=x@seed,manifest_hash=x@manifest_hash,splits=lapply(x@splits,smf_split_manifest),diagnostics=x@diagnostics)
+}
+
+#' Recreate a split from stable row IDs
+#' @export
+smf_import_split_manifest <- function(data, manifest, id_column) {
+  .smf_abort_missing_columns(data,id_column,"split manifest import")
+  ids <- data[[id_column]]
+  if (anyDuplicated(ids)) .smf_abort("MANIFEST_ID_NOT_UNIQUE", "ID column must be unique when importing a split manifest.")
+  conv <- function(z) { m <- match(z, ids); if (anyNA(m)) .smf_abort("MANIFEST_ID_MISSING", "Some manifest IDs are absent from data.", evidence=list(ids=z[is.na(m)])); as.integer(m) }
+  train <- conv(manifest$train_ids); validation <- conv(manifest$validation_ids); test <- conv(manifest$test_ids)
+  h <- .smf_split_hash(train,validation,test)
+  out <- SplitRecord(id=manifest$id,method=manifest$method,train_index=train,validation_index=validation,test_index=test,
+    train_ids=manifest$train_ids,validation_ids=manifest$validation_ids,test_ids=manifest$test_ids,seed=as.integer(manifest$seed),hash=h,summary=manifest$summary)
+  smf_validate_split(out,nrow(data)); out
+}

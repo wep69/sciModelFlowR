@@ -1,0 +1,10 @@
+{
+  "dataset": "gold_count_pests",
+  "log_time_effect": 0.18,
+  "nb_shape": 4,
+  "treatment_log_effects": {
+    "bio": -0.45,
+    "chemical": -0.75,
+    "control": 0
+  }
+}

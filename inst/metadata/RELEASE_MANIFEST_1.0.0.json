@@ -1,0 +1,28 @@
+{
+  "package": "sciModelFlowR",
+  "version": "1.0.0",
+  "release_name": "Consolidated Scientific Release",
+  "source_base": "0.9.0 Integrated Scientific Release Candidate",
+  "api_exports": 246,
+  "api_freeze_sha256": "1a7513c141d8d35711ae875e4a98eb9b712d6878b237c08efe2253c34819ae48",
+  "api_changed_since_0_9_0": false,
+  "gold_datasets": 25,
+  "gold_manifest": "inst/metadata/GOLD_RELEASE_MANIFEST_1.0.0.csv",
+  "compatibility_matrix": "inst/metadata/FINAL_COMPATIBILITY_MATRIX_1.0.0.csv",
+  "security_review": "inst/metadata/SECURITY_REVIEW_1.0.0.json",
+  "benchmark_baselines": "inst/metadata/BENCHMARK_BASELINES_1.0.0.csv",
+  "runtime_certification": "pending-post-freeze-local-validation",
+  "r_cmd_check_as_cran": "not-run-in-current-environment",
+  "cran_ready_claim": false,
+  "release_state": "definitive-source-freeze-runtime-certification-deferred",
+  "r_source_files": 50,
+  "testthat_files": 61,
+  "notebooks": 27,
+  "focused_vignette_length_contract": "all v02-v27 within 60-70 percent of v01",
+  "r_source_diff_vs_0_9_0": [
+    "R/release-candidate.R metadata-path update only"
+  ],
+  "final_static_audit": "599/599 passed",
+  "source_immutable_after_freeze": true,
+  "post_freeze_source_corrections_require_new_version": true
+}

@@ -1,0 +1,10 @@
+{
+  "dataset": "gold_hierarchical_yield",
+  "nitrogen_effect": 0.11,
+  "site_effect_order": [
+    "S1",
+    "S2",
+    "S3",
+    "S4"
+  ]
+}

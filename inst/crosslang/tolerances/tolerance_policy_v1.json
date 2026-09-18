@@ -1,0 +1,7 @@
+{
+  "coverage_simulation_rule": "pre-registered Monte Carlo band",
+  "deterministic_prediction_abs": 1e-08,
+  "metric_abs": 1e-08,
+  "probability_row_sum_abs": 1e-10,
+  "schema_version": "1.0.0"
+}

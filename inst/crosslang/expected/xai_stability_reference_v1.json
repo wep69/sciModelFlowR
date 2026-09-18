@@ -1,0 +1,18 @@
+{
+  "fixture": "gold_xai_stability",
+  "version": "0.5.0",
+  "rows": 240,
+  "correlation_rule": {
+    "features": [
+      "signal_primary",
+      "signal_correlated"
+    ],
+    "abs_pearson_min": 0.95
+  },
+  "causal_interpretation": false,
+  "required_warning_code": "CORRELATED_FEATURE_EXPLANATION",
+  "dominant_source_feature": "signal_primary",
+  "stability": {
+    "same_manifest_same_seed_reproducible": true
+  }
+}

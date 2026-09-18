@@ -1,0 +1,22 @@
+id: tracking-persistence-and-scalable-inference
+release: 0.8.0
+dataset: gold_linear_regression
+learning_objectives:
+  - distinguish tracking from scientific validation
+  - validate checksums before loading model state
+  - enforce explicit trust for opaque serialization
+  - reproduce managed predictions after portable bundle reload
+  - perform resumable batch prediction without changing row order
+seed: 260915
+required_outputs:
+  - local_run_record
+  - bundle_validation
+  - prediction_equivalence
+  - batch_manifest
+required_assertions:
+  - checksum_corruption_is_rejected
+  - opaque_load_requires_trust
+  - bundle_prediction_matches_live_prediction
+  - resumed_batches_match_original_order
+expected_warnings:
+  - external deployment does not imply scientific validity

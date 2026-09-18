@@ -1,0 +1,15 @@
+cff-version: 1.2.0
+title: sciModelFlowR: Design-Aware Scientific Modeling Workflows
+message: If you use sciModelFlowR, please cite the software and the methodological sources relevant to the methods used.
+type: software
+version: 1.0.0
+date-released: 2026-09-15
+authors:
+  - family-names: Pereira
+    given-names: Walter Esfrain
+    orcid: https://orcid.org/0000-0003-1085-0191
+  - family-names: Pereira Martinez
+    given-names: Magali Haidee
+    orcid: https://orcid.org/0009-0009-5419-959X
+license: BSD-3-Clause
+repository-code: https://github.com/walterufpb/sciModelFlowR

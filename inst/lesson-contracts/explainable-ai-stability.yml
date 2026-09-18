@@ -1,0 +1,22 @@
+id: xai-stability-050
+title: Explainable AI and explanation stability
+version: 0.5.0
+dataset: gold_xai_stability
+learning_objectives:
+  - distinguish predictive explanation from causal inference
+  - compare permutation importance, PDP, ICE, ALE and local explanations
+  - trace transformed features to source features
+  - diagnose correlated-feature and extrapolation risks
+  - quantify explanation stability across design-aware resamples
+seed: 260915
+required_outputs:
+  - ExplainResult
+  - ExplanationStabilityResult
+  - source feature map
+  - correlated-feature warning
+required_assertions:
+  - causal_interpretation is false
+  - final external test is not used for stability estimation
+  - same split manifest and seed reproduce stability summaries
+expected_warnings:
+  - CORRELATED_FEATURE_EXPLANATION

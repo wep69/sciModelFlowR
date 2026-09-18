@@ -1,0 +1,18 @@
+{
+  "portable_formats": [
+    "markdown",
+    "quarto"
+  ],
+  "rendered_formats": [
+    "html",
+    "pdf",
+    "docx",
+    "latex"
+  ],
+  "table_formats": [
+    "data.frame",
+    "markdown",
+    "csv",
+    "parquet"
+  ]
+}

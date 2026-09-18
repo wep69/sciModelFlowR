@@ -1,0 +1,22 @@
+id: tuning-scientific-benchmarking-040
+release: 0.4.0
+datasets:
+  - gold_linear_regression
+  - gold_multiclass_imbalanced
+seed: 260915
+learning_objectives:
+  - define conditional hyperparameter search spaces
+  - distinguish inner selection from outer generalization performance
+  - preserve Pareto sets until an explicit compromise rule is declared
+  - compare candidate procedures on identical resampling geometry
+required_assertions:
+  - final_test_data_is_rejected_by_tuning
+  - outer_and_inner_split_hashes_are_distinct
+  - multiobjective_tuning_without_rule_has_no_selected_winner
+  - benchmark_without_rule_has_no_universal_winner
+required_outputs:
+  - tuning_archive
+  - pareto_set
+  - nested_selection_and_generalization_tables
+  - benchmark_summary
+expected_warnings: []

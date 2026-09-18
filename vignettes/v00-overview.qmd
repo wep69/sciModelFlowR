@@ -1,0 +1,66 @@
+---
+title: "sciModelFlowR 0.5.0 Overview"
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    code-fold: false
+execute:
+  echo: true
+  warning: true
+  message: false
+---
+
+# sciModelFlowR 0.5.0 Overview
+
+A compact orientation to the package architecture, current development scope, stable contracts, Gold data, and recommended learning path.
+
+## Package mission
+
+`sciModelFlowR` is a scientific orchestration framework. It does not try to replace established modeling engines. It records the scientific design, protects the information boundary, standardizes package-native results, and makes provenance visible.
+
+## Start here
+
+```{r}
+#| eval: false
+library(sciModelFlowR)
+smf_doctor()
+smf_list_datasets()
+```
+
+For the integrating workflow, follow `v01-foundations-to-advanced-scientific-modeling.qmd`. Version 0.5.0 preserves the earlier design-aware kernel and adds conditional hyperparameter search, nested model selection, multi-objective Pareto analysis, and scientific benchmarking on shared resamples.
+
+## Stable sequence
+
+**question -> data roles -> design -> audit -> design-aware resampling -> training-only preprocessing -> fold-safe feature learning when needed -> reference fit -> diagnostics -> uncertainty/stability -> manifest**
+
+## Implemented through version 0.5.0
+
+The snapshot includes formal S7 specifications, typed scientific conditions, capability registry, serialization and hashing, Gold data, data audit, leakage screening, design validation, training-only preprocessing, package-native results, `lm`/`glm` reference adapters, reproducibility manifests, group/block/time/spatial/external/Monte Carlo/nested resampling, initial dependence-aware bootstrap, and feature selection and representation methods, supervised ML adapters, typed class probabilities, calibration, probabilistic scoring, and imbalance handling.
+
+## Explicit development boundaries
+
+Version 0.5.0 completes the planned source implementation for tuning and scientific benchmarking while retaining the earlier supervised, probabilistic, calibration, imbalance, resampling, bootstrap, and feature-engineering layers. RFE and sequential subset search are available through the package-native reference selector, and PCA/PLS states are fitted on analysis data and transferred to assessment data without refitting. Residual, parametric, and wild bootstrap use an explicit generator contract so the data-generating mechanism remains inspectable. Runtime R tests, numerical simulation validation, and `R CMD check --as-cran` are deliberately deferred to the consolidated local validation cycle for all versions.
+
+## Focused vignettes
+
+1. `v02-data-audit-and-leakage.qmd`
+2. `v03-resampling-and-scientific-design.qmd`
+3. `v04-bootstrap-and-stability.qmd`
+4. `v05-feature-engineering-and-selection.qmd`
+5. `v06-supervised-machine-learning.qmd`
+6. `v07-probabilistic-machine-learning.qmd`
+7. `v09-imbalance-calibration-and-thresholds.qmd`
+
+The focused substantive vignettes target approximately 60 to 70 percent of the integrating vignette length.
+
+## Scientific non-negotiables
+
+1. Design is declared before the algorithm.
+2. Assessment and test data are not preprocessing, feature-selection, or tuning resources.
+3. Group, block, time, and space determine validation geometry when scientifically relevant.
+4. Bootstrap resamples the scientifically defensible unit.
+5. Feature selection is fitted inside training partitions.
+6. Uncertainty is labeled by statistical meaning.
+7. Synthetic Gold data are never presented as empirical evidence.
+8. Every managed experiment preserves provenance and warnings.

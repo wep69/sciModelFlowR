@@ -1,0 +1,23 @@
+id: quick-start-010
+release: 0.1.0
+learning_objectives:
+  - declare data roles and scientific design before model fitting
+  - audit data and detect a target-copy leakage defect
+  - create a reproducible holdout split
+  - fit preprocessing on training rows only
+  - fit the reference linear-regression adapter
+  - inspect diagnostics and the reproducibility manifest
+datasets:
+  - gold_linear_regression
+seed: 260915
+required_assertions:
+  - no_train_test_overlap
+  - preprocessing_training_hash_exists
+  - predictions_match_stats_backend
+  - manifest_contains_data_spec_split_hashes
+required_outputs:
+  - data_audit
+  - metric_table
+  - diagnostic_result
+  - run_manifest
+expected_warnings: []

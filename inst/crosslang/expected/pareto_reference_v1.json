@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "objectives": [
+    {"name": "error", "direction": "minimize"},
+    {"name": "cost", "direction": "minimize"}
+  ],
+  "candidates": [
+    {"id": "A", "error": 0.10, "cost": 0.90},
+    {"id": "B", "error": 0.15, "cost": 0.50},
+    {"id": "C", "error": 0.25, "cost": 0.25},
+    {"id": "D", "error": 0.30, "cost": 0.80}
+  ],
+  "pareto_ids": ["A", "B", "C"],
+  "dominated_ids": ["D"]
+}

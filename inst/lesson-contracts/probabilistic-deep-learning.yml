@@ -1,0 +1,13 @@
+id: probabilistic-deep-learning
+dataset: gold_dl_nonlinear
+learning_objectives:
+  - distinguish distributional heads, MC dropout, and deep ensembles
+  - assess predictive intervals and uncertainty components
+seed: 260915
+required_outputs:
+  - PredictionDistribution
+  - DLUncertaintyResult
+required_assertions:
+  - scale_parameter_is_positive
+  - uncertainty_components_are_not_claimed_when_unidentified
+expected_warnings: []

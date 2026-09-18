@@ -1,0 +1,11 @@
+test_that("preprocessing fits training statistics only", {
+  tr <- data.frame(id=1:4,x=c(1,2,NA,4),g=c("a","a","b","b"),y=1:4)
+  te <- data.frame(id=5:6,x=c(100,200),g=c("a","c"),y=5:6)
+  ds <- smf_data_spec("y",c("x","g"),id_column="id")
+  p <- smf_fit_preprocessor(tr,smf_preprocess_spec("mean",TRUE,TRUE,TRUE),ds,"training")
+  expect_equal(p@state$imputes$x,mean(c(1,2,4)))
+  expect_error(smf_fit_preprocessor(te,smf_preprocess_spec(),ds,"test"),class="smf_leakage_error")
+  xt <- smf_apply_preprocessor(p,te)
+  expect_true("g__a" %in% names(xt))
+  expect_false(any(grepl("g__c",names(xt))))
+})

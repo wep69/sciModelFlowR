@@ -1,0 +1,16 @@
+^\.github$
+^renv$
+^renv\.lock$
+^references$
+^pkgdown$
+^tools$
+^.*\.Rproj$
+^\.Rproj\.user$
+^VALIDATION\.md$
+^IMPLEMENTATION_SUMMARY\.md$
+^LOCAL_VALIDATION\.md$
+^SHA256SUMS\.txt$
+^CITATION\.cff$
+^PACKAGE_PLAN\.md$
+^STATIC_AUDIT\.md$
+^_pkgdown\.yml$

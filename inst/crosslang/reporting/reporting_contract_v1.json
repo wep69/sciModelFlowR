@@ -1,0 +1,17 @@
+{
+  "causal_language_from_xai": false,
+  "formats": [
+    "markdown",
+    "quarto",
+    "html",
+    "pdf",
+    "docx",
+    "latex"
+  ],
+  "tables": [
+    "data.frame",
+    "markdown",
+    "csv",
+    "parquet"
+  ]
+}

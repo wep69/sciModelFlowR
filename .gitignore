@@ -1,0 +1,26 @@
+# R package: build, check, pkgdown artefacts
+*.tar.gz
+*.zip
+*.Rout
+*.log
+.Rhistory
+.RData
+.Rproj.user/
+*.Rproj
+
+# pkgdown local preview (site publicável vai para docs/)
+# docs/ é intencional para GitHub Pages (Deploy from branch -> /docs)
+!docs/.nojekyll
+
+# outputs de validação local (organizados em subfolders)
+# Mantemos a estrutura, ignoramos artefactos pesados
+outputs/built-tarballs/*
+outputs/rendered-docs/*
+!outputs/built-tarballs/.gitkeep
+!outputs/rendered-docs/.gitkeep
+!outputs/evidence/.gitkeep
+!outputs/final-reports/.gitkeep
+!outputs/validation-records/.gitkeep
+
+# R misc
+renv/

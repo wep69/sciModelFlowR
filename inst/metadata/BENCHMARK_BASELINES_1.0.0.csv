@@ -1,0 +1,9 @@
+benchmark_group,dataset,engine,metric,value,unit,status,notes
+reference_ols,gold_linear_regression,stats::lm,rmse,3.5731971951099646,response_units,frozen-crosslang-reference,independent NumPy OLS reference
+reference_ols,gold_linear_regression,stats::lm,mae,2.982103662628401,response_units,frozen-crosslang-reference,independent NumPy OLS reference
+package_structure,package,sciModelFlowR,public_exports,246,count,frozen-source-baseline,must remain unchanged unless blocker correction is documented
+package_structure,package,sciModelFlowR,gold_datasets,25,count,frozen-source-baseline,formal Gold suite plus retained development fixtures
+runtime_performance,gold_linear_regression,stats::lm,fit_wall_seconds,,seconds,pending-local-validation,record median and distribution on reference machine
+runtime_performance,gold_linear_regression,sciModelFlowR reference workflow,end_to_end_wall_seconds,,seconds,pending-local-validation,record cold and warm timings separately
+runtime_performance,gold_dl_nonlinear,torch CPU,training_wall_seconds,,seconds,pending-local-validation,fixed epochs/seed/hardware manifest required
+runtime_performance,gold_dl_nonlinear,torch CUDA,training_wall_seconds,,seconds,pending-local-validation,only if CUDA validation environment is available

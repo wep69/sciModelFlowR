@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "dataset": "gold_dl_sequence",
+  "n_sequences": 160,
+  "sequence_length": 24,
+  "period": 12,
+  "shape_convention": "batch,time,features"
+}

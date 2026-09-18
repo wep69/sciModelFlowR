@@ -1,0 +1,13 @@
+{
+  "schema_version": "1",
+  "dataset": "gold_conformal_regression",
+  "method": "split",
+  "level": 0.9,
+  "score": "absolute",
+  "roles": {
+    "train": "train",
+    "calibration": "calibration",
+    "test": "final untouched test"
+  },
+  "comparison": "same frozen rows, same finite-sample quantile rule, empirical marginal coverage within tolerance"
+}

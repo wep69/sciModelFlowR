@@ -1,0 +1,6 @@
+{
+  "api_freeze": "0.9.0",
+  "conformal_quantile": "finite-sample order statistic",
+  "contract_version": "0.9.0",
+  "linear_reference": "OLS QR-equivalent"
+}

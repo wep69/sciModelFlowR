@@ -1,0 +1,62 @@
+{
+  "release": "1.0.0",
+  "review_type": "static-source-review",
+  "runtime_penetration_tested": false,
+  "findings": [
+    {
+      "id": "SEC-001",
+      "area": "opaque R serialization",
+      "severity": "high-if-untrusted",
+      "status": "guarded-in-source",
+      "evidence": "smf_load_bundle() validates SHA-256 and requires trusted=TRUE before readRDS for unsafe bundle components."
+    },
+    {
+      "id": "SEC-002",
+      "area": "portable bundles",
+      "severity": "low",
+      "status": "guarded-in-source",
+      "evidence": "portable path uses JSON metadata/model state and validates checksum/schema before load."
+    },
+    {
+      "id": "SEC-003",
+      "area": "arbitrary code execution primitives",
+      "severity": "high",
+      "status": "no-package-R-source-use-found",
+      "evidence": "static scan found no system(), system2(), shell(), eval(parse()), source(), or download.file() calls in R/."
+    },
+    {
+      "id": "SEC-004",
+      "area": "ONNX export",
+      "severity": "medium",
+      "status": "explicitly-uncertified",
+      "evidence": "smf_export_onnx() requires caller-supplied exporter and warns that export does not imply prediction equivalence."
+    },
+    {
+      "id": "SEC-005",
+      "area": "deployment endpoint",
+      "severity": "medium",
+      "status": "requires-runtime-review",
+      "evidence": "generated Plumber endpoint enforces bundle load semantics but production auth/rate limiting/TLS belong to deployment environment."
+    },
+    {
+      "id": "SEC-006",
+      "area": "artifact integrity",
+      "severity": "medium",
+      "status": "implemented",
+      "evidence": "bundle/source manifests use SHA-256; final distribution hashes generated only after freeze."
+    },
+    {
+      "id": "SEC-007",
+      "area": "external services",
+      "severity": "medium",
+      "status": "optional-quarantined",
+      "evidence": "MLflow/pins/vetiver/Plumber integrations remain optional pending local certification."
+    }
+  ],
+  "release_blockers_remaining_for_runtime_certification": [
+    "runtime package checks",
+    "dependency/advisory review in release environment",
+    "deployment-environment security review for any production service"
+  ],
+  "definitive_source_freeze_blockers_remaining": []
+}

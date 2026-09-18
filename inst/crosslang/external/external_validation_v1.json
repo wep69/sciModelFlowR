@@ -1,0 +1,10 @@
+{
+  "external_labels_for_evaluation_only": true,
+  "recalibration": false,
+  "refit": false,
+  "required_provenance": [
+    "source_run_id",
+    "source_spec_hash",
+    "external_data_hash"
+  ]
+}

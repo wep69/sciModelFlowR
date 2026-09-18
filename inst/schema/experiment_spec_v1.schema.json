@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.org/sciModelFlowR/experiment_spec_v1.schema.json",
+  "title": "sciModelFlowR portable ExperimentSpec v1",
+  "type": "object",
+  "required": [
+    "task",
+    "data",
+    "design",
+    "preprocessing",
+    "resampling",
+    "model",
+    "metrics",
+    "reproducibility"
+  ],
+  "properties": {
+    "task": {
+      "type": "object"
+    },
+    "data": {
+      "type": "object"
+    },
+    "design": {
+      "type": "object"
+    },
+    "preprocessing": {
+      "type": "object"
+    },
+    "resampling": {
+      "type": "object"
+    },
+    "model": {
+      "type": "object"
+    },
+    "metrics": {
+      "type": "array"
+    },
+    "reproducibility": {
+      "type": "object"
+    },
+    "bootstrap": {},
+    "probabilistic": {},
+    "bayesian": {},
+    "deep_learning": {},
+    "uncertainty": {}
+  },
+  "additionalProperties": true
+}

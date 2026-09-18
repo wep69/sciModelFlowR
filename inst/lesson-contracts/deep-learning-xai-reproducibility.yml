@@ -1,0 +1,14 @@
+id: deep-learning-xai-reproducibility
+dataset: gold_dl_nonlinear
+learning_objectives:
+  - use gradient explanations as sensitivity descriptions
+  - verify checkpoint hashes and explicit trust
+  - document CPU/GPU determinism limits
+seed: 260915
+required_outputs:
+  - DLGradientExplanation
+  - DLCheckpoint
+required_assertions:
+  - causal_interpretation_is_false
+  - untrusted_checkpoint_load_is_blocked
+expected_warnings: []

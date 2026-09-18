@@ -1,0 +1,713 @@
+---
+title: "Full Uncertainty: Typed Intervals, Decomposition, and Scientific Communication"
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    number-sections: true
+execute:
+  eval: false
+---
+
+**Package:** `sciModelFlowR`  
+**Version targeted:** `0.7.0`  
+**Status:** implementation-complete; runtime and numerical validation deferred to the consolidated local validation campaign.
+
+> Examples use the public package API. Heavy Bayesian backends are optional. Frozen Gold datasets are simulated validation material, not empirical evidence.
+
+
+# 1. Why a unified uncertainty layer is necessary
+
+Scientific software often represents every interval as `lower` and `upper`. That is convenient computationally and dangerous scientifically. A confidence interval, Bayesian credible interval, posterior predictive interval, bootstrap interval, conformal interval, ensemble spread, and uncertainty decomposition can all have two endpoints while answering different questions.
+
+Version 0.7.0 therefore completes the typed uncertainty layer. The package records the source, target, interval type, nominal level, and conditioning information. Comparison is allowed; semantic erasure is not.
+
+# 2. Learning objectives
+
+The reader should be able to identify the target of an interval, state its probability interpretation, distinguish parameter uncertainty from future-response uncertainty, keep bootstrap and posterior intervals separate, understand when aleatoric/epistemic decomposition is identified, compare Bayesian and conformal predictions without falsely equating them, and construct a reproducible uncertainty report.
+
+# 3. The semantics registry
+
+```r
+smf_uncertainty_semantics()
+```
+
+The canonical categories are confidence, credible, prediction, posterior predictive, bootstrap, and conformal. Each has a target and probability statement. The table intentionally sets `interchangeable = FALSE` for all entries.
+
+# 4. Build descriptors explicitly
+
+```r
+credible <- smf_uncertainty_descriptor(
+  source = "bayesian_posterior",
+  target = "parameter",
+  interval_type = "credible",
+  level = 0.95,
+  conditional_on = "model and prior"
+)
+
+conformal <- smf_uncertainty_descriptor(
+  source = "split_conformal",
+  target = "future_response",
+  interval_type = "conformal",
+  level = 0.95,
+  conditional_on = "exchangeability and score construction"
+)
+
+smf_uncertainty_compare(credible, conformal)
+```
+
+Even though both nominal levels are 0.95, the labels remain different.
+
+# 5. Confidence intervals
+
+A frequentist confidence interval is a procedure with repeated-sampling coverage for a parameter or estimand under specified assumptions. The realized interval is not ordinarily interpreted as assigning a 95% probability to a fixed parameter after the data are observed.
+
+Bootstrap confidence intervals inherit their interpretation from the resampling procedure and statistic. They should still be labeled as bootstrap intervals rather than generic confidence bounds because method details affect coverage.
+
+# 6. Bayesian credible intervals
+
+A credible interval assigns posterior probability to a parameter or latent quantity conditional on model, prior, and data. It is appropriate to make posterior probability statements when the model supports them. That does not transform the result into a design-based confidence interval or a causal effect.
+
+# 7. Posterior predictive intervals
+
+Posterior predictive intervals target future responses and integrate posterior uncertainty plus the likelihood's observation process. They are different from credible intervals for the conditional mean. In many Gaussian regressions, the predictive interval is wider because it includes residual variability.
+
+# 8. Frequentist prediction intervals
+
+A model-based frequentist prediction interval also targets a future observation but uses repeated-sampling logic and the assumed sampling model. Its similarity in purpose to a posterior predictive interval does not make their probability statements identical.
+
+# 9. Bootstrap intervals
+
+Bootstrap distributions approximate sampling variability by resampling cases, clusters, blocks, residuals, or another design-consistent unit. The bootstrap unit is part of the uncertainty definition. Row bootstrap for clustered data can underestimate uncertainty because it breaks the design.
+
+# 10. Conformal intervals
+
+Conformal intervals target future responses or class sets with marginal coverage properties under the selected conformal assumptions. They need not be probability distributions. Therefore, one should not calculate a posterior probability from a conformal interval unless an additional probabilistic model supplies that meaning.
+
+# 11. Predictive distributions as the common computational object
+
+`PredictionDistribution` is a package-level container that can represent samples, quantiles, parametric distributions, class probabilities, or intervals. The container does not imply that all representations have the same statistical interpretation. Its attached `UncertaintyDescriptor` preserves the semantics.
+
+# 12. Aleatoric and epistemic language
+
+Aleatoric uncertainty usually refers to irreducible or observation-level variability within a declared model; epistemic uncertainty refers to uncertainty about model functions or parameters that could in principle decrease with information. These terms are useful but frequently abused.
+
+A decomposition is only valid when the model provides identifiable components. Version 0.7.0 blocks requests that merely name two arbitrary variance estimates "aleatoric" and "epistemic."
+
+```r
+smf_uncertainty_decompose(
+  aleatoric = c(0.5, 0.5),
+  epistemic = c(0.2, 0.3),
+  method = "identified_example",
+  identified = TRUE
+)
+```
+
+If `identified = FALSE`, the function stops rather than manufacturing a decomposition.
+
+# 13. GP decomposition example
+
+The package-native Gaussian process can expose latent posterior variance and an observation-noise variance when the noise term is explicitly part of the model.
+
+```r
+d <- smf_load_dataset("gold_bayesian_linear")
+
+gp <- smf_gp_fit(
+  d[1:150, c("x1", "x2")],
+  d$y[1:150],
+  noise_variance = 0.64,
+  optimize = FALSE
+)
+
+pd <- smf_gp_predict(
+  gp,
+  d[151:160, c("x1", "x2")]
+)
+
+dec <- smf_uncertainty_from_distribution(pd)
+```
+
+The decomposition is conditional on fixed GP hyperparameters. If hyperparameters were estimated and their uncertainty ignored, the label must state that plug-in approximation.
+
+# 14. Deep ensembles and MC dropout
+
+Deep ensembles and MC dropout can provide useful predictive variability, but a variance decomposition is not automatically identified. Version 0.6 already blocked false decompositions, and version 0.7 preserves that rule in the unified layer.
+
+Do not call between-network variance pure epistemic uncertainty without defining what randomness and training procedure it represents.
+
+# 15. Calibration is not uncertainty type
+
+Probability calibration asks whether predicted probabilities match empirical frequencies. A perfectly calibrated classifier can still be uncertain. A poorly calibrated classifier can still make confident predictions. Calibration is a quality property of probabilistic predictions, not a replacement for uncertainty semantics.
+
+# 16. Interval width is not quality by itself
+
+A narrow interval is useful only if its coverage or posterior interpretation is defensible. Artificially narrow intervals can arise from leakage, ignored clustering, strong misspecified priors, underdispersed variational approximations, or omitted observation noise. Always evaluate width together with the uncertainty target and calibration/coverage evidence.
+
+# 17. Coverage is not sharpness
+
+Two conformal methods can both attain 90% marginal coverage but have very different widths. Two Bayesian predictive models can have similar interval coverage but different log scores or CRPS. Good probabilistic predictions require calibration and sharpness relative to the scientific target.
+
+# 18. Out-of-distribution prediction
+
+Most uncertainty methods can fail under distribution shift. A posterior predictive interval conditional on the training model may be overconfident in a new environment. Ordinary conformal intervals can lose exchangeability-based coverage under covariate or concept shift. Ensemble disagreement can also fail to detect unfamiliar conditions.
+
+Therefore, domain shift should be diagnosed explicitly and external validation should remain part of the scientific workflow.
+
+# 19. Parameter uncertainty versus model uncertainty
+
+Posterior parameter uncertainty is uncertainty within a specified model. It does not automatically include uncertainty over alternative model structures, omitted variables, response families, feature engineering, or measurement models. Benchmarking multiple defensible models can reveal sensitivity, but averaging models does not make structural uncertainty disappear.
+
+# 20. Measurement uncertainty
+
+When predictors or responses are measured with error, ordinary regression intervals can underrepresent uncertainty if measurement error is ignored. A measurement-error model can propagate that component, but only if the data contain information or priors sufficient to identify it.
+
+# 21. Resampling uncertainty
+
+Repeated cross-validation scores vary because data partitions change. That variability is not a confidence interval for a model parameter. It describes sensitivity of predictive performance to resampling geometry. Use a descriptor that identifies the source as resampling rather than relabeling it as posterior or sampling uncertainty.
+
+# 22. Decision uncertainty
+
+Scientific decisions often involve loss functions, costs, thresholds, or utility. Prediction uncertainty alone does not specify the optimal decision. A threshold chosen for pest control, irrigation, or disease intervention requires consequences of false positives and false negatives. Keep the predictive model separate from the decision rule.
+
+# 23. Multiple uncertainty layers in one analysis
+
+A single project can legitimately contain several uncertainty objects:
+
+- bootstrap confidence intervals for an estimator;
+- Bayesian posterior intervals for model parameters;
+- posterior predictive intervals for future outcomes;
+- conformal intervals for marginal predictive coverage;
+- resampling variability for model performance;
+- XAI stability intervals for explanation sensitivity.
+
+The package's goal is not to choose one universal interval. It is to prevent those objects from being confused.
+
+# 24. Compare without collapsing semantics
+
+```r
+report <- smf_uncertainty_report(
+  credible,
+  conformal
+)
+
+report$table
+report$semantics
+```
+
+A report should compare source, target, level and conditioning information before comparing numerical widths.
+
+# 25. Rendering rules
+
+Tables and figures should label interval type directly. A caption saying only "95% interval" is insufficient when multiple paradigms appear. Use labels such as "95% posterior predictive interval" or "90% split-conformal interval." If both appear in one figure, use separate legend entries and explanatory text.
+
+# 26. Scientific examples
+
+For a crop-yield regression, a coefficient credible interval concerns a model parameter; a posterior predictive interval concerns a future plot; a split-conformal interval concerns marginal future response coverage; a bootstrap interval may concern a treatment contrast; and repeated spatial-CV variation concerns generalization stability. These are five distinct uncertainty statements even if each uses lower and upper bounds.
+
+# 27. Validation of uncertainty methods
+
+Gold simulation should be tailored to each method. Bayesian parameter recovery tests known parameters and interval coverage under the generating model. Conformal simulation tests marginal coverage under exchangeability. Bootstrap simulations test coverage for the chosen resampling unit. Calibration simulations test probability calibration. No single universal uncertainty simulation is sufficient.
+
+# 28. Failure modes to report
+
+Report approximation pathologies, undercoverage, extreme interval width, unstable decomposition, non-identification, calibration failure, distribution shift, dependence mismatches, and extrapolation. Hiding these issues behind a single uncertainty ribbon defeats the purpose of typed uncertainty.
+
+# 29. Minimum reporting checklist
+
+- uncertainty source;
+- target quantity;
+- interval/set type;
+- nominal level;
+- conditioning assumptions;
+- data role used to estimate uncertainty;
+- calibration or coverage evidence;
+- dependence/resampling unit;
+- approximation method;
+- whether aleatoric/epistemic components are identified;
+- external-validity limitations;
+- software version and Gold/reference validation status.
+
+# 30. Final workflow
+
+The recommended sequence remains:
+
+**scientific question -> design -> audit -> leakage-safe preprocessing -> design-aware resampling -> model -> diagnostics -> typed uncertainty -> calibration/coverage -> external validation -> interpretation -> reproducibility manifest.**
+
+Uncertainty belongs near the end of the scientific argument because its meaning depends on every modeling and design choice that came before it.
+
+## 30.1 Interpretation case: Field-trial treatment mean
+
+A confidence or bootstrap interval for a treatment mean is not the same as a prediction interval for a new plot. The first concerns an estimand; the second includes plot-to-plot variation. State which is needed for the agronomic decision.
+
+**Label before interpreting.** Identify source, target, probability statement, data role, and dependence assumptions before comparing the numerical interval with another method.
+
+## 30.2 Interpretation case: Bayesian fertilizer slope
+
+A credible interval for a fertilizer slope conditions on the prior and response model. If the final question is yield for a new field, report posterior predictive uncertainty as well rather than substituting the slope interval.
+
+**Label before interpreting.** Identify source, target, probability statement, data role, and dependence assumptions before comparing the numerical interval with another method.
+
+## 30.3 Interpretation case: Conformal soil prediction
+
+A conformal interval can provide marginal predictive coverage without being a posterior distribution. Do not interpret its midpoint as a posterior mean or the interval mass as Bayesian probability.
+
+**Label before interpreting.** Identify source, target, probability statement, data role, and dependence assumptions before comparing the numerical interval with another method.
+
+## 30.4 Interpretation case: Bootstrap clustered insects
+
+When insects are observed within cages or plots, resample the scientifically independent unit. Row bootstrap can create pseudo-replication and too-narrow uncertainty.
+
+**Label before interpreting.** Identify source, target, probability statement, data role, and dependence assumptions before comparing the numerical interval with another method.
+
+## 30.5 Interpretation case: GP soil surface
+
+Latent GP variance and nugget/observation variance can be separated under the model. If covariance hyperparameters are plug-in estimates, label that conditioning because the decomposition omits their uncertainty.
+
+**Label before interpreting.** Identify source, target, probability statement, data role, and dependence assumptions before comparing the numerical interval with another method.
+
+## 30.6 Interpretation case: Deep ensemble stress classifier
+
+Ensemble disagreement can be a useful sensitivity measure, but it is not automatically a complete epistemic variance. Validate whether disagreement increases on known distribution shifts before using it as a scientific uncertainty claim.
+
+**Label before interpreting.** Identify source, target, probability statement, data role, and dependence assumptions before comparing the numerical interval with another method.
+
+## 30.7 Interpretation case: Remote-sensing transfer
+
+A narrow interval within the source sensor does not imply narrow transfer uncertainty to another sensor. External-domain error is a separate component unless modeled explicitly.
+
+**Label before interpreting.** Identify source, target, probability statement, data role, and dependence assumptions before comparing the numerical interval with another method.
+
+## 30.8 Interpretation case: Climate projection
+
+Parameter uncertainty within one climate-response model differs from structural uncertainty across models or scenarios. Report model/scenario sensitivity separately rather than folding all variation into a single standard deviation.
+
+**Label before interpreting.** Identify source, target, probability statement, data role, and dependence assumptions before comparing the numerical interval with another method.
+
+## 30.9 Interpretation case: Disease decision threshold
+
+Predictive probability uncertainty and uncertainty about the optimal treatment threshold are different. Threshold choice depends on costs, prevalence and intervention consequences.
+
+**Label before interpreting.** Identify source, target, probability statement, data role, and dependence assumptions before comparing the numerical interval with another method.
+
+## 30.10 Interpretation case: Spectral calibration
+
+Cross-validation spread describes sensitivity to data splits. It should not be reported as a 95% confidence interval unless a justified inferential construction supports that interpretation.
+
+**Label before interpreting.** Identify source, target, probability statement, data role, and dependence assumptions before comparing the numerical interval with another method.
+
+## 30.11 Interpretation case: Growth optimum
+
+Uncertainty in a nonlinear optimum should be propagated from the curve parameters or resampling distribution. A narrow pointwise confidence ribbon does not necessarily imply a narrow optimum distribution.
+
+**Label before interpreting.** Identify source, target, probability statement, data role, and dependence assumptions before comparing the numerical interval with another method.
+
+## 30.12 Interpretation case: External validation
+
+If performance degrades in a new site, the discrepancy is evidence about transportability. Do not widen an internal interval post hoc and claim that external shift was already covered.
+
+**Label before interpreting.** Identify source, target, probability statement, data role, and dependence assumptions before comparing the numerical interval with another method.
+
+
+# Part II. Integrated Bayesian–conformal workflow
+
+
+
+This vignette connects the Bayesian and conformal modules into one scientific workflow without pretending that they answer the same uncertainty question. Bayesian modeling supplies a coherent probability model for parameters, latent quantities and future observations. Conformal prediction supplies method-specific marginal coverage for future responses or class sets under stated conformity assumptions. They can be used separately or side by side.
+
+# 2. Learning objectives
+
+The reader should be able to build a development/test information boundary, run prior predictive checks, fit and diagnose a Bayesian reference model, generate posterior predictive distributions, calibrate a conformal interval on held-out development data, compare posterior predictive and conformal intervals semantically, evaluate both on an untouched test set, and document where their assumptions differ.
+
+# 3. Start with the scientific target
+
+Suppose the goal is prediction of a continuous agronomic response in future experimental units. The project also wants interpretable coefficients. Two targets therefore exist: model parameters describing associations under the model and future responses. The same interval should not be used for both.
+
+# 4. Declare information roles
+
+A defensible workflow can use:
+
+- training data for fitting;
+- internal resampling for tuning or model comparison;
+- a calibration subset for split conformal;
+- a final test set for untouched evaluation;
+- an external domain for transportability, if available.
+
+The calibration subset is development data, not final validation.
+
+# 5. Frozen reference data
+
+```r
+d <- smf_load_dataset("gold_conformal_regression")
+train <- subset(d, partition == "train")
+cal <- subset(d, partition == "calibration")
+test <- subset(d, partition == "test")
+```
+
+The Gold fixture is designed for coverage validation. For parameter-recovery validation, use `gold_bayesian_linear`. Different Gold fixtures answer different numerical questions.
+
+# 6. Bayesian model on the training data
+
+For the conformal Gold data, a simple linear Gaussian model is intentionally imperfect because the generator contains mild nonlinearity and heteroscedasticity. This creates an instructive distinction: Bayesian posterior predictive intervals inherit the assumed likelihood, while split conformal can correct marginal coverage using calibration residuals.
+
+```r
+bsp <- smf_bayesian_spec(
+  priors = list(
+    beta_mean = c(0, 0, 0),
+    beta_sd = c(10, 10, 10),
+    sigma_shape = 2,
+    sigma_rate = 1
+  ),
+  draws = 3000L,
+  seed = 260917L
+)
+
+bfit <- smf_bayes_fit(
+  y ~ x1 + x2,
+  train,
+  bayesian = bsp,
+  backend = "conjugate_gaussian"
+)
+```
+
+# 7. Prior predictive assessment
+
+```r
+prior_rep <- smf_bayes_prior_predictive(
+  y ~ x1 + x2,
+  train,
+  bayesian = bsp,
+  ndraws = 500L
+)
+```
+
+Inspect whether prior simulations are plausible before using the observed outcome to update the model. If a prior is revised after seeing the data, record that model-development step honestly.
+
+# 8. Posterior diagnostics
+
+```r
+bdiag <- smf_bayes_diagnose(bfit)
+```
+
+For the conjugate reference there is no MCMC convergence problem. A `brms` fit would require R-hat, ESS and divergence diagnostics. The absence of MCMC warnings in a closed-form model should not be reported as evidence that the likelihood itself is correct.
+
+# 9. Posterior predictive intervals on calibration data
+
+```r
+pd_cal <- smf_bayes_predict(
+  bfit,
+  cal[c("x1", "x2")],
+  ndraws = 2000L
+)
+
+bayes_cal_interval <- smf_dist_interval(pd_cal, level=.90)
+```
+
+These intervals are conditional on the Gaussian model and prior. Because the Gold generator is heteroscedastic and slightly nonlinear, the model can be misspecified even when coefficient computation is exact.
+
+# 10. Conformal calibration using the Bayesian point predictor
+
+Conformalization can use a point prediction from the Bayesian model. Use the posterior expected mean on calibration rows rather than the future posterior draw.
+
+```r
+ep_cal <- rowMeans(smf_bayes_epred(
+  bfit,
+  cal[c("x1", "x2")],
+  ndraws = 2000L
+))
+
+cf <- smf_conformal_fit(
+  truth = cal$y,
+  prediction = ep_cal,
+  spec = smf_conformal_spec(
+    method = "split",
+    level = .90
+  ),
+  calibration_ids = cal$row_id,
+  final_test_ids = test$row_id
+)
+```
+
+The conformal calibrator uses the calibration outcomes. This means those rows can no longer serve as untouched evidence for the final coverage estimate.
+
+# 11. Predictions on final test data
+
+```r
+pd_test <- smf_bayes_predict(
+  bfit,
+  test[c("x1", "x2")],
+  ndraws = 2000L
+)
+
+bayes_test_interval <- smf_dist_interval(pd_test, level=.90)
+
+ep_test <- rowMeans(smf_bayes_epred(
+  bfit,
+  test[c("x1", "x2")],
+  ndraws = 2000L
+))
+
+conf_test_interval <- smf_conformal_predict(
+  cf,
+  prediction = ep_test
+)
+```
+
+# 12. Compare interval semantics before widths
+
+```r
+cf_desc <- smf_uncertainty_descriptor(
+  source = "split_conformal",
+  target = "future_response",
+  interval_type = "conformal",
+  level = cf@spec@level,
+  conditional_on = "exchangeability and calibration score"
+)
+
+smf_uncertainty_compare(pd_test, cf_desc)
+```
+
+The descriptors are created explicitly so that the probability statement remains visible in the analysis. The posterior predictive interval and conformal interval carry different meanings even when they share the same nominal level.
+
+# 13. Evaluate the Bayesian interval
+
+A simple empirical coverage diagnostic can be calculated on the untouched test set. This does not turn the Bayesian interval into a conformal interval. It is a frequentist operating-characteristic check of posterior predictive intervals under the test population.
+
+```r
+bayes_cover <- mean(
+  test$y >= bayes_test_interval[, "lower"] &
+  test$y <= bayes_test_interval[, "upper"]
+)
+```
+
+# 14. Evaluate conformal coverage
+
+```r
+conf_eval <- smf_conformal_diagnose(
+  cf,
+  truth = test$y,
+  prediction = conf_test_interval
+)
+```
+
+The conformal diagnostic compares observed marginal coverage with the declared target and finite test-sample variability.
+
+# 15. Width comparison
+
+Comparing widths is useful only after the methods' semantics are clear. A conformal interval may be wider because it compensates for misspecification observed in calibration residuals. A Bayesian interval may adapt differently because its width follows the likelihood and posterior model.
+
+If a conformal interval is narrower but undercovers, that is not an improvement. If a Bayesian interval is wider because the prior or residual model is unrealistic, width alone does not make it safer.
+
+# 16. What happens under a correct model
+
+When the Bayesian likelihood, mean structure, and prior are well calibrated to the data-generating process, posterior predictive intervals can have good empirical coverage and offer a complete predictive distribution. Conformalization may still be useful as a distribution-free operating guarantee, but it spends calibration data and can add width.
+
+# 17. What happens under misspecification
+
+Under mean or variance misspecification, posterior predictive intervals can undercover systematically. Split conformal can restore marginal coverage when exchangeability holds, but it does not repair the probability model itself. Posterior parameter interpretations can remain wrong even if conformal prediction covers future responses.
+
+# 18. Conformalized Bayesian prediction
+
+Using a Bayesian expected prediction as the base predictor for conformal intervals is legitimate because conformal calibration can wrap many predictive algorithms. The resulting interval is still a conformal interval. It should not be called a Bayesian credible interval simply because the underlying point predictor came from a Bayesian fit.
+
+# 19. Posterior predictive checks and conformal coverage are complementary
+
+Posterior predictive checks ask whether the model can reproduce scientifically important features of observed data. Conformal coverage asks whether predictive sets attain their target operating coverage. A model can pass one and fail the other. Both can therefore be informative.
+
+# 20. PSIS-LOO and conformal calibration are different
+
+PSIS-LOO estimates predictive performance and diagnoses influential observations under a Bayesian model. It does not create a conformal coverage guarantee. CV+ uses out-of-fold predictive residuals in a particular conformal construction. The fact that both use leave-out information does not make them equivalent.
+
+# 21. External validation
+
+Neither posterior predictive checks nor internal conformal calibration establishes transportability to a new region, sensor, season, management system, or genotype population. If external deployment matters, preserve an external domain and report performance, calibration and coverage there separately.
+
+# 22. Grouped and hierarchical data
+
+If observations are nested in fields, subjects or sites, both the Bayesian hierarchy and conformal calibration unit must respect that structure. A hierarchical Bayesian model can account for within-group dependence while row-level conformal calibration still assumes an inappropriate exchangeability unit. The two layers must be aligned deliberately.
+
+# 23. Time and space
+
+For forecasting or spatial extrapolation, random calibration/test partitions can give misleading evidence. Use chronological or spatially separated evaluation. Specialized conformal methods for dependence require their own assumptions; version 0.7 records the exchangeability declaration but does not invent guarantees for arbitrary dependent data.
+
+# 24. BART plus conformal
+
+A BART posterior predictive distribution can already represent flexible uncertainty. One can still conformalize a BART point predictor for marginal coverage. Report clearly whether the final interval comes from BART posterior predictive draws or from conformalized BART predictions.
+
+# 25. GP plus conformal
+
+GP uncertainty can increase away from training points according to its kernel. Split conformal with a constant absolute-residual score may add a constant adjustment that does not fully reflect local extrapolation geometry. Conformalized quantile or normalized-score approaches can be more adaptive, but must be justified and validated.
+
+# 26. Classification workflow
+
+For classification, Bayesian posterior class probabilities can be evaluated for calibration and proper scores. Conformal APS can wrap class probabilities to create prediction sets. Probability calibration and set coverage are separate reporting domains.
+
+# 27. Decision making
+
+Neither a posterior probability nor a conformal set chooses an agronomic action by itself. Irrigation, pesticide application, disease treatment, or cultivar recommendation requires costs and consequences. Keep the predictive uncertainty layer separate from the decision utility layer.
+
+# 28. Reproducibility manifest
+
+A complete run should record training/calibration/test hashes, Bayesian approximation, prior specification, posterior diagnostics, conformal score and quantile convention, target coverage, seeds, backend versions, Gold validation status, and any external-domain evaluation.
+
+# 29. Reporting paragraph template
+
+A concise methods paragraph can state that the predictive model was fit on a prespecified training partition with declared priors, evaluated through prior and posterior predictive checks, and diagnosed for computation. A separate calibration partition was then used to estimate a split-conformal absolute-residual threshold at the chosen marginal coverage level. Final Bayesian posterior predictive and conformal intervals were evaluated on an untouched test set. The manuscript should state that the two interval types have different probability interpretations and were not treated as interchangeable.
+
+# 30. Final checklist
+
+- [ ] experimental or observational unit declared;
+- [ ] training/calibration/test roles frozen before evaluation;
+- [ ] priors documented and prior-predictive checked;
+- [ ] Bayesian approximation named;
+- [ ] MCMC diagnostics reported when applicable;
+- [ ] posterior predictive adequacy examined;
+- [ ] conformal score and target level documented;
+- [ ] calibration/test overlap excluded;
+- [ ] exchangeability assumption stated;
+- [ ] empirical coverage and width reported on untouched data;
+- [ ] posterior and conformal intervals labeled differently;
+- [ ] external validity evaluated separately when claimed.
+
+# 31. Final perspective
+
+Bayesian and conformal methods are strongest when their differences remain visible. Bayesian inference offers a probability model for unknown quantities and future observations. Conformal prediction offers a coverage-oriented wrapper built from conformity information. `sciModelFlowR` 0.7.0 places both inside one workflow so users can compare and combine them without erasing their scientific semantics.
+
+## 31.1 Integrated case: Agronomic fertilizer trial
+
+Use posterior draws to describe the dose-response parameters and conformal prediction to evaluate future-plot coverage. If the final deployment is a new site, site-level external validation remains necessary. Do not call a conformalized prediction a credible interval.
+
+**Audit question.** Which uncertainty object is being interpreted, what data informed it, and what population or future unit does its claim actually concern?
+
+## 31.2 Integrated case: Pest management forecast
+
+Posterior predictive draws can quantify a count model, while conformal intervals can check operating coverage of future counts. Temporal validation must precede both if the goal is next-week forecasting.
+
+**Audit question.** Which uncertainty object is being interpreted, what data informed it, and what population or future unit does its claim actually concern?
+
+## 31.3 Integrated case: Soil carbon prediction
+
+A Bayesian or GP model can represent spatial latent structure. Conformal calibration on neighboring samples may still overstate coverage for distant locations. Evaluate spatially separated domains.
+
+**Audit question.** Which uncertainty object is being interpreted, what data informed it, and what population or future unit does its claim actually concern?
+
+## 31.4 Integrated case: Plant stress classification
+
+Bayesian class probabilities support posterior predictive classification and calibration diagnostics. APS prediction sets add a coverage target. Report set size, especially if stressed classes are rare.
+
+**Audit question.** Which uncertainty object is being interpreted, what data informed it, and what population or future unit does its claim actually concern?
+
+## 31.5 Integrated case: Hyperspectral regression
+
+A flexible model can be Bayesian, neural, or deterministic. Feature selection and preprocessing must be learned before calibration. Conformalization does not repair spectral leakage from preprocessing fitted on all samples.
+
+**Audit question.** Which uncertainty object is being interpreted, what data informed it, and what population or future unit does its claim actually concern?
+
+## 31.6 Integrated case: Multi-environment genotype prediction
+
+A Bayesian hierarchy can partially pool genotypes, while conformal evaluation for a new environment requires environment-level separation. Row-level exchangeability is not the target.
+
+**Audit question.** Which uncertainty object is being interpreted, what data informed it, and what population or future unit does its claim actually concern?
+
+## 31.7 Integrated case: Irrigation demand
+
+Bayesian posterior intervals can represent a weather-response model. Split conformal can correct marginal operating coverage, but random temporal calibration can leak seasonal information. Preserve chronology.
+
+**Audit question.** Which uncertainty object is being interpreted, what data informed it, and what population or future unit does its claim actually concern?
+
+## 31.8 Integrated case: Sensor calibration transfer
+
+Fit and calibrate on the source sensor only if source-sensor deployment is the target. For transfer, reserve the target sensor as an external domain and do not use it to tune conformal thresholds.
+
+**Audit question.** Which uncertainty object is being interpreted, what data informed it, and what population or future unit does its claim actually concern?
+
+## 31.9 Integrated case: Nonlinear growth
+
+Posterior uncertainty in growth parameters is scientifically interpretable; conformal intervals concern future observations. A growth parameter credible interval and biomass prediction set should appear in separate table columns or panels.
+
+**Audit question.** Which uncertainty object is being interpreted, what data informed it, and what population or future unit does its claim actually concern?
+
+## 31.10 Integrated case: Reviewer audit
+
+A reviewer should be able to identify every row used for fitting, prior revision, conformal calibration and final evaluation. If those roles cannot be reconstructed from the manifest, the uncertainty claims are not sufficiently reproducible.
+
+**Audit question.** Which uncertainty object is being interpreted, what data informed it, and what population or future unit does its claim actually concern?
+
+
+## Extended practice note 1: Scientific target
+
+Write the estimand or predictive target before selecting an uncertainty procedure. A parameter, conditional mean, future observation, class set and model-performance score require different evidence. For version 0.7.0, document the function call, data role, assumptions, warning records, and the local validation test that would falsify an incorrect implementation. This practice keeps teaching examples aligned with the production API and prevents an attractive plot from becoming evidence without a reproducible statistical contract.
+
+
+## Extended practice note 2: Design boundary
+
+Record the experimental unit, grouping, time or space structure, and external domain. The uncertainty method inherits these design choices; it cannot repair pseudo-replication. For version 0.7.0, document the function call, data role, assumptions, warning records, and the local validation test that would falsify an incorrect implementation. This practice keeps teaching examples aligned with the production API and prevents an attractive plot from becoming evidence without a reproducible statistical contract.
+
+
+## Extended practice note 3: Training boundary
+
+All learned preprocessing, feature selection, model fitting and tuning must be restricted to development data. Calibration is a learned step and therefore cannot use final test outcomes. For version 0.7.0, document the function call, data role, assumptions, warning records, and the local validation test that would falsify an incorrect implementation. This practice keeps teaching examples aligned with the production API and prevents an attractive plot from becoming evidence without a reproducible statistical contract.
+
+
+## Extended practice note 4: Numerical validation
+
+Compare package-native calculations with analytical truth or an independent backend where feasible. Use tolerances for stochastic quantities and exact hashes for frozen metadata. For version 0.7.0, document the function call, data role, assumptions, warning records, and the local validation test that would falsify an incorrect implementation. This practice keeps teaching examples aligned with the production API and prevents an attractive plot from becoming evidence without a reproducible statistical contract.
+
+
+## Extended practice note 5: Sensitivity analysis
+
+Vary consequential priors, kernels, calibration splits, resampling units or model structures when scientifically plausible. Report whether substantive conclusions change. For version 0.7.0, document the function call, data role, assumptions, warning records, and the local validation test that would falsify an incorrect implementation. This practice keeps teaching examples aligned with the production API and prevents an attractive plot from becoming evidence without a reproducible statistical contract.
+
+
+## Extended practice note 6: Communication
+
+Name interval types directly in text, tables and figure legends. Avoid the generic phrase confidence band when the object is posterior predictive or conformal. For version 0.7.0, document the function call, data role, assumptions, warning records, and the local validation test that would falsify an incorrect implementation. This practice keeps teaching examples aligned with the production API and prevents an attractive plot from becoming evidence without a reproducible statistical contract.
+
+
+## Extended practice note 7: Scientific target
+
+Write the estimand or predictive target before selecting an uncertainty procedure. A parameter, conditional mean, future observation, class set and model-performance score require different evidence. For version 0.7.0, document the function call, data role, assumptions, warning records, and the local validation test that would falsify an incorrect implementation. This practice keeps teaching examples aligned with the production API and prevents an attractive plot from becoming evidence without a reproducible statistical contract.
+
+
+## Extended practice note 8: Design boundary
+
+Record the experimental unit, grouping, time or space structure, and external domain. The uncertainty method inherits these design choices; it cannot repair pseudo-replication. For version 0.7.0, document the function call, data role, assumptions, warning records, and the local validation test that would falsify an incorrect implementation. This practice keeps teaching examples aligned with the production API and prevents an attractive plot from becoming evidence without a reproducible statistical contract.
+
+
+## Extended practice note 9: Training boundary
+
+All learned preprocessing, feature selection, model fitting and tuning must be restricted to development data. Calibration is a learned step and therefore cannot use final test outcomes. For version 0.7.0, document the function call, data role, assumptions, warning records, and the local validation test that would falsify an incorrect implementation. This practice keeps teaching examples aligned with the production API and prevents an attractive plot from becoming evidence without a reproducible statistical contract.
+
+
+## Extended practice note 10: Numerical validation
+
+Compare package-native calculations with analytical truth or an independent backend where feasible. Use tolerances for stochastic quantities and exact hashes for frozen metadata. For version 0.7.0, document the function call, data role, assumptions, warning records, and the local validation test that would falsify an incorrect implementation. This practice keeps teaching examples aligned with the production API and prevents an attractive plot from becoming evidence without a reproducible statistical contract.
+
+
+## Extended practice note 11: Sensitivity analysis
+
+Vary consequential priors, kernels, calibration splits, resampling units or model structures when scientifically plausible. Report whether substantive conclusions change. For version 0.7.0, document the function call, data role, assumptions, warning records, and the local validation test that would falsify an incorrect implementation. This practice keeps teaching examples aligned with the production API and prevents an attractive plot from becoming evidence without a reproducible statistical contract.
+
+
+## Extended practice note 12: Communication
+
+Name interval types directly in text, tables and figure legends. Avoid the generic phrase confidence band when the object is posterior predictive or conformal. For version 0.7.0, document the function call, data role, assumptions, warning records, and the local validation test that would falsify an incorrect implementation. This practice keeps teaching examples aligned with the production API and prevents an attractive plot from becoming evidence without a reproducible statistical contract.
+
+
+## Extended practice note 13: Scientific target
+
+Write the estimand or predictive target before selecting an uncertainty procedure. A parameter, conditional mean, future observation, class set and model-performance score require different evidence. For version 0.7.0, document the function call, data role, assumptions, warning records, and the local validation test that would falsify an incorrect implementation. This practice keeps teaching examples aligned with the production API and prevents an attractive plot from becoming evidence without a reproducible statistical contract.
+
+
+## Extended practice note 14: Design boundary
+
+Record the experimental unit, grouping, time or space structure, and external domain. The uncertainty method inherits these design choices; it cannot repair pseudo-replication. For version 0.7.0, document the function call, data role, assumptions, warning records, and the local validation test that would falsify an incorrect implementation. This practice keeps teaching examples aligned with the production API and prevents an attractive plot from becoming evidence without a reproducible statistical contract.
+
+
+## Extended practice note 15: Training boundary
+
+All learned preprocessing, feature selection, model fitting and tuning must be restricted to development data. Calibration is a learned step and therefore cannot use final test outcomes. For version 0.7.0, document the function call, data role, assumptions, warning records, and the local validation test that would falsify an incorrect implementation. This practice keeps teaching examples aligned with the production API and prevents an attractive plot from becoming evidence without a reproducible statistical contract.
+
+
+## Extended practice note 16: Numerical validation
+
+Compare package-native calculations with analytical truth or an independent backend where feasible. Use tolerances for stochastic quantities and exact hashes for frozen metadata. For version 0.7.0, document the function call, data role, assumptions, warning records, and the local validation test that would falsify an incorrect implementation. This practice keeps teaching examples aligned with the production API and prevents an attractive plot from becoming evidence without a reproducible statistical contract.
