@@ -16,6 +16,7 @@
 # Mantemos a estrutura, ignoramos artefactos pesados
 outputs/built-tarballs/*
 outputs/rendered-docs/*
+outputs/evidence/check/
 !outputs/built-tarballs/.gitkeep
 !outputs/rendered-docs/.gitkeep
 !outputs/evidence/.gitkeep

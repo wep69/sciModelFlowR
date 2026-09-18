@@ -8,4 +8,4 @@ response <- 10 + 5 * signal_primary + 0.5 * weak_feature + noise
 gold_xai_stability <- data.frame(
   obs_id = sprintf("XA%03d", i), signal_primary, signal_correlated, weak_feature, response
 )
-utils::write.csv(gold_xai_stability, "inst/extdata/gold/gold_xai_stability.csv", row.names = FALSE)
+utils::write.csv(gold_xai_stability, "inst/extdata/gold_data/gold_xai_stability.csv", row.names = FALSE)

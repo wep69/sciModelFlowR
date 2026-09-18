@@ -33,20 +33,6 @@
 \alias{smf_export_onnx}
 \title{Tracking, safe persistence, deployment, and scalable inference}
 \description{Version 0.8.0 APIs for local and optional MLflow tracking, checksum-verified inference bundles, explicit trust boundaries for opaque serialization, optional pins/vetiver deployment adapters, hardware provenance, deterministic batch prediction, resumable checkpoints, and iterator-based processing.}
-\usage{
-smf_tracking_spec(provider = c("local", "none", "mlflow"), uri = character(),
-  experiment = "default", tags = list(), artifact_mode = c("copy", "reference"),
-  parameters = list())
-smf_tracker_local(path, experiment = "default", tags = list())
-smf_start_run(tracker, run_name = character(), tags = list(), resume_run_id = character())
-smf_save_bundle(result, path, mode = c("auto", "portable", "opaque"), overwrite = FALSE)
-smf_validate_bundle(path, strict = TRUE)
-smf_load_bundle(path, trusted = FALSE)
-smf_predict_bundle(bundle, new_data, strict_schema = TRUE,
-  type = c("auto", "response", "prob"))
-smf_batch_predict(object, new_data, batch_size = 1000L, workers = 1L,
-  strict_schema = TRUE, checkpoint_dir = NULL, resume = FALSE)
-}
 \details{Portable safe-state export is intentionally limited to fitted pipelines whose semantics can be represented without opaque R serialization. Opaque bundles are checksum-verified but require explicit \code{trusted = TRUE} before deserialization. Optional integrations never block the local core path.}
 \value{Package-native specification, tracker, bundle, validation, or batch-prediction objects as appropriate.}
 \examples{

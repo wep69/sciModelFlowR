@@ -8,10 +8,10 @@ smf_list_datasets <- function() .smf_gold_names
 #' @export
 smf_load_dataset <- function(name) {
   name <- match.arg(name,.smf_gold_names)
-  path <- system.file("extdata","gold",paste0(name,".csv"),package="sciModelFlowR")
+  path <- system.file("extdata","gold_data",paste0(name,".csv"),package="sciModelFlowR")
   if(!nzchar(path)) {
     # development fallback when sourced outside an installed package
-    path <- file.path("inst","extdata","gold",paste0(name,".csv"))
+    path <- file.path("inst","extdata","gold_data",paste0(name,".csv"))
   }
   utils::read.csv(path,check.names=FALSE,stringsAsFactors=FALSE)
 }
@@ -20,7 +20,7 @@ smf_load_dataset <- function(name) {
 #' @export
 smf_dataset_card <- function(name) {
   name <- match.arg(name,.smf_gold_names)
-  path <- system.file("gold","cards",paste0(name,".md"),package="sciModelFlowR")
-  if(!nzchar(path)) path <- file.path("inst","gold","cards",paste0(name,".md"))
+  path <- system.file("gold_data","cards",paste0(name,".md"),package="sciModelFlowR")
+  if(!nzchar(path)) path <- file.path("inst","gold_data","cards",paste0(name,".md"))
   paste(readLines(path,warn=FALSE,encoding="UTF-8"),collapse="\n")
 }

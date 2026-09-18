@@ -1,0 +1,124 @@
+"file","context","test","nb","failed","skipped","error","warning","user","system","real","passed"
+"test-090-api-freeze.R","090-api-freeze","API freeze has 246 exports",2,0,FALSE,FALSE,0,0.04,0.02,0.0600000000000001,2
+"test-090-crosslang.R","090-crosslang","cross-language fixtures parse",2,0,FALSE,FALSE,0,0.0599999999999998,0,0.0399999999999998,2
+"test-090-external-validation.R","090-external-validation","external validation API exists",2,0,FALSE,FALSE,0,0.01,0,0.01,2
+"test-090-gold-suite.R","090-gold-suite","formal Gold suite is complete",2,0,FALSE,FALSE,0,0.04,0.03,0.0600000000000001,2
+"test-090-reference-validation.R","090-reference-validation","reference validator returns evidence",2,0,FALSE,FALSE,0,0.03,0,0.03,2
+"test-090-release-candidate.R","090-release-candidate","release candidate evidence is frozen",2,0,FALSE,FALSE,0,0.03,0,0.01,2
+"test-090-reporting.R","090-reporting","reporting interfaces exist",3,0,FALSE,FALSE,0,0.01,0,0.02,3
+"test-adapters-030.R","adapters-030","stats adapter matches direct lm predictions",1,0,FALSE,FALSE,0,0.03,0,0.0199999999999998,1
+"test-adapters-030.R","adapters-030","stats binary adapter returns two normalized probability columns",2,0,FALSE,FALSE,0,0.15,0,0.14,2
+"test-adapters-030.R","adapters-030","optional tidymodels adapter follows parsnip probability contract",2,0,FALSE,FALSE,1,0.43,0.03,0.49,1
+"test-adapters-030.R","adapters-030","binary positive label defines the probability-column order",2,0,FALSE,FALSE,0,0.03,0,0.0300000000000002,2
+"test-batch-080.R","batch-080","batch prediction preserves order and can resume",3,0,FALSE,FALSE,0,1.09,0.19,2.48,3
+"test-batch-080.R","batch-080","iterator visits every row exactly once",1,0,FALSE,FALSE,0,0.0100000000000002,0,0,1
+"test-bayesian-adapters-070.R","bayesian-adapters-070","GP native adapter separates latent and noise variance",3,0,FALSE,FALSE,0,0.04,0,0.0199999999999996,3
+"test-bayesian-adapters-070.R","bayesian-adapters-070","optional Bayesian backends are explicit capabilities",2,0,FALSE,FALSE,0,0.0299999999999998,0,0.0199999999999996,2
+"test-bayesian-conjugate-070.R","bayesian-conjugate-070","conjugate Gaussian reference model recovers Gold coefficients",5,0,FALSE,FALSE,0,0.0300000000000002,0,0.04,5
+"test-bayesian-conjugate-070.R","bayesian-conjugate-070","posterior predictive distribution is typed",3,0,FALSE,FALSE,0,0.0699999999999998,0,0.0999999999999996,3
+"test-bayesian-diagnostics-070.R","bayesian-diagnostics-070","pathological MCMC diagnostics become structured warnings",2,0,FALSE,FALSE,0,0.02,0,0.0300000000000002,2
+"test-bayesian-diagnostics-070.R","bayesian-diagnostics-070","Bayesian approximation method is explicit",2,0,FALSE,FALSE,0,0,0.01,0.0300000000000002,2
+"test-benchmark-040.R","benchmark-040","benchmark specification never implies a universal winner by default",1,0,FALSE,FALSE,0,0.00999999999999979,0.02,0.0199999999999996,1
+"test-benchmark-040.R","benchmark-040","benchmark decision can be changed explicitly after evaluation",1,0,FALSE,FALSE,0,0,0,0.0100000000000007,1
+"test-bootstrap-020.R","bootstrap-020","IID bootstrap is blocked for declared clustered data",1,0,FALSE,FALSE,0,0.0100000000000002,0,0,1
+"test-bootstrap-020.R","bootstrap-020","cluster bootstrap preserves cluster sampling unit",3,0,FALSE,FALSE,0,0.13,0.02,0.140000000000001,3
+"test-bootstrap-020.R","bootstrap-020","moving-block bootstrap accepts declared temporal dependence",1,0,FALSE,FALSE,0,0.02,0.05,0.0699999999999994,1
+"test-bootstrap-020.R","bootstrap-020","temporal bootstrap does not silently ignore grouping dependence",1,0,FALSE,FALSE,0,0,0,0.0100000000000007,1
+"test-bootstrap-020.R","bootstrap-020","generic BCa is restricted to certified case bootstrap",1,0,FALSE,FALSE,0,0.0300000000000002,0,0.0199999999999996,1
+"test-bootstrap-020.R","bootstrap-020","studentized intervals use replicate-specific standard errors",2,0,FALSE,FALSE,0,0.02,0.01,0.0200000000000005,2
+"test-calibration-030.R","calibration-030","Platt calibration never requires final test labels",3,0,FALSE,FALSE,0,0.4,0.0499999999999999,0.44,3
+"test-calibration-030.R","calibration-030","isotonic multiclass calibration renormalizes probabilities",1,0,FALSE,FALSE,0,0.0499999999999998,0.01,0.0600000000000005,1
+"test-calibration-030.R","calibration-030","external calibration cannot overlap final test IDs",1,0,FALSE,FALSE,0,0.0300000000000002,0,0.0299999999999994,1
+"test-conformal-070.R","conformal-070","split conformal uses untouched calibration data",3,0,FALSE,FALSE,0,0.0100000000000007,0,0.0300000000000002,3
+"test-conformal-070.R","conformal-070","final-test overlap is blocked",1,0,FALSE,FALSE,0,0.0499999999999998,0,0.0499999999999998,1
+"test-conformal-070.R","conformal-070","CV+ stores fold identity and returns intervals",2,0,FALSE,FALSE,0,0.0499999999999998,0.02,0.0600000000000005,2
+"test-conformal-classification-070.R","conformal-classification-070","APS produces nonempty prediction sets",2,0,FALSE,FALSE,0,0.0200000000000005,0.02,0.0199999999999996,2
+"test-data-audit.R","data-audit","audit detects an exact target copy",1,0,FALSE,FALSE,0,0.00999999999999979,0,0.0200000000000005,1
+"test-data-audit.R","data-audit","schema rejects missing columns",1,0,FALSE,FALSE,0,0.0200000000000005,0,0.0300000000000002,1
+"test-deployment-080.R","deployment-080","hardware record has CPU/GPU/CUDA fields",1,0,FALSE,FALSE,0,0.00999999999999979,0,0.0199999999999996,1
+"test-deployment-080.R","deployment-080","ONNX export never claims unsupported equivalence",1,0,FALSE,FALSE,0,0,0,0.00999999999999979,1
+"test-design.R","design","design metadata validates and summarizes",2,0,FALSE,FALSE,0,0.00999999999999979,0,0.0200000000000005,2
+"test-design.R","design","coordinates must be numeric",1,0,FALSE,FALSE,0,0,0,0.00999999999999979,1
+"test-dl-architecture-060.R","dl-architecture-060","0.6 architectures preserve declared scientific shapes",6,0,FALSE,FALSE,0,0.0199999999999996,0.01,0.0300000000000002,6
+"test-dl-checkpoint-060.R","dl-checkpoint-060","checkpoint metadata records SHA-256 without trusting payload",3,0,FALSE,FALSE,0,0.00999999999999979,0,0.00999999999999979,3
+"test-dl-checkpoint-060.R","dl-checkpoint-060","checkpoint load requires explicit trust before deserialization",1,0,FALSE,FALSE,0,0,0,0.0199999999999996,1
+"test-dl-gold-060.R","dl-gold-060","0.6 Gold fixtures preserve generator truth",5,0,FALSE,FALSE,0,0.0200000000000005,0.0099999999999999,0.0299999999999994,5
+"test-dl-safeguards-060.R","dl-safeguards-060","final test data cannot drive neural development validation",3,0,FALSE,FALSE,0,0.0100000000000007,0,0.0300000000000002,3
+"test-dl-safeguards-060.R","dl-safeguards-060","mixed16 is not silently enabled on CPU",1,0,FALSE,FALSE,0,0.0199999999999996,0,0,1
+"test-dl-tensor-060.R","dl-tensor-060","structured tensor shape guard is explicit",2,0,FALSE,FALSE,0,0.00999999999999979,0,0.0199999999999996,2
+"test-dl-xai-060.R","dl-xai-060","gradient explanations are structurally non-causal",2,0,FALSE,FALSE,0,0.0300000000000002,0,0.0300000000000002,2
+"test-dl-xai-060.R","dl-xai-060","Grad-CAM requires explicit activation contract",1,0,FALSE,FALSE,0,0.0200000000000005,0,0.00999999999999979,1
+"test-doctor.R","doctor","doctor works without optional backends",2,0,FALSE,FALSE,0,2.07,0.36,8.55,2
+"test-experiment-linear.R","experiment-linear","linear reference workflow is end-to-end",5,0,FALSE,FALSE,0,0.0800000000000001,0.05,0.140000000000001,5
+"test-experiment-linear.R","experiment-linear","blocking leakage stops a managed experiment",1,0,FALSE,FALSE,0,0,0,0.00999999999999979,1
+"test-experiment-linear.R","experiment-linear","holdout experiment retains feature state for new-data prediction",2,0,FALSE,FALSE,0,0.11,0.01,0.109999999999999,2
+"test-explain-050.R","explain-050","ExplainSpec round-trips and explanations are explicitly non-causal",2,0,FALSE,FALSE,0,0.0499999999999998,0.0600000000000001,0.0899999999999999,2
+"test-explain-050.R","explain-050","XAI Gold fixture contains the intended correlated predictors",1,0,FALSE,FALSE,0,0,0,0,1
+"test-explain-functions-050.R","explain-functions-050","permutation importance, PDP, ICE and ALE return scientific tables",4,0,FALSE,FALSE,0,0.350000000000001,0.05,0.390000000000001,4
+"test-explain-functions-050.R","explain-functions-050","local explanations retain sign semantics",1,0,FALSE,FALSE,0,0.0800000000000001,0.0199999999999998,0.0800000000000001,1
+"test-explain-safeguards-050.R","explain-safeguards-050","correlated feature warnings are explicit and XAI is non-causal",2,0,FALSE,FALSE,0,0.12,0.01,0.140000000000001,2
+"test-explain-safeguards-050.R","explain-safeguards-050","feature tracing maps dummy variables to their source",1,0,FALSE,FALSE,0,0.0999999999999996,0.02,0.109999999999999,1
+"test-explain-stability-050.R","explain-stability-050","explanation stability is tied to design-aware resampling and is reproducible",3,0,FALSE,FALSE,0,0.35,0.0700000000000001,0.419999999999998,3
+"test-features-020.R","features-020","learned selection cannot be fitted globally in a managed workflow",1,0,FALSE,FALSE,0,0.0199999999999996,0,0.0100000000000016,1
+"test-features-020.R","features-020","correlation filtering is fitted on a training partition",2,0,FALSE,FALSE,0,0.12,0.01,0.149999999999999,2
+"test-features-020.R","features-020","feature stability is estimated across resampling folds",2,0,FALSE,FALSE,0,0.0600000000000005,0,0.0399999999999991,2
+"test-features-020.R","features-020","PCA is a training-fitted representation",1,0,FALSE,FALSE,0,0.0299999999999994,0,0.0299999999999976,1
+"test-features-020.R","features-020","RFE and sequential selection are implemented on training data",4,0,FALSE,FALSE,0,0.0800000000000001,0.03,0.109999999999999,4
+"test-features-020.R","features-020","PCA state is applied without refitting assessment data",3,0,FALSE,FALSE,0,0.0199999999999996,0,0.0100000000000016,3
+"test-gold-070.R","gold-070","version 0.7 Gold fixtures are frozen",3,0,FALSE,FALSE,0,0.0199999999999996,0.02,0.0300000000000011,3
+"test-gold.R","gold","all 25 Gold files are available",26,0,FALSE,FALSE,0,0.140000000000001,0.0899999999999999,0.25,26
+"test-gold.R","gold","Gold hashes validate",1,0,FALSE,FALSE,0,0.0299999999999994,0.03,0.0700000000000003,1
+"test-imbalance-030.R","imbalance-030","imbalance operations are blocked on assessment data",1,0,FALSE,FALSE,0,0.0300000000000011,0,0.0300000000000011,1
+"test-imbalance-030.R","imbalance-030","class weights are learned from analysis labels only",2,0,FALSE,FALSE,0,0,0,0.0199999999999996,2
+"test-imbalance-030.R","imbalance-030","threshold optimization returns an explicit validation rule",2,0,FALSE,FALSE,0,0,0,0.00999999999999801,2
+"test-metrics.R","metrics","RMSE and MAE agree with direct calculations",2,0,FALSE,FALSE,0,0.0199999999999996,0,0.0100000000000016,2
+"test-multiclass-030.R","multiclass-030","multiclass Gold fixture is frozen and imbalanced",3,0,FALSE,FALSE,0,0.0200000000000014,0,0.0199999999999996,3
+"test-multiclass-030.R","multiclass-030","multiclass probability metrics use named normalized columns",2,0,FALSE,FALSE,0,0,0.02,0.0100000000000016,2
+"test-nested-tuning-040.R","nested-tuning-040","nested resampling stores distinct outer and inner hashes",3,0,FALSE,FALSE,0,0.0499999999999989,0.02,0.0599999999999987,3
+"test-optimizers-040.R","optimizers-040","racing and Bayesian optimization create inspectable archives",2,0,FALSE,FALSE,0,0.43,0.0700000000000001,0.52,2
+"test-optimizers-040.R","optimizers-040","successive halving and Hyperband use an explicit resource parameter",2,0,FALSE,FALSE,0,0.609999999999999,0.16,0.73,2
+"test-pareto-040.R","pareto-040","Pareto front honors objective directions",3,0,FALSE,FALSE,0,0.0500000000000007,0,0.0500000000000007,3
+"test-persistence-080.R","persistence-080","portable bundle round-trip reproduces predictions",3,0,FALSE,FALSE,0,0.25,0.0299999999999998,0.300000000000001,3
+"test-persistence-080.R","persistence-080","checksum corruption is rejected before loading",1,0,FALSE,FALSE,0,0.0899999999999999,0.0300000000000002,0.140000000000001,1
+"test-persistence-080.R","persistence-080","opaque bundles require explicit trust",2,0,FALSE,FALSE,0,0.110000000000001,0.0600000000000001,0.219999999999999,2
+"test-persistence-080.R","persistence-080","opaque calibrated classification bundle replays calibration after trusted load",2,0,FALSE,FALSE,0,0.239999999999998,0.02,0.260000000000002,2
+"test-preprocess.R","preprocess","preprocessing fits training statistics only",4,0,FALSE,FALSE,0,0.0199999999999996,0,0.0199999999999996,4
+"test-probabilistic-030.R","probabilistic-030","normal PredictionDistribution supports core operations",6,0,FALSE,FALSE,0,0.0399999999999991,0,0.0499999999999972,6
+"test-probabilistic-030.R","probabilistic-030","class probabilities are normalized and scoreable",3,0,FALSE,FALSE,0,0.0500000000000007,0,0.0500000000000007,3
+"test-probabilistic-dl-060.R","probabilistic-dl-060","Gaussian distributional head has constrained scale semantics",1,0,FALSE,FALSE,0,0.00999999999999979,0,0.0100000000000016,1
+"test-probabilistic-dl-060.R","probabilistic-dl-060","ensemble seeds must be distinct",1,0,FALSE,FALSE,0,0.0199999999999996,0,0.0199999999999996,1
+"test-probabilistic-dl-060.R","probabilistic-dl-060","uncertainty is not decomposed when components are unidentified",1,0,FALSE,FALSE,0,0.0200000000000014,0,0,1
+"test-release-100-contract.R","release-100-contract","1.0.0 keeps the 0.9.0 public API freeze",3,0,FALSE,FALSE,0,0.0299999999999994,0,0.0300000000000011,3
+"test-release-100-contract.R","release-100-contract","1.0.0 release metadata are installed",1,0,FALSE,FALSE,0,0.00999999999999979,0,0.0199999999999996,1
+"test-resample-experiment-020.R","resample-experiment-020","grouped resample experiment fits preprocessing and selection inside folds",6,0,FALSE,FALSE,0,0.120000000000001,0,0.140000000000001,6
+"test-resample-experiment-020.R","resample-experiment-020","PCA representation is learned and applied independently inside folds",2,0,FALSE,FALSE,0,0.129999999999999,0,0.109999999999999,2
+"test-resampling-020.R","resampling-020","group V-fold never splits a declared group",5,0,FALSE,FALSE,0,0.0300000000000011,0,0.0399999999999991,5
+"test-resampling-020.R","resampling-020","time validation trains strictly before assessment",2,0,FALSE,FALSE,0,0,0.02,0.0100000000000016,2
+"test-resampling-020.R","resampling-020","spatial blocks are reproducible from configuration",1,0,FALSE,FALSE,0,0.0600000000000005,0,0.0599999999999987,1
+"test-resampling-020.R","resampling-020","ordinary row-wise CV is blocked for grouped designs",1,0,FALSE,FALSE,0,0.00999999999999979,0,0.0199999999999996,1
+"test-resampling-020.R","resampling-020","external validation isolates declared domains",2,0,FALSE,FALSE,0,0.0199999999999996,0,0.0100000000000016,2
+"test-search-space-040.R","search-space-040","conditional search spaces generate valid configurations",3,0,FALSE,FALSE,0,0.0199999999999996,0,0.0500000000000007,3
+"test-search-space-040.R","search-space-040","search spaces survive portable serialization",2,0,FALSE,FALSE,0,0,0,0.00999999999999801,2
+"test-security-100-contract.R","security-100-contract","opaque bundles preserve the explicit trust boundary",1,0,TRUE,FALSE,0,0.0199999999999996,0,0,0
+"test-serialization.R","serialization","core specs round-trip through JSON",2,0,FALSE,FALSE,0,0.0299999999999994,0,0.0500000000000007,2
+"test-serialization.R","serialization","hash changes when scientific specification changes",1,0,FALSE,FALSE,0,0.0100000000000016,0,0,1
+"test-serialization.R","serialization","portable schemas use unqualified stable class names",1,0,FALSE,FALSE,0,0.0199999999999996,0,0,1
+"test-serialization.R","serialization","run metadata generation does not consume the global RNG stream",1,0,FALSE,FALSE,0,0.0199999999999996,0,0.00999999999999801,1
+"test-specs-030.R","specs-030","0.3.0 specifications construct and serialize",6,0,FALSE,FALSE,0,0.0299999999999994,0,0.0300000000000011,6
+"test-specs-030.R","specs-030","probabilistic quantiles are validated",3,0,FALSE,FALSE,0,0,0,0.0199999999999996,3
+"test-specs-040.R","specs-040","0.4 specifications are valid and composable",5,0,FALSE,FALSE,0,0,0,0.0299999999999976,5
+"test-specs-070.R","specs-070","conformal spec is part of ExperimentSpec",2,0,FALSE,FALSE,0,0.00999999999999979,0,0.00999999999999801,2
+"test-specs-080.R","specs-080","0.8 specifications validate",4,0,FALSE,FALSE,0,0.0199999999999996,0.0100000000000002,0.0100000000000016,4
+"test-specs-080.R","specs-080","ExperimentSpec carries optional operations layer",2,0,FALSE,FALSE,0,0,0.02,0.0399999999999991,2
+"test-specs.R","specs","core specifications construct valid objects",3,0,FALSE,FALSE,0,0,0.00999999999999979,0.0199999999999996,3
+"test-specs.R","specs","invalid task and preprocessing specifications fail",3,0,FALSE,FALSE,0,0.0199999999999996,0.02,0.00999999999999801,3
+"test-splits.R","splits","holdout is disjoint and reproducible",3,0,FALSE,FALSE,0,0.0200000000000014,0,0.0100000000000016,3
+"test-splits.R","splits","split manifest restores ID membership",2,0,FALSE,FALSE,0,0,0.02,0.0199999999999996,2
+"test-tracking-080.R","tracking-080","local tracker starts, logs, ends, and resumes interrupted runs",5,0,FALSE,FALSE,0,0.0399999999999991,0.0300000000000002,0.0899999999999999,5
+"test-tuning-040.R","tuning-040","grid and random objective tuning produce reproducible archives",4,0,FALSE,FALSE,0,0.0500000000000007,0.00999999999999979,0.0500000000000007,4
+"test-tuning-040.R","tuning-040","multi-objective tuning preserves Pareto set and requires explicit compromise",3,0,FALSE,FALSE,0,0.0199999999999996,0.02,0.0399999999999991,3
+"test-tuning-040.R","tuning-040","data marked as final test are rejected by managed tuning",1,0,FALSE,FALSE,0,0.00999999999999979,0,0.0199999999999996,1
+"test-uncertainty-070.R","uncertainty-070","canonical interval types remain non-interchangeable",3,0,FALSE,FALSE,0,0.0199999999999996,0,0.0199999999999996,3
+"test-uncertainty-070.R","uncertainty-070","false uncertainty decomposition is blocked",1,0,FALSE,FALSE,0,0,0,0.0199999999999996,1
+"test-warnings-capabilities.R","warnings-capabilities","scientific warning records retain severity and evidence",3,0,FALSE,FALSE,0,0,0.02,0.0100000000000016,3
+"test-warnings-capabilities.R","warnings-capabilities","stats reference backend advertises expected capabilities",3,0,FALSE,FALSE,0,0.0200000000000014,0.0299999999999998,0.0399999999999991,3

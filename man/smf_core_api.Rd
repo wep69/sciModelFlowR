@@ -57,17 +57,6 @@
 \alias{smf_with_seed}
 \title{sciModelFlowR Core Scientific Workflow API}
 \description{Construct, validate, audit, fit, diagnose, serialize, and reproduce design-aware scientific workflows. The core API preserves the stable design, leakage, preprocessing, result, and provenance contracts introduced in the foundational releases.}
-\usage{
-smf_task_spec(kind = "regression", target, positive_label = NULL, objective = character())
-smf_data_spec(target, predictors = character(), id_column = character(), ...)
-smf_design_spec(id_column = character(), group_columns = character(), ...)
-smf_experiment_spec(task, data, design, preprocessing, resampling, model, ...)
-smf_audit_data(data, spec, design = NULL)
-smf_fit_experiment(spec, data, split = NULL)
-smf_diagnose(result)
-smf_manifest(x)
-smf_doctor()
-}
 \details{The public API is organized around explicit scientific specifications. Data roles and design are declared before validation and model fitting. Managed preprocessing is fitted on training observations only. Heavy machine-learning, Bayesian, and Deep-Learning backends are optional and are not loaded by the core. See the package vignettes for complete workflows, assumptions, failure modes, and release scope.}
 \value{Constructors return S7 specification objects. Audit, split, fit, diagnostic, and manifest functions return package-native result objects or portable data structures as documented in the vignettes.}
 \seealso{\code{vignette("v01-foundations-to-advanced-scientific-modeling", package = "sciModelFlowR")}}

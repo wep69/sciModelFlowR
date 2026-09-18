@@ -9,7 +9,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-OUT = Path(__file__).resolve().parents[1] / "inst" / "extdata" / "gold"
+OUT = Path(__file__).resolve().parents[1] / "inst" / "extdata" / "gold_data"
 OUT.mkdir(parents=True, exist_ok=True)
 
 rng = np.random.default_rng(260917)

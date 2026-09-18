@@ -30,13 +30,13 @@ Imports:
     digest,
     jsonlite,
     rlang,
+    tibble,
+    vctrs,
     withr,
     yaml
 Suggests:
     covr,
     devtools,
-    tibble,
-    vctrs,
     ggplot2,
     knitr,
     pkgdown,

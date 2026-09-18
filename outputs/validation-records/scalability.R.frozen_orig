@@ -89,9 +89,7 @@ smf_batch_predict <- function(object, new_data, batch_size=1000L, workers=1L, st
   if(length(todo) && workers>1L) {
     cl<-parallel::makePSOCKcluster(as.integer(workers)); on.exit(parallel::stopCluster(cl),add=TRUE)
     parallel::clusterEvalQ(cl,library(sciModelFlowR)); parallel::clusterExport(cl,c("object","new_data","plan","strict_schema"),envir=environment())
-    # NB: bare internal call — the closure environment is already the package
-    # namespace on workers (same pattern as worker_fun above); ::: is avoided.
-    vals<-parallel::parLapply(cl,todo,function(i) .smf_predict_any(object,new_data[plan[[i]],,drop=FALSE],strict_schema))
+    vals<-parallel::parLapply(cl,todo,function(i) sciModelFlowR:::.smf_predict_any(object,new_data[plan[[i]],,drop=FALSE],strict_schema))
     names(vals)<-as.character(todo)
   } else vals<-setNames(lapply(todo,worker_fun),as.character(todo))
   if(!is.null(checkpoint_dir)) {

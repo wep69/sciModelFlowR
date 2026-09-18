@@ -1,0 +1,172 @@
+
+R version 4.6.0 (2026-04-24 ucrt) -- "Because it was There"
+Copyright (C) 2026 The R Foundation for Statistical Computing
+Platform: x86_64-w64-mingw32/x64
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> library(testthat)
+> library(sciModelFlowR)
+> 
+> test_check("sciModelFlowR")
+Saving _problems/test-batch-080-4.R
+Saving _problems/test-dl-xai-060-4.R
+Saving _problems/test-explain-050-3.R
+Saving _problems/test-persistence-080-18.R
+Saving _problems/test-persistence-080-32.R
+Saving _problems/test-persistence-080-52.R
+Saving _problems/test-serialization-12.R
+Saving _problems/test-specs-070-5.R
+Saving _problems/test-specs-080-20.R
+[ FAIL 9 | WARN 2 | SKIP 1 | PASS 285 ]
+
+══ Skipped tests (1) ═══════════════════════════════════════════════════════════
+• Installed source R files are not available through system.file on this
+  platform (1): 'test-security-100-contract.R:3:3'
+
+══ Failed tests ════════════════════════════════════════════════════════════════
+── Error ('test-batch-080.R:4:99'): batch prediction preserves order and can resume ──
+Error: <sciModelFlowR::DataSpec> object properties are invalid:
+- @categorical must be <character>, not <list>
+- @numeric must be <character>, not <list>
+Backtrace:
+    ▆
+ 1. └─sciModelFlowR::smf_load_bundle(bdir) at test-batch-080.R:4:99
+ 2.   └─sciModelFlowR::smf_from_json(file.path(path, "spec.json"))
+ 3.     └─sciModelFlowR::smf_from_list(...)
+ 4.       └─base::lapply(x, smf_from_list)
+ 5.         └─sciModelFlowR (local) FUN(X[[i]], ...)
+ 6.           ├─base::do.call(ctor, x)
+ 7.           └─sciModelFlowR (local) `<S7_class>`(...)
+ 8.             └─S7::new_object(...)
+ 9.               └─S7::validate(object, recursive = !parent_validated)
+── Error ('test-dl-xai-060.R:4:3'): gradient explanations are structurally non-causal ──
+Error: <sciModelFlowR::DLGradientExplanation> object properties are invalid:
+- @layer must be <character>, not <list>
+Backtrace:
+    ▆
+ 1. └─sciModelFlowR::smf_from_json(smf_to_json(x)) at test-dl-xai-060.R:4:3
+ 2.   └─sciModelFlowR::smf_from_list(...)
+ 3.     ├─base::do.call(ctor, x)
+ 4.     └─sciModelFlowR (local) `<S7_class>`(...)
+ 5.       └─S7::new_object(...)
+ 6.         └─S7::validate(object, recursive = !parent_validated)
+── Error ('test-explain-050.R:3:3'): ExplainSpec round-trips and explanations are explicitly non-causal ──
+Error: <sciModelFlowR::ExplainSpec> object properties are invalid:
+- @features must be <character>, not <list>
+Backtrace:
+    ▆
+ 1. └─sciModelFlowR::smf_from_json(smf_to_json(x)) at test-explain-050.R:3:3
+ 2.   └─sciModelFlowR::smf_from_list(...)
+ 3.     ├─base::do.call(ctor, x)
+ 4.     └─sciModelFlowR (local) `<S7_class>`(...)
+ 5.       └─S7::new_object(...)
+ 6.         └─S7::validate(object, recursive = !parent_validated)
+── Error ('test-persistence-080.R:18:3'): portable bundle round-trip reproduces predictions ──
+Error: <sciModelFlowR::DataSpec> object properties are invalid:
+- @categorical must be <character>, not <list>
+- @numeric must be <character>, not <list>
+Backtrace:
+    ▆
+ 1. └─sciModelFlowR::smf_load_bundle(path) at test-persistence-080.R:18:3
+ 2.   └─sciModelFlowR::smf_from_json(file.path(path, "spec.json"))
+ 3.     └─sciModelFlowR::smf_from_list(...)
+ 4.       └─base::lapply(x, smf_from_list)
+ 5.         └─sciModelFlowR (local) FUN(X[[i]], ...)
+ 6.           ├─base::do.call(ctor, x)
+ 7.           └─sciModelFlowR (local) `<S7_class>`(...)
+ 8.             └─S7::new_object(...)
+ 9.               └─S7::validate(object, recursive = !parent_validated)
+── Error ('test-persistence-080.R:32:3'): opaque bundles require explicit trust ──
+Error: <sciModelFlowR::DataSpec> object properties are invalid:
+- @categorical must be <character>, not <list>
+- @numeric must be <character>, not <list>
+Backtrace:
+     ▆
+  1. ├─testthat::expect_true(...) at test-persistence-080.R:32:3
+  2. │ └─testthat::quasi_label(enquo(object), label)
+  3. │   └─rlang::eval_bare(expr, quo_get_env(quo))
+  4. ├─S7::S7_inherits(smf_load_bundle(path, trusted = TRUE), sciModelFlowR:::InferenceBundle)
+  5. └─sciModelFlowR::smf_load_bundle(path, trusted = TRUE)
+  6.   └─sciModelFlowR::smf_from_json(file.path(path, "spec.json"))
+  7.     └─sciModelFlowR::smf_from_list(...)
+  8.       └─base::lapply(x, smf_from_list)
+  9.         └─sciModelFlowR (local) FUN(X[[i]], ...)
+ 10.           ├─base::do.call(ctor, x)
+ 11.           └─sciModelFlowR (local) `<S7_class>`(...)
+ 12.             └─S7::new_object(...)
+ 13.               └─S7::validate(object, recursive = !parent_validated)
+── Error ('test-persistence-080.R:52:3'): opaque calibrated classification bundle replays calibration after trusted load ──
+Error: <sciModelFlowR::DataSpec> object properties are invalid:
+- @categorical must be <character>, not <list>
+- @numeric must be <character>, not <list>
+Backtrace:
+    ▆
+ 1. └─sciModelFlowR::smf_load_bundle(path, trusted = TRUE) at test-persistence-080.R:52:3
+ 2.   └─sciModelFlowR::smf_from_json(file.path(path, "spec.json"))
+ 3.     └─sciModelFlowR::smf_from_list(...)
+ 4.       └─base::lapply(x, smf_from_list)
+ 5.         └─sciModelFlowR (local) FUN(X[[i]], ...)
+ 6.           ├─base::do.call(ctor, x)
+ 7.           └─sciModelFlowR (local) `<S7_class>`(...)
+ 8.             └─S7::new_object(...)
+ 9.               └─S7::validate(object, recursive = !parent_validated)
+── Error ('test-serialization.R:12:3'): core specs round-trip through JSON ─────
+Error: <sciModelFlowR::DataSpec> object properties are invalid:
+- @categorical must be <character>, not <list>
+- @numeric must be <character>, not <list>
+Backtrace:
+    ▆
+ 1. └─sciModelFlowR::smf_from_json(smf_to_json(x)) at test-serialization.R:12:3
+ 2.   └─sciModelFlowR::smf_from_list(...)
+ 3.     └─base::lapply(x, smf_from_list)
+ 4.       └─sciModelFlowR (local) FUN(X[[i]], ...)
+ 5.         ├─base::do.call(ctor, x)
+ 6.         └─sciModelFlowR (local) `<S7_class>`(...)
+ 7.           └─S7::new_object(...)
+ 8.             └─S7::validate(object, recursive = !parent_validated)
+── Error ('test-specs-070.R:5:3'): conformal spec is part of ExperimentSpec ────
+Error: <sciModelFlowR::DataSpec> object properties are invalid:
+- @id_column must be <character>, not <list>
+- @categorical must be <character>, not <list>
+- @numeric must be <character>, not <list>
+Backtrace:
+    ▆
+ 1. └─sciModelFlowR::smf_from_json(smf_to_json(ex)) at test-specs-070.R:5:3
+ 2.   └─sciModelFlowR::smf_from_list(...)
+ 3.     └─base::lapply(x, smf_from_list)
+ 4.       └─sciModelFlowR (local) FUN(X[[i]], ...)
+ 5.         ├─base::do.call(ctor, x)
+ 6.         └─sciModelFlowR (local) `<S7_class>`(...)
+ 7.           └─S7::new_object(...)
+ 8.             └─S7::validate(object, recursive = !parent_validated)
+── Error ('test-specs-080.R:20:3'): ExperimentSpec carries optional operations layer ──
+Error: <sciModelFlowR::DataSpec> object properties are invalid:
+- @id_column must be <character>, not <list>
+- @categorical must be <character>, not <list>
+- @numeric must be <character>, not <list>
+Backtrace:
+    ▆
+ 1. └─sciModelFlowR::smf_from_json(smf_to_json(spec)) at test-specs-080.R:20:3
+ 2.   └─sciModelFlowR::smf_from_list(...)
+ 3.     └─base::lapply(x, smf_from_list)
+ 4.       └─sciModelFlowR (local) FUN(X[[i]], ...)
+ 5.         ├─base::do.call(ctor, x)
+ 6.         └─sciModelFlowR (local) `<S7_class>`(...)
+ 7.           └─S7::new_object(...)
+ 8.             └─S7::validate(object, recursive = !parent_validated)
+
+[ FAIL 9 | WARN 2 | SKIP 1 | PASS 285 ]
+Error:
+! Test failures.
+Execution halted

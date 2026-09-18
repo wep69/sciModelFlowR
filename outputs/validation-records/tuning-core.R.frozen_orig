@@ -289,7 +289,7 @@ smf_select_compromise <- function(data, objectives, directions, rule) {
     for (i in active) {
       sp <- .smf_update_model_params(spec,as.list(cfgs[i,,drop=FALSE])); fr <- .smf_fit_one_split(sp,data,resamples@splits[[f]])
       v <- .smf_metric_vector(fr$metrics,objectives); fold_values[[i]] <- rbind(fold_values[[i]],data.frame(fold=f,metric=names(v),value=as.numeric(v)))
-      hist[[length(hist)+1L]] <- .smf_archive_row(as.list(cfgs[i,,drop=FALSE]),v,length(hist)+1L,NA_real_,list(stage=as.integer(f),n_folds=1L,status="active"))
+      hist[[length(hist)+1L]] <- .smf_archive_row(as.list(cfgs[i,,drop=FALSE]),v,length(hist)+1L,NA_real_,list(stage=f,status="active"))
     }
     if (f >= min_folds && length(active)>1L) {
       means <- vapply(active,function(i){z<-fold_values[[i]]; mean(z$value[z$metric==primary@name],na.rm=TRUE)},numeric(1))
@@ -308,9 +308,7 @@ smf_select_compromise <- function(data, objectives, directions, rule) {
     if(length(active)==1L && f>=min_folds) break
   }
   # Add one aggregate record per configuration evaluated at least once.
-  # Aggregate rows share the per-fold schema (stage=NA) so the final rbind is
-  # homogeneous (derived fix 1.0.0+).
-  agg <- lapply(seq_len(nrow(cfgs)),function(i){ z<-fold_values[[i]]; if(is.null(z)||!nrow(z))return(NULL); vals=tapply(z$value,z$metric,mean,na.rm=TRUE); .smf_archive_row(as.list(cfgs[i,,drop=FALSE]),vals,100000L+i,NA_real_,list(stage=NA_integer_,n_folds=length(unique(z$fold)),status=if(i%in%active)"survivor" else "eliminated")) })
+  agg <- lapply(seq_len(nrow(cfgs)),function(i){ z<-fold_values[[i]]; if(is.null(z)||!nrow(z))return(NULL); vals=tapply(z$value,z$metric,mean,na.rm=TRUE); .smf_archive_row(as.list(cfgs[i,,drop=FALSE]),vals,100000L+i,NA_real_,list(n_folds=length(unique(z$fold)),status=if(i%in%active)"survivor" else "eliminated")) })
   do.call(rbind,c(hist,Filter(Negate(is.null),agg)))
 }
 

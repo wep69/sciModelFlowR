@@ -70,7 +70,230 @@ com três desvios documentados em relação ao freeze. Originais preservados em
     SHA-256 `E2664B46A9AC33AD9AA07C0B784AC3F9D59BA9880D5C2621C07B9B9F186FC56D`
 - **Política (§29):** idem fix 1 — recomenda-se publicar como **1.0.1**.
 
-## 4. `tools/validate_1.0.0.R` — harness de linha única
+## 4. `R/provenance.R` — `si[["model"]]` inexistente (runtime blocker)
+
+- **Estado no freeze:** `.smf_hardware_info()` lê `si[["model"]]` de
+  `Sys.info()`, que não tem esse elemento em nenhuma plataforma
+  (`[[` em vetor atómico dispara `subscript out of bounds`). Todo o caminho
+  que constrói `RunManifest` abortava: batch/resume, calibration, deployment,
+  experimentos — 6 erros em `testthat`.
+- **Derivado:** helper `.smf_cpu_model()` — usa `model` se existir, senão
+  `PROCESSOR_IDENTIFIER` (Windows), senão `machine`.
+- **Proveniência:**
+  - `outputs/validation-records/provenance.R.frozen_orig`
+    SHA-256 `5632B45E108221D2AFBFBB5725A68BA096B9EE01F066BA1F20913B34D4A610FB`
+- **Política (§29):** idem fix 1 — recomenda-se publicar como **1.0.1**.
+
+## 5. `R/calibration.R` — isotonic em `x` não ordenado + linha degenerada
+
+- **Estado no freeze:** `smf_calibrate(..., "isotonic")` chama
+  `stats::isoreg(prob[, cl], ...)` com scores fora de ordem; o PAVA corre na
+  ordem de entrada e o ajuste é lixo (ex.: `yf = 0,0,0,0,1,1` desalinhados),
+  produzindo linhas calibradas todas-zero; o guarda `rs[rs==0]<-1` emitia uma
+  linha `0` — fora do simplex (`FAIL` em
+  `test-calibration-030.R:28`, desvio `1`).
+- **Derivado:** ordena por score antes do `isoreg`; linha degenerada recai na
+  linha de entrada (simplex validado) e, em último caso, uniforme `1/K`.
+- **Proveniência:**
+  - `outputs/validation-records/calibration.R.frozen_orig`
+    SHA-256 `3CC05A2B5A658D0B695BB99035C52E6A5AB3576295FA2DAD656D558F533850BD`
+- **Política (§29):** idem fix 1 — recomenda-se publicar como **1.0.1**.
+
+## 6. `R/core-serialization.R` — `[]` JSON vira lista vazia (round-trip blocker)
+
+- **Estado no freeze:** `smf_to_json()` serializa `character()` como `[]`;
+  `smf_from_json()` devolve lista vazia e o S7 rejeita
+  (`@layer must be <character>, not <list>`). Quebrava round-trip de
+  `DLGradientExplanation` (`test-dl-xai-060.R:4`) e `ExplainSpec`
+  (`test-explain-050.R:3`) — qualquer propriedade atómica vazia.
+- **Derivado:** `.smf_empty_for_class()` + coerção em `smf_from_list()` via
+  introspecção `ctor@properties[[nm]]$class` (character/numeric/integer/
+  logical; `class_any` já aceitava lista). Cobre JSON e YAML.
+- **Proveniência:**
+  - `outputs/validation-records/core-serialization.R.frozen_orig`
+    SHA-256 `06C6912E05C5CA80866EED9C19477D2D823F5B171F3C1B48F57BD3CA59B48644`
+- **Política (§29):** idem fix 1 — recomenda-se publicar como **1.0.1**.
+- **Observação (não alterada):** `.smf_class_map()` não lista
+  `ExternalValidationResult`/`ReportingResult`/`ReleaseCandidateAudit` —
+  `smf_from_json()` desses aborta `Unknown serialized class`. Gap de cobertura
+  registado para 1.0.1; nenhum gate/teste atual o exercita.
+
+## 7. `tests/testthat/test-release-100-contract.R` + `test-security-100-contract.R` — harness de linha única
+
+- **Estado no freeze:** múltiplos blocos `test_that()` separados por `\n`
+  literais — `parse()` aborta (`unexpected symbol`). Mesma classe de defeito
+  dos validators 1.0.0.
+- **Derivado:** transcrição fiel com linhas reais (semântica idêntica;
+  `collapse="\n"` preservado dentro da string).
+- **Proveniência:**
+  - `outputs/validation-records/test-release-100-contract.R.frozen_orig`
+    SHA-256 `C822E9693A7411272FDAEFB384CD1328DC324960F2C42E17FC7E00AB84D876F3`
+  - `outputs/validation-records/test-security-100-contract.R.frozen_orig`
+    SHA-256 `CDC632273D5EF662AB1FDB2E8E902D99D98993850C35DE6D76B0B6D4D512941F`
+- **Política (§29):** correção de harness/teste, mantida como derivado com
+  hash próprio (não exige nova versão científica, mas exige rerun — feito).
+
+## 8. `tests/testthat/test-090-api-freeze.R` + `test-090-release-candidate.R` — constantes 0.9.0 obsoletas
+
+- **Estado no freeze:** os testes exigem `api_freeze == "0.9.0"` e
+  `release_status %in% c("pending-final-runtime",
+  "quarantined-pending-local-validation")`, mas os metadados 1.0.0 congelados
+  usam `api_freeze == "1.0.0"` (`status stable_1x`, 246 linhas) e
+  `release_status == "pending-final-local-certification"` (14 linhas) —
+  vocabulário evoluído de forma consistente (cf. `BACKEND_MATRIX_0.9.0.csv`
+  vs `BACKEND_MATRIX_1.0.0.csv`).
+- **Derivado:** expectativas alinhadas ao vocabulário 1.0.0 congelado, com
+  igualdade estrita (`==`, sem enfraquecimento).
+- **Proveniência:**
+  - `outputs/validation-records/test-090-api-freeze.R.frozen_orig`
+    SHA-256 `739D872178820E52827CC2D3ABEA7CD8C2965CE699DD63A6E3C170A28A241AED`
+  - `outputs/validation-records/test-090-release-candidate.R.frozen_orig`
+    SHA-256 `208EA8BDF0C42A4696341199D9875EA02175E59A17BBD88A941EC2AFE2944255`
+
+## 9. `R/model-adapters.R` — alias `"linear"` rejeitado (capability blocker)
+
+- **Estado no freeze:** `.smf_stats_fit()` aceita apenas
+  `c("linear_regression","lm")`, mas `"linear"` é o alias usado no próprio
+  `tools/validate_0.5.0.R`, em 2 vinhetas (v05, v10) e em 5 call sites de
+  teste 050 — todos abortavam `STATS_MODEL_UNSUPPORTED task=regression
+  family=linear` (5 erros em `testthat`).
+- **Derivado:** `"linear"` admitido como alias no stats adapter e no mapeamento
+  parsnip (`linear=, linear_regression=` + engine `"lm"`). Sem mudança para
+  famílias existentes.
+- **Proveniência:**
+  - `outputs/validation-records/model-adapters.R.frozen_orig`
+    SHA-256 `D731BF6C7AE4939A61B5C688BE9FD4B717CCFF30EBA14AB8FE96763F6B473503`
+- **Política (§29):** idem fix 1 — recomenda-se publicar como **1.0.1**.
+
+## 10. `tests/testthat/test-gold.R` + `test-gold-070.R` — constantes obsoletas/strictness
+
+- **Estado no freeze:** `expect_length(smf_list_datasets(),12)` contra 25
+  datasets congelados; `expect_equal(table(c$partition),
+  c(calibration=500,test=1200,train=500))` falha por atributos
+  (dim/dimnames de `table`) embora as contagens estejam exatas
+  (500/1200/500 verificadas no CSV).
+- **Derivado:** `12`→`25` (+rótulo); comparação por contagens ordenadas
+  `unname(tb[c(...)])`, igualmente estrita.
+- **Proveniência:** originais em
+  `outputs/validation-records/test-gold.R.frozen_orig` e
+  `test-gold-070.R.frozen_orig`.
+  (`unname()` não remove `dim` de `table`; versão final usa `as.vector()`.)
+
+## 11. `R/tuning-core.R` — schema heterogéneo no archive de racing (rbind blocker)
+
+- **Estado no freeze:** `.smf_tune_racing()` monta linhas per-fold com extra
+  `list(stage, status)` e linhas agregadas com `list(n_folds, status)`; o
+  `do.call(rbind, ...)` final aborta `names do not match previous names`
+  (`FAIL` em `test-optimizers-040.R:14` — racing nunca produzia archive).
+- **Derivado:** schema único `list(stage, n_folds, status)` — per-fold com
+  `n_folds=1L`, agregadas com `stage=NA_integer_`. Nenhum consumidor
+  downstream usa `stage` (só `nrow` + colunas de objetivos).
+- **Proveniência:**
+  - `outputs/validation-records/tuning-core.R.frozen_orig`
+    SHA-256 `C2BA5217BB81E03C820CCF90A3AD3B9FCE3EB87832AC731F925F4D2765612186`
+- **Política (§29):** idem fix 1 — recomenda-se publicar como **1.0.1**.
+
+## 12. Strictness de tipos em 3 testes (sem mudança científica)
+
+- `test-pareto-040.R:5`: `expect_false(anyDuplicated(p$id))` — base R devolve
+  `0L`, não `FALSE` → `expect_identical(anyDuplicated(p$id), 0L)` (orig.
+  `.../test-pareto-040.R.frozen_orig`
+  SHA-256 `1A3F9F6FE3C3C9340C21F926E96EF5C9DC781878DF332C7B81D0B7A295238E34`).
+- `test-probabilistic-030.R:7`: `smf_dist_interval()` rotula colunas
+  lower/upper por design; o teste comparava com a matriz sem rótulos —
+  valores via `as.vector()` + `colnames()` asserido separadamente (orig.
+  `.../test-probabilistic-030.R.frozen_orig`
+  SHA-256 `BB7BDABE763F444389EFC77696B1F0315340C41D6B479D15990BB9276C0FFF0B`).
+- Intenção de cada asserção preservada; apenas alinhamento de tipos.
+
+## 13. `man/`: páginas por tópico, não por função (+ regra dev)
+
+- **Contexto:** o freeze traz 11 tópicos que, via `\alias`, cobrem os 246
+  exports (verificado: 0 faltas). `devtools::document()` (roxygen2 8.1.0)
+  gerou 246 páginas esqueléticas por função (sem `@param` nos fontes) que
+  duplicam todos os aliases → 3 classes de WARNING no check (Rd metadata,
+  Rd usage, HTML anchors).
+- **Derivado:** removidas as 246 páginas geradas (mais `smf_explain_api.Rd`,
+  detalhado em item próprio abaixo — duplicata quebrada cujos 13 aliases já
+  vivem em `additional-api-070.Rd`); `man/` volta aos 10 tópicos congelados.
+  Removidos ainda os blocos `\usage{}` ilustrativos de
+  `external-validation-090.Rd`, `smf_core_api.Rd` e
+  `tracking-persistence-080.Rd` (assinaturas sem `\arguments` correspondente;
+  o conteúdo científico vive nas vinhetas + freeze de API). Exemplos
+  `\dontrun` preservados.
+- **Regra dev (obrigatória):** NÃO executar `devtools::document()` cheio —
+  ele recria as 246 páginas e reintroduz os WARNINGs. Para sincronizar
+  apenas NAMESPACE no futuro:
+  `roxygen2::roxygenise(roclets = "namespace")`. DESCRIPTION teve o churn
+  `RoxygenNote→Config/roxygen2/version` revertido (mantida só a moção
+  tibble/vctrs Imports→Suggests).
+
+## 14. `inst/gold/` → `inst/gold_data/` (build/packaging blocker crítico)
+
+- **Causa raiz (verificada no R 4.6.0 instalado):** `R CMD build` exclui
+  diretórios cujo basename casa `grepl("([Oo]ld|\\.Rcheck)$", bases)`
+  (`tools:::.build_packages`, convenção de diretórios backup) — `gold`
+  termina em `old`. Prova: pacote mínimo com `inst/{mydata,gold,extdata,
+  golden,...}/x.csv` perde exatamente os ramos `*gold`; `golden` sobrevive;
+  `tools:::inRbuildignore()` com/sem `.Rbuildignore` não exclui nada.
+- **Impacto no freeze:** o tarball 1.0.0 construído do freeze perde
+  `inst/gold/` (cards, `gold_hashes.csv`, `known_truth.json`, manifest),
+  `inst/extdata/gold/` (25 CSVs) e `inst/crosslang/gold/`
+  (`gold_suite_manifest_v1.json`) — 133 entradas em vez do completo. O pacote
+  instalado ficaria sem `smf_load_dataset()`, Gold, reference e parte do
+  crosslang; `R CMD check` falharia em massa. Ou seja: sem rename, o tarball
+  **não distribui a funcionalidade central anunciada**.
+- **Derivado:** `inst/gold/`→`inst/gold_data/`,
+  `inst/extdata/gold/`→`inst/extdata/gold_data/`,
+  `inst/crosslang/gold/`→`inst/crosslang/gold_data/` (`git mv`, conteúdo e
+  hashes de ficheiros intactos) + atualização dos caminhos em
+  `R/datasets.R`, `R/validation-gold.R`, `tools/static_validate_1.0.0.py`,
+  `data-raw/generate-gold-xai-stability.R`,
+  `data-raw/generate-gold-bayes-conformal.py`, `data-raw/README.md`.
+  Nomes de datasets (`gold_*`), hashes e conteúdo: inalterados.
+- **Congelados preservados:** layout original só existe nos ZIP/TAR.GZ +
+  `SOURCE_MANIFEST_SHA256.txt` (registo histórico, não editado).
+- **Política (§29):** mudança com efeito em paths instalados — exige **1.0.1**.
+
+## 15. Aviso: validadores estáticos reescrevem `STATIC_AUDIT.md`
+
+- `tools/static_validate_1.0.0.py` (linhas 82–93) e
+  `tools/static_validate_0.9.0.py` (linhas 83–88) escrevem `STATIC_AUDIT.md`
+  in-tree como efeito colateral. O run 1.0.0 regenera conteúdo idêntico ao
+  congelado (verificado: 31879 chars, igual modulo line-endings); o run
+  legado 0.9.0 **sobrescreveu** com conteúdo 0.9.0 — revertido via git
+  (byte-idêntico ao freeze). **Não executar validadores legados na árvore de
+  trabalho**; validação histórica exige os snapshots próprios (§8, §29).
+
+## 16. `man/smf_explain_api.Rd` — tópico redundante e ilegível (build blocker)
+
+- **Estado no freeze:** 1 linha com `\n` literais (mesma classe de defeito do
+  harness) + `title{...}` sem barra invertida → `R CMD build` aborta
+  (`Sections \title and \name must exist`). O ficheiro não é gerado pelo
+  roxygen (246 páginas geradas cobrem os 13 aliases — verificado).
+- **Derivado:** removido; original em
+  `outputs/validation-records/smf_explain_api.Rd.frozen_orig`
+  (SHA-256 `FCF89E6814F500DEA16C4F278E55121A194A7B35B34823F2EC04035DD78C3B02`).
+- **Política (§29):** correção de docs/harness, mantida como derivado.
+
+## 19. `R/deep-learning-train.R`, `R/scalability.R`, `DESCRIPTION` (check WARNINGs)
+
+- `torch::nn_lazy_linear` não existe no torch R (0.17.0 instalado; nem
+  interno): guarda runtime via `utils::getFromNamespace()` + erro de
+  capacidade explícito `TORCH_LAZY_UNSUPPORTED` (orig.
+  `outputs/validation-records/deep-learning-train.R.frozen_orig`
+  SHA-256 `658C66D8CF123EF5BC6C45CE01050A6553E4CD50687BBEDD99B05808C3D5BB0F`).
+- `sciModelFlowR:::.smf_predict_any` em worker paralelo → chamada nua
+  (o closure já carrega o namespace; igual à `worker_fun` vizinha) (orig.
+  `outputs/validation-records/scalability.R.frozen_orig`
+  SHA-256 `86FC3987610C5860E59C5635D19C7FBB51AE783E1A7E8B1FE63332A611EF9DB2`).
+- `tibble`/`vctrs` sem uso em `R/` e sem `importFrom` no NAMESPACE:
+  Imports→Suggests (orig. `outputs/validation-records/DESCRIPTION.frozen_orig`
+  SHA-256 `816D3A2EA606B412676E84332E92695C6DE3DBDD802F3945F5DB018B68E9AB34`).
+- **Política (§29):** guarda de capacidade + metadados → 1.0.1; o `:::` nu é
+  equivalência comprovada pelo padrão vizinho.
+
+## 17. `tools/validate_1.0.0.R` — harness de linha única
 
 - **Estado no freeze:** 1 linha com `\n` literais entre comandos (não faz parse).
   Original em `outputs/validation-records/validate_1.0.0.R.frozen_orig`
@@ -80,7 +303,7 @@ com três desvios documentados em relação ao freeze. Originais preservados em
   `tools/VALIDATION_HARNESS_WORKAROUND.md`.
   SHA-256 `4A5D744B97D45831B0DBB84DC54A6B0D5DE31BA42DA98746A378C57A3EB2`.
 
-## 5. `tools/validate_1.0.0_release.R` — harness de linha única
+## 18. `tools/validate_1.0.0_release.R` — harness de linha única
 
 - **Estado no freeze:** idem; original em
   `outputs/validation-records/validate_1.0.0_release.R.frozen_orig`

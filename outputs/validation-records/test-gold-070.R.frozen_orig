@@ -3,6 +3,5 @@ test_that("version 0.7 Gold fixtures are frozen", {
   b <- smf_load_dataset("gold_bayesian_linear")
   c <- smf_load_dataset("gold_conformal_regression")
   expect_equal(nrow(b),600)
-  tb <- table(c$partition)
-  expect_equal(as.vector(tb[c("calibration","test","train")]),c(500,1200,500))
+  expect_equal(table(c$partition),c(calibration=500,test=1200,train=500))
 })

@@ -33,7 +33,7 @@
   }
   y <- .smf_standardize_truth(task,y)
   d <- x; d$.smf_target <- y
-  if (task@kind == "regression" && model@family %in% c("linear","linear_regression","lm")) return(stats::lm(.smf_target ~ ., data=d, weights=weights))
+  if (task@kind == "regression" && model@family %in% c("linear_regression","lm")) return(stats::lm(.smf_target ~ ., data=d, weights=weights))
   if (task@kind == "binary" && model@family %in% c("logistic_regression","glm_binomial","glm")) return(stats::glm(.smf_target ~ ., data=d, family=stats::binomial(), weights=weights))
   if (task@kind == "count" && model@family %in% c("poisson_regression","glm_poisson","glm")) return(stats::glm(.smf_target ~ ., data=d, family=stats::poisson(), weights=weights))
   .smf_abort("STATS_MODEL_UNSUPPORTED", paste0("stats adapter does not support task=",task@kind," and family=",model@family,"."), class="smf_capability_error")
@@ -45,7 +45,7 @@
   mode <- if (task@kind %in% c("binary","multiclass")) "classification" else "regression"
   fam <- model@family
   spec <- switch(fam,
-    linear=, linear_regression=do.call(parsnip::linear_reg,args),
+    linear_regression=do.call(parsnip::linear_reg,args),
     logistic_regression=do.call(parsnip::logistic_reg,args),
     multinomial_regression=do.call(parsnip::multinom_reg,args),
     random_forest=do.call(parsnip::rand_forest,c(args,list(mode=mode))),
@@ -57,7 +57,7 @@
     .smf_abort("PARsnip_FAMILY_UNSUPPORTED",paste0("No tidymodels mapping for family '",fam,"'."),class="smf_capability_error")
   )
   native_engine <- model@parameters$model_engine %||% switch(fam,
-    linear=, linear_regression="lm",logistic_regression="glm",poisson_regression="glm",
+    linear_regression="lm",logistic_regression="glm",poisson_regression="glm",
     decision_tree="rpart",nearest_neighbor="kknn",svm_rbf="kernlab",
     random_forest="ranger",boosted_tree="xgboost",multinomial_regression="nnet",NULL)
   if (is.null(native_engine)) .smf_abort("PARsnip_ENGINE_REQUIRED","Specify model@parameters$model_engine for this tidymodels family.",class="smf_capability_error")

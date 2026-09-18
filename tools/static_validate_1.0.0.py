@@ -28,7 +28,7 @@ for row in api10:
 gold = list(csv.DictReader(open(ROOT / 'inst/metadata/GOLD_RELEASE_MANIFEST_1.0.0.csv', encoding='utf-8')))
 for r in gold:
     nm = r['dataset']
-    f = ROOT / 'inst/extdata/gold' / f'{nm}.csv'
+    f = ROOT / 'inst/extdata/gold_data' / f'{nm}.csv'
     got = hashlib.sha256(f.read_bytes()).hexdigest() if f.exists() else ''
     check(f.exists() and got.lower() == r['sha256'].lower(), f'Gold {nm}: release SHA-256 matches')
     check(r['known_truth_present'] == 'true' and r['card_present'] == 'true', f'Gold {nm}: truth/card release metadata complete')

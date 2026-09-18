@@ -111,12 +111,7 @@ smf_dl_mixed_precision <- function(precision=c("float32","mixed16","float64"), d
     "SMFStructuredProjection",
     initialize=function() {
       self$flatten <- torch::nn_flatten(start_dim=2L)
-      # torch R has no lazy modules in some backend versions: resolve at
-      # runtime and fail with an explicit capability error instead of an
-      # unexported-object error (derived fix 1.0.0+; also R CMD check clean).
-      lazy <- tryCatch(utils::getFromNamespace("nn_lazy_linear", "torch"), error=function(e) NULL)
-      if (is.null(lazy)) .smf_abort("TORCH_LAZY_UNSUPPORTED","The installed torch backend does not provide lazy linear modules; structured-architecture native execution requires a torch backend with nn_lazy_linear.",class="smf_capability_error")
-      self$lazy <- lazy(architecture@output_dim)
+      self$lazy <- torch::nn_lazy_linear(architecture@output_dim)
     },
     forward=function(x) self$lazy(self$flatten(x))
   )

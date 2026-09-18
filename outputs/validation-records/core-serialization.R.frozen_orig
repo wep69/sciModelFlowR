@@ -42,31 +42,6 @@ smf_to_list <- function(x) {
     NULL)
 }
 
-.smf_empty_for_class <- function(class) {
-  # JSON/YAML decode [] as an empty list, which S7 atomic classes reject.
-  # Map it back to the declared empty vector (derived fix 1.0.0+).
-  # NOTE: S7 class objects are instantiated at install time and serialized
-  # into the package DB, so cross-session *object identity* (identical())
-  # does NOT hold for them. Dispatch on the stable constructor_name string
-  # instead (verified installed vs load_all).
-  u <- tryCatch(unclass(class), error=function(e) NULL)
-  if (is.null(u) || is.null(names(u))) return(NULL)
-  nm <- u[["constructor_name"]]
-  if (is.character(nm)) {
-    if ("character" %in% nm) return(character())
-    if ("double" %in% nm) return(numeric())
-    if ("integer" %in% nm) return(integer())
-    if ("logical" %in% nm) return(logical())
-    if ("numeric" %in% nm) return(numeric())
-  }
-  cls <- u[["classes"]]
-  if (is.list(cls)) for (m in cls) {
-    p <- .smf_empty_for_class(m)
-    if (!is.null(p)) return(p)
-  }
-  NULL
-}
-
 #' Reconstruct package objects from portable lists
 #' @export
 smf_from_list <- function(x) {
@@ -97,15 +72,6 @@ smf_from_list <- function(x) {
     if (identical(cls, "PredictionResult") && is.null(x$calibration)) x$calibration <- NULL
     ctor <- .smf_class_map(cls)
     if (is.null(ctor)) cli::cli_abort("Unknown serialized class {.val {cls}}.")
-    pr <- tryCatch(ctor@properties, error=function(e) list())
-    for (nm in intersect(names(x), names(pr))) {
-      v <- x[[nm]]
-      if (is.list(v) && !length(v)) {
-        pcl <- tryCatch(pr[[nm]]$class, error=function(e) NULL)
-        co <- .smf_empty_for_class(pcl)
-        if (!is.null(co)) x[[nm]] <- co
-      }
-    }
     return(do.call(ctor, x))
   }
   lapply(x, smf_from_list)

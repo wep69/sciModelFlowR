@@ -20,21 +20,11 @@ smf_save_manifest <- function(x, file) {
   writeLines(txt,file,useBytes=TRUE); invisible(normalizePath(file,mustWork=FALSE))
 }
 
-.smf_cpu_model <- function(si) {
-  # Sys.info() has no "model" entry on any mainstream platform; [[ would throw
-  # "subscript out of bounds". Prefer it when present, else the Windows
-  # processor identifier, else the machine architecture (derived fix 1.0.0+).
-  if ("model" %in% names(si) && isTRUE(nzchar(unname(si[["model"]]) %||% ""))) return(unname(si[["model"]]))
-  env <- Sys.getenv("PROCESSOR_IDENTIFIER", unset="")
-  if (nzchar(env)) return(unname(env))
-  unname(si[["machine"]] %||% "")
-}
-
 .smf_hardware_info <- function() {
   si <- Sys.info()
   out <- list(
     sysname=unname(si[["sysname"]] %||% ""), release=unname(si[["release"]] %||% ""),
-    machine=unname(si[["machine"]] %||% ""), cpu_model=.smf_cpu_model(si),
+    machine=unname(si[["machine"]] %||% ""), cpu_model=unname(si[["model"]] %||% ""),
     logical_cores=as.integer(parallel::detectCores(logical=TRUE) %||% NA_integer_),
     physical_cores=as.integer(parallel::detectCores(logical=FALSE) %||% NA_integer_),
     gpu_available=FALSE, cuda_available=FALSE, cuda_runtime=character(), torch_version=character(),

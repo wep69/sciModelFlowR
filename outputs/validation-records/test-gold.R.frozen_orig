@@ -1,5 +1,5 @@
-test_that("all 25 Gold files are available", {
-  expect_length(smf_list_datasets(),25)
+test_that("all twelve Gold files are available", {
+  expect_length(smf_list_datasets(),12)
   for(nm in smf_list_datasets()) expect_true(nrow(smf_load_dataset(nm))>0)
 })
 

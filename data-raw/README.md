@@ -1,6 +1,6 @@
 # Gold data generation
 
-The distributed Gold CSV files are frozen synthetic validation fixtures. Their authoritative hashes are stored in `inst/gold/gold_hashes.csv`. They are development and validation assets, not empirical scientific evidence.
+The distributed Gold CSV files are frozen synthetic validation fixtures. Their authoritative hashes are stored in `inst/gold_data/gold_hashes.csv`. They are development and validation assets, not empirical scientific evidence.
 
 The original byte-exact generator for the six historical 0.1.0 fixtures is not distributed in this source snapshot; those files therefore remain immutable historical fixtures identified by their SHA-256 hashes. Later releases should not claim otherwise.
 

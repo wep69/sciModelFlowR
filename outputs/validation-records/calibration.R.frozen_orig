@@ -12,9 +12,7 @@ smf_calibrate <- function(truth,probabilities,spec=smf_calibration_spec("platt")
     pos<-levels(truth)[[2]]; score<-stats::qlogis(.smf_clip_prob(prob[,pos])); y<-as.integer(truth==pos)
     model<-stats::glm(y~score,family=stats::binomial())
   } else if(method=="isotonic") {
-    # stats::isoreg() runs PAVA in input order and is only meaningful for
-    # nondecreasing x: fit on score-ordered pairs (derived fix 1.0.0+).
-    model<-lapply(colnames(prob),function(cl){o<-order(prob[,cl]); z<-stats::isoreg(prob[o,cl],as.integer(truth[o]==cl)); oo<-order(z$x); list(x=z$x[oo],yf=z$yf[oo])}); names(model)<-colnames(prob)
+    model<-lapply(colnames(prob),function(cl){z<-stats::isoreg(prob[,cl],as.integer(truth==cl)); o<-order(z$x); list(x=z$x[o],yf=z$yf[o])}); names(model)<-colnames(prob)
   } else if(method=="multinomial") {
     if(!requireNamespace("nnet",quietly=TRUE)) .smf_abort("NNET_MISSING","Package 'nnet' is required for multinomial calibration.",class="smf_capability_error")
     ref<-colnames(prob)[ncol(prob)]; zz<-log(.smf_clip_prob(prob[,seq_len(ncol(prob)-1),drop=FALSE])/ .smf_clip_prob(prob[,ref])); colnames(zz)<-paste0("lp_",seq_len(ncol(zz))); d<-data.frame(.truth=truth,zz,check.names=FALSE)
@@ -37,11 +35,7 @@ smf_apply_calibration <- function(calibration,probabilities) {
     pos<-calibration@positive_label; score<-stats::qlogis(.smf_clip_prob(p[,pos])); q<-as.numeric(stats::predict(calibration@model,newdata=data.frame(score=score),type="response")); out<-cbind(1-q,q); colnames(out)<-calibration@class_levels; return(out)
   }
   if(calibration@method=="isotonic") {
-    out<-sapply(calibration@class_levels,function(cl){m<-calibration@model[[cl]]; stats::approx(m$x,m$yf,xout=p[,cl],rule=2,ties="ordered")$y}); out<-as.matrix(out); out[out<0]<-0; out[out>1]<-1; rs<-rowSums(out); zero<-rs==0
-    # A degenerate all-zero row is not a distribution: keep the input row
-    # (validated on the simplex upstream), else uniform (derived fix 1.0.0+).
-    if(any(zero)) { out[zero,]<-p[zero,,drop=FALSE]; rs<-rowSums(out); still<-rs==0; if(any(still)) out[still,]<-1/ncol(out); rs<-rowSums(out) }
-    out<-out/rs; colnames(out)<-calibration@class_levels; return(out)
+    out<-sapply(calibration@class_levels,function(cl){m<-calibration@model[[cl]]; stats::approx(m$x,m$yf,xout=p[,cl],rule=2,ties="ordered")$y}); out<-as.matrix(out); out[out<0]<-0; out[out>1]<-1; rs<-rowSums(out); rs[rs==0]<-1; out<-out/rs; colnames(out)<-calibration@class_levels; return(out)
   }
   if(calibration@method=="multinomial") {
     ref<-calibration@class_levels[length(calibration@class_levels)]; zz<-log(.smf_clip_prob(p[,seq_len(ncol(p)-1),drop=FALSE])/.smf_clip_prob(p[,ref])); colnames(zz)<-paste0("lp_",seq_len(ncol(zz))); out<-as.matrix(stats::predict(calibration@model,newdata=data.frame(zz,check.names=FALSE),type="probs")); if(is.vector(out)) out<-cbind(1-out,out); colnames(out)<-calibration@class_levels; return(out)
