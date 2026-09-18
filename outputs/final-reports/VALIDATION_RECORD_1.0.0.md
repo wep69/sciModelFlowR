@@ -11,8 +11,8 @@
 - ZIP SHA-256: `9483b17fe2bec07c7cd4c66dd6db7e4e44f632ac48d2b9a0f2a7bd671e36bb6d` — **VERIFIED** (§2)
 - TAR.GZ SHA-256: `ef684ad7d511a31d5487a1366b6fe099488f1fe98dbe57fd26f707136b144c3e` — **VERIFIED** (§2)
 - Derived working tarball: `outputs/built-tarballs/sciModelFlowR_1.0.0_derived.tar.gz`
-  SHA-256 `82CE93A1FD9AA5237B08C75024FAD8830CAF2FE804D229B500C3BDB3C67DFCF0`
-- `00check.log` SHA-256: `67A304E1971FDB6940F914FA3304CEB0D5F0250E2E4F5D3E3B7EFD38F488CC59`
+  SHA-256 `B35A37D0E6F8FAE2DFF32DE838EBC3D860B40E69CB7CBB58F352CEC25172289B`
+- `00check.log` SHA-256: `E2D61CED5AA1752A01DA3D06783600BCE6933B86378E3BF1703291E1F741609D`
 - Verified: **PASS**
 
 ## Environment
@@ -107,18 +107,27 @@
 ## R CMD build/check
 
 - built tarball: `outputs/built-tarballs/sciModelFlowR_1.0.0_derived.tar.gz`
-- SHA-256: `82CE93A1FD9AA5237B08C75024FAD8830CAF2FE804D229B500C3BDB3C67DFCF0`
+- SHA-256: `B35A37D0E6F8FAE2DFF32DE838EBC3D860B40E69CB7CBB58F352CEC25172289B`
 - check status: **0 ERROR, 0 WARNING, 2 NOTEs** (`--as-cran`)
 - warnings: nenhum
 - notes (revisados e aceites):
   1. *CRAN incoming feasibility* — New submission; Suggests fora de
      repositórios mainstream (`fastshap`, `vip`, `cmdstanr` — backends
-     opcionais GitHub-only); URLs `https://github.com/walterufpb/sciModelFlowR`
-     ainda 404 (repositório será criado no push).
+     opcionais GitHub-only). A nota de “invalid URLs” desapareceu após o
+     push: `https://github.com/wep69/sciModelFlowR` resolve (repo público).
   2. *Top-level files* — documentos de governança/release no topo
      (BIBLIOGRAPHY_VERIFICATION, COMPATIBILITY, DEPRECATION_POLICY,
      MIGRATION_*, RELEASE_*, SECURITY_REVIEW, SOURCE_MANIFEST, data-raw):
      artefactos intencionais do freeze 1.0.0.
+
+## Publication
+
+- Repositório: `https://github.com/wep69/sciModelFlowR` (público, branch `main`, 7 commits)
+- GitHub Pages: `https://wep69.github.io/sciModelFlowR/` (Deploy from branch → `main` → `/docs`)
+  — build `built` (30.8 s); home, `reference/index.html` e artigo v15 verificados HTTP 200
+- Topics: r, r-package, statistics, machine-learning, reproducibility, bayesian,
+  deep-learning, conformal-prediction, agronomy, scientific-computing
+- Sem CI (workflows removidos, conforme pedido); Pages servido de `docs/`
 
 ## Final classification
 

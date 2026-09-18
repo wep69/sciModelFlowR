@@ -10,9 +10,10 @@
 
 | Entregável | Local | Estado |
 |---|---|---|
-| Repositório git pronto para push | `repo/` (branch `main`, 5 commits) | PASS |
-| Snapshot congelado preservado | `repo/outputs/built-tarballs/…` + ZIP/TAR.GZ originais intactos | PASS |
-| Tarball derivado construído | `repo/outputs/built-tarballs/sciModelFlowR_1.0.0_derived.tar.gz` (`82CE93A1…`) | PASS |
+| Repositório publicado no GitHub | `https://github.com/wep69/sciModelFlowR` (público, branch `main`, 7 commits) | PASS |
+| Snapshot congelado preservado | ZIP/TAR.GZ originais intactos em `D:\Walter\R\Pacotes_criados\sciModelFlowR\` (hashes §2) | PASS |
+| Tarball derivado construído | `repo/outputs/built-tarballs/sciModelFlowR_1.0.0_derived.tar.gz` (`B35A37D0…`) | PASS |
+| GitHub Pages | `https://wep69.github.io/sciModelFlowR/` (branch `main` → `/docs`; build `built`) | PASS |
 | `R CMD check --as-cran` | 0 ERROR / 0 WARNING / 2 NOTEs aceites | PASS |
 | testthat | 61 arquivos, 299 PASS / 0 FAIL (fonte) · 0 falhas (instalado) | PASS |
 | Gold + reference + crosslang | 25/25 + tolerâncias ~1e-15 + 25/25 | PASS |
@@ -103,10 +104,10 @@ hashes no próprio arquivo `DERIVED_PATCH_NOTES.md`.
 
 ## 5. Próximos passos recomendados
 
-1. **Push para GitHub** (`walterufpb/sciModelFlowR`) e ativar Pages
-   (Settings → Pages → Deploy from a branch → `main` → `/docs`).
-   As URLs do DESCRIPTION deixam de ser 404 (NOTA 1 do check).
-2. **Publicar 1.0.1** com os 21 fixes derivados (§29: correção em código
+1. **Repositório publicado** — ✅ `https://github.com/wep69/sciModelFlowR`
+   (público; Pages ativo em `https://wep69.github.io/sciModelFlowR/`).
+   O owner `walterufpb` não existe no GitHub; URLs do pacote apontam para `wep69`.
+2. **Publicar 1.0.1** com os 22 fixes derivados (§29: correção em código
    científico exige nova versão), preservando o freeze 1.0.0 como histórico.
 3. **Campanha histórica** 0.1.0–0.9.0 nos snapshots próprios (Fases B–D do §25)
    quando os ZIP/TAR.GZ históricos estiverem disponíveis.

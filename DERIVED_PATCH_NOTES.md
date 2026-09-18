@@ -392,3 +392,11 @@ com três desvios documentados em relação ao freeze. Originais preservados em
   `https://wep69.github.io/sciModelFlowR/`); site pkgdown reconstruído
   (28/28 artigos) e `sitemap.xml` regenerado. E-mail do autor
   (`walterufpb@yahoo.com.br`) preservado.
+- **Publicação (2026-09-18):** repo público
+  `https://github.com/wep69/sciModelFlowR` (branch `main`, sem CI);
+  GitHub Pages ativo via *Deploy from a branch* → `main` → `/docs`
+  (`https://wep69.github.io/sciModelFlowR/`, build `built`; home/reference/artigo
+  verificados HTTP 200). Tarball final reconstruído
+  (`B35A37D0E6F8FAE2DFF32DE838EBC3D860B40E69CB7CBB58F352CEC25172289B`) e
+  check re-executado: **0 ERROR / 0 WARNING / 2 NOTEs** — a nota de URLs
+  inválidas desapareceu com o repo publicado.
