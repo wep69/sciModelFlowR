@@ -96,6 +96,6 @@ Config/testthat/edition: 3
 Config/Needs/website: pkgdown
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
-URL: https://github.com/walterufpb/sciModelFlowR
-BugReports: https://github.com/walterufpb/sciModelFlowR/issues
+URL: https://github.com/wep69/sciModelFlowR
+BugReports: https://github.com/wep69/sciModelFlowR/issues
 VignetteBuilder: quarto

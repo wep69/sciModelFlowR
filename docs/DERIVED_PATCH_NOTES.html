@@ -20,7 +20,7 @@
 <li class="nav-item"><a class="nav-link" href="news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="search.json"></form></li>
-<li class="nav-item"><a class="external-link nav-link" href="https://github.com/walterufpb/sciModelFlowR/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
+<li class="nav-item"><a class="external-link nav-link" href="https://github.com/wep69/sciModelFlowR/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
       </ul></div>
 
 
@@ -30,7 +30,7 @@
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Derived patch notes — working copy vs frozen 1.0.0 source</h1>
-      <small class="dont-index">Source: <a href="https://github.com/walterufpb/sciModelFlowR/blob/HEAD/DERIVED_PATCH_NOTES.md" class="external-link"><code>DERIVED_PATCH_NOTES.md</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/wep69/sciModelFlowR/blob/HEAD/DERIVED_PATCH_NOTES.md" class="external-link"><code>DERIVED_PATCH_NOTES.md</code></a></small>
     </div>
 
 <div id="derived-patch-notes--working-copy-vs-frozen-100-source" class="section level1">
@@ -269,6 +269,44 @@
 <strong>Política (§29):</strong> guarda de capacidade + metadados → 1.0.1; o <code>:::</code> nu é equivalência comprovada pelo padrão vizinho.</li>
 <li>
 <strong>Adenda check (2ª rodada):</strong> <code>stats</code>/<code>utils</code> estavam no Imports mas sem diretiva <code>import()</code> no NAMESPACE (que só tinha <code>export</code>s) → codoc seguia cego. Acrescentado <code>#' @import utils stats</code> em <code>R/sciModelFlowR-package.R</code> + <code>import(stats)</code>/<code>import(utils)</code> no NAMESPACE (verificado com pacote mínimo: Imports sem import() NÃO silencia; com import() silencia). <code>LICENSE</code> reduzido ao stub DCF de 2 linhas (texto BSD-3 integral preservado em <code>outputs/validation-records/LICENSE.frozen_orig</code>, SHA-256 <code>9E8F1B8DF8BA309B019F81999FD58D637E5D427AA4DD0BB31B1EBA59B993049F</code>; BSD_3_clause é licença-padrão do R) + <code>License: BSD_3_clause + file LICENSE</code> restaurado (elimina os NOTEs de DESCRIPTION). <code>self</code> (NSE do <code><a href="https://torch.mlverse.org/docs/reference/nn_module.html" class="external-link">torch::nn_module</a></code>) declarado via <code><a href="https://rdrr.io/r/utils/globalVariables.html" class="external-link">utils::globalVariables()</a></code> em <code>R/zzz.R</code>.</li>
+</ul></div>
+<div class="section level2">
+<h2 id="id_20-vignettesqmd--metadados-de-vignette-em-falta--engine-errado-warning">20. <code>vignettes/*.qmd</code> — metadados de vignette em falta + engine errado (WARNING)<a class="anchor" aria-label="anchor" href="#id_20-vignettesqmd--metadados-de-vignette-em-falta--engine-errado-warning"></a></h2>
+<ul><li>
+<strong>Estado no freeze:</strong> os 28 <code>.qmd</code> não tinham bloco <code>vignette:</code> com <code>%\VignetteEngine{}</code> (e 3 tinham engine incompatível: <code>knitr::rmarkdown</code>, <code><a href="https://rdrr.io/pkg/knitr/man/knitr-package.html" class="external-link">knitr::knitr</a></code> — patterns de knitr não cobrem <code>.qmd</code>, verificado via <code><a href="https://rdrr.io/r/tools/vignetteEngine.html" class="external-link">tools::vignetteEngine()</a></code>). Com <code>VignetteBuilder: knitr</code> (congelado), o <code>R CMD build</code> <strong>não construía nenhum vignette</strong> (0 entradas <code>inst/doc</code>), produzindo <code>WARNING: Files in 'vignettes' but no files in 'inst/doc'</code> e NOTE “no prebuilt vignette index” no check.</li>
+<li>
+<strong>Derivado:</strong> adicionado <code>vignette: &gt;</code> com <code>%\VignetteIndexEntry{&lt;título&gt;}</code>
+<ul><li>
+<code>%\VignetteEngine{quarto::html}</code> + <code>%\VignetteEncoding{UTF-8}</code> aos 28 qmds (títulos preservados; 3 engines normalizados) e <code>VignetteBuilder: quarto</code> (o pacote <code>quarto</code> registra o engine <code>quarto::html</code>; <code>quarto</code> já estava em Suggests).</li>
+</ul></li>
+<li>
+<strong>Resultado (verificado):</strong> <code>R CMD build</code> passa a construir <code>inst/doc/</code> com <strong>28 HTML + 28 .R + 28 .qmd</strong> (62 entradas); o check re-constroi todos os vignettes (<code>re-building of vignette outputs ... OK</code>, 101 s). Hashes congelados dos 28 qmds em <code>outputs/validation-records/vignettes_qmd_frozen_sha256.csv</code>.</li>
+<li>
+<strong>Política (§29):</strong> metadados de release engineering → 1.0.1.</li>
+</ul></div>
+<div class="section level2">
+<h2 id="id_21-pkgdown--quarto-no-windows--bug-de-path-absoluto-harness-de-docs">21. pkgdown + Quarto no Windows — bug de path absoluto (harness de docs)<a class="anchor" aria-label="anchor" href="#id_21-pkgdown--quarto-no-windows--bug-de-path-absoluto-harness-de-docs"></a></h2>
+<ul><li>
+<strong>Sintoma:</strong> <code><a href="https://pkgdown.r-lib.org/reference/build_articles.html" class="external-link">pkgdown::build_article()</a></code> abortava com <code>os error 123: stat 'D:\...\vignettes\C:\Users\...\pkgdown-quarto-&lt;id&gt;'</code> (pkgdown 2.2.1 + Quarto 1.11.0): o <code>quarto_render()</code> interno passa <code>--output-dir</code> com path absoluto do <code><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir()</a></code> e o Quarto CLI junta-o ao diretório do input.</li>
+<li>
+<strong>Workaround usado (derivado de harness, fora do package):</strong> <code>TMPDIR=D:\smf_tmp</code> + patch em sessão de <code>pkgdown:::quarto_render</code> que
+<ol style="list-style-type: lower-alpha"><li>absolutiza o input e (b) passa <code>--output-dir</code> <strong>relativo</strong> ao dir do input. Script em <code>outputs/evidence/</code> logs; nenhum ficheiro do pacote foi alterado por esse motivo.</li>
+</ol></li>
+<li>
+<strong>Resultado:</strong> 28/28 artigos renderizados (<code>outputs/evidence/pkgdown_articles_1.0.0.csv</code>), site completo em <code>docs/</code> (home, reference 11 tópicos, 28 artigos, news, 404, <code>.nojekyll</code>).</li>
+<li>
+<strong>Política (§29):</strong> workaround de harness documentado; sem impacto no código científico. Rerun em ambiente limpo recomendado para certificação pkgdown definitiva.</li>
+</ul></div>
+<div class="section level2">
+<h2 id="id_22-instnotebooksjupyteripynb--asserção-de-versão-090-obsoleta-27-notebooks">22. <code>inst/notebooks/jupyter/*.ipynb</code> — asserção de versão 0.9.0 obsoleta (27 notebooks)<a class="anchor" aria-label="anchor" href="#id_22-instnotebooksjupyteripynb--asser%C3%A7%C3%A3o-de-vers%C3%A3o-090-obsoleta-27-notebooks"></a></h2>
+<ul><li>
+<strong>Estado no freeze:</strong> os 27 notebooks (IRkernel, <code>paired_vignette</code> com metadata <code>"release": "1.0.0"</code>) terminam com <code>stopifnot(as.character(packageVersion("sciModelFlowR")) == "0.9.0")</code> — contradiz o próprio metadata e o pacote 1.0.0. Execução em kernel limpo <strong>falharia</strong> em todos; a campanha §17.9/§21.3 exige 27/27 executados.</li>
+<li>
+<strong>Derivado:</strong> asserção atualizada para <code>"1.0.0"</code> (metadata preservado; estrutura de células intacta). Originais em <code>outputs/validation-records/notebooks_frozen/</code> + hashes em <code>outputs/validation-records/notebooks_frozen_sha256.csv</code>.</li>
+<li>
+<strong>Resultado (verificado):</strong> 27/27 executados em kernels IR limpos (<code>R_LIBS</code> apontando para o tarball derivado instalado), cópias executadas fora do source tree em <code>outputs/rendered-docs/notebooks/</code>, evidência em <code>outputs/evidence/notebooks_execution_1.0.0.csv</code>.</li>
+<li>
+<strong>Política (§29):</strong> material didático/validação → 1.0.1.</li>
 </ul></div>
 <div class="section level2">
 <h2 id="id_17-toolsvalidate_100r--harness-de-linha-única">17. <code>tools/validate_1.0.0.R</code> — harness de linha única<a class="anchor" aria-label="anchor" href="#id_17-toolsvalidate_100r--harness-de-linha-%C3%BAnica"></a></h2>

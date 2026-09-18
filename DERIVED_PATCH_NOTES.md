@@ -386,3 +386,9 @@ com três desvios documentados em relação ao freeze. Originais preservados em
 - `_pkgdown.yml`: `destination: docs` para GitHub Pages (Deploy from branch → `/docs`); `docs/.nojekyll` incluído.
 - Outputs organizados em subfolders: `outputs/{evidence,rendered-docs,built-tarballs,final-reports,validation-records}` (+ `.gitkeep`).
 - `.gitignore` para artefactos R/pkgdown/outputs pesados.
+- **Owner do repositório:** `walterufpb` não existe no GitHub (404). URLs
+  atualizadas para o owner real `wep69` em `DESCRIPTION` (URL/BugReports),
+  `CITATION.cff` (repository-code) e `_pkgdown.yml` (site →
+  `https://wep69.github.io/sciModelFlowR/`); site pkgdown reconstruído
+  (28/28 artigos) e `sitemap.xml` regenerado. E-mail do autor
+  (`walterufpb@yahoo.com.br`) preservado.
