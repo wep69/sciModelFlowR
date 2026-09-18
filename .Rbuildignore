@@ -1,4 +1,6 @@
 ^\.github$
+^docs$
+^outputs$
 ^renv$
 ^renv\.lock$
 ^references$

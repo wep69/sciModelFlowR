@@ -292,6 +292,18 @@ com três desvios documentados em relação ao freeze. Originais preservados em
   SHA-256 `816D3A2EA606B412676E84332E92695C6DE3DBDD802F3945F5DB018B68E9AB34`).
 - **Política (§29):** guarda de capacidade + metadados → 1.0.1; o `:::` nu é
   equivalência comprovada pelo padrão vizinho.
+- **Adenda check (2ª rodada):** `stats`/`utils` estavam no Imports mas sem
+  diretiva `import()` no NAMESPACE (que só tinha `export`s) → codoc seguia
+  cego. Acrescentado `#' @import utils stats` em
+  `R/sciModelFlowR-package.R` + `import(stats)`/`import(utils)` no NAMESPACE
+  (verificado com pacote mínimo: Imports sem import() NÃO silencia; com
+  import() silencia). `LICENSE` reduzido ao stub DCF de 2 linhas
+  (texto BSD-3 integral preservado em
+  `outputs/validation-records/LICENSE.frozen_orig`, SHA-256
+  `9E8F1B8DF8BA309B019F81999FD58D637E5D427AA4DD0BB31B1EBA59B993049F`;
+  BSD_3_clause é licença-padrão do R) + `License: BSD_3_clause + file
+  LICENSE` restaurado (elimina os NOTEs de DESCRIPTION). `self` (NSE do
+  `torch::nn_module`) declarado via `utils::globalVariables()` em `R/zzz.R`.
 
 ## 17. `tools/validate_1.0.0.R` — harness de linha única
 

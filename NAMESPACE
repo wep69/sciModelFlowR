@@ -1,4 +1,6 @@
 # Generated from roxygen @export tags for the 0.9.0 release-candidate source snapshot; regenerate with roxygen2 locally.
+import(stats)
+import(utils)
 export(smf_ale)
 export(smf_api_catalog)
 export(smf_apply_calibration)

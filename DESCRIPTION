@@ -30,6 +30,8 @@ Imports:
     digest,
     jsonlite,
     rlang,
+    stats,
+    utils,
     withr,
     yaml
 Suggests:

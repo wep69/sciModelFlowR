@@ -1,0 +1,36 @@
+pandoc: '3.9'
+pkgdown: 2.2.1
+pkgdown_sha: ~
+articles:
+  v00-overview: v00-overview.html
+  v01-foundations-to-advanced-scientific-modeling: v01-foundations-to-advanced-scientific-modeling.html
+  v02-data-audit-and-leakage: v02-data-audit-and-leakage.html
+  v03-resampling-and-scientific-design: v03-resampling-and-scientific-design.html
+  v04-bootstrap-and-stability: v04-bootstrap-and-stability.html
+  v05-feature-engineering-and-selection: v05-feature-engineering-and-selection.html
+  v06-supervised-machine-learning: v06-supervised-machine-learning.html
+  v07-probabilistic-machine-learning: v07-probabilistic-machine-learning.html
+  v08-tuning-and-scientific-benchmarking: v08-tuning-and-scientific-benchmarking.html
+  v09-imbalance-calibration-and-thresholds: v09-imbalance-calibration-and-thresholds.html
+  v10-explainable-ai-and-stability: v10-explainable-ai-and-stability.html
+  v11-deep-learning-foundations: v11-deep-learning-foundations.html
+  v12-deep-learning-architectures: v12-deep-learning-architectures.html
+  v13-probabilistic-deep-learning: v13-probabilistic-deep-learning.html
+  v14-deep-learning-xai-and-reproducibility: v14-deep-learning-xai-and-reproducibility.html
+  v15-bayesian-modeling: v15-bayesian-modeling.html
+  v16-bayesian-diagnostics-and-predictive-checking: v16-bayesian-diagnostics-and-predictive-checking.html
+  v17-conformal-prediction: v17-conformal-prediction.html
+  v18-full-uncertainty: v18-full-uncertainty.html
+  v19-complete-scientific-workflow: v19-complete-scientific-workflow.html
+  v20-tracking-persistence-and-scalable-inference: v20-tracking-persistence-and-scalable-inference.html
+  v21-agronomy-soil-workflow: v21-agronomy-soil-workflow.html
+  v22-spectroscopy-phenotyping-workflow: v22-spectroscopy-phenotyping-workflow.html
+  v23-spatial-environmental-workflow: v23-spatial-environmental-workflow.html
+  v24-protected-external-validation: v24-protected-external-validation.html
+  v25-api-catalog: v25-api-catalog.html
+  v26-migration-and-deprecation: v26-migration-and-deprecation.html
+  v27-validation-and-reproducibility: v27-validation-and-reproducibility.html
+last_built: 2026-09-18T04:46Z
+urls:
+  reference: https://walterufpb.github.io/sciModelFlowR/reference
+  article: https://walterufpb.github.io/sciModelFlowR/articles
