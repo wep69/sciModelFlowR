@@ -146,6 +146,15 @@ smf_search_random <- function(search_space, n=20L, seed=260915L) {
 .smf_objective_names <- function(objectives) vapply(objectives, function(x) x@name, character(1))
 .smf_objective_directions <- function(objectives) stats::setNames(vapply(objectives, function(x) x@direction, character(1)), .smf_objective_names(objectives))
 
+.smf_tuning_archive_all_na <- function(archive, objectives) {
+  if (!is.data.frame(archive) || !nrow(archive)) return(FALSE)
+  obj <- if (is.list(objectives)) objectives else list(objectives)
+  nm <- tryCatch(.smf_objective_names(obj), error=function(e) character(0))
+  cols <- intersect(nm, names(archive))
+  if (!length(cols)) return(TRUE)
+  !any(vapply(archive[cols], function(v) any(is.finite(suppressWarnings(as.numeric(v)))), logical(1)))
+}
+
 .smf_metric_vector <- function(metric_table, objectives) {
   nm <- .smf_objective_names(objectives)
   out <- stats::setNames(rep(NA_real_, length(nm)), nm)
@@ -411,6 +420,13 @@ smf_tune <- function(spec, data, search_space, tuning=smf_tuning_spec(), resampl
   .smf_tuning_guard(data); smf_validate_schema(data,spec@data)
   if (tuning@backend == "mlr3") .smf_abort("MLR3_TUNING_PIPELINE_NOT_CERTIFIED", "The mlr3 tuning backend is reserved but not allowed to bypass sciModelFlowR fold-safe preprocessing in 0.4.0; use backend='native'.", class="smf_capability_error")
   objectives<-.smf_objective_specs(tuning,spec)
+  # Every objective must be computed by the fitted specification; otherwise the
+  # archive carries an all-NA objective column and the selection is silently
+  # empty (1.0.2 fix).
+  obj_names <- .smf_objective_names(objectives)
+  metricas_spec <- vapply(spec@metrics, function(m) m@name, character(1))
+  faltam <- setdiff(obj_names, metricas_spec)
+  if (length(faltam)) .smf_abort("TUNING_OBJECTIVE_NOT_IN_METRICS", paste0("Objective metric(s) not declared in spec@metrics: ", paste(faltam, collapse=", "), ". Available: ", paste(metricas_spec, collapse=", "), ". Add them to the specification so the inner resampling computes them."), evidence=list(missing=faltam, available=metricas_spec), class="smf_tuning_error")
   if(is.null(resamples)) {
     inner<-tuning@inner_resampling %||% spec@resampling
     if(is.null(inner)) .smf_abort("INNER_RESAMPLING_REQUIRED","Managed tuning requires an explicit inner ResamplingSpec.",class="smf_tuning_error")

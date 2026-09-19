@@ -127,7 +127,7 @@ smf_pdp <- function(result, data, features=character(), grid_size=20L, class=NUL
   rows<-list();k<-0L
   for(nm in features) for(v in .smf_feature_grid(x[[nm]],grid_size)) {
     xx<-x; xx[[nm]]<-if(is.factor(x[[nm]]))factor(v,levels=levels(x[[nm]])) else v
-    k<-k+1L; rows[[k]]<-data.frame(feature=nm,value=as.character(v),prediction=mean(.smf_explain_response(result,xx,class),na.rm=TRUE),stringsAsFactors=FALSE)
+    k<-k+1L; rows[[k]]<-data.frame(feature=nm,value=if(is.factor(x[[nm]]))as.character(v) else as.numeric(v),prediction=mean(.smf_explain_response(result,xx,class),na.rm=TRUE),stringsAsFactors=FALSE)
   }
   do.call(rbind,rows)
 }
@@ -142,7 +142,7 @@ smf_ice <- function(result, data, features=character(), grid_size=20L, n=50L, cl
   for(nm in features) for(v in .smf_feature_grid(x[[nm]],grid_size)) {
     xx<-x[ids,,drop=FALSE]; xx[[nm]]<-if(is.factor(x[[nm]]))factor(v,levels=levels(x[[nm]])) else v
     pr<-.smf_explain_response(result,xx,class)
-    k<-k+1L; rows[[k]]<-data.frame(feature=nm,value=as.character(v),row_id=ids,prediction=pr,stringsAsFactors=FALSE)
+    k<-k+1L; rows[[k]]<-data.frame(feature=nm,value=if(is.factor(x[[nm]]))as.character(v) else as.numeric(v),row_id=ids,prediction=pr,stringsAsFactors=FALSE)
   }
   do.call(rbind,rows)
 }

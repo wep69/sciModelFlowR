@@ -1,0 +1,1015 @@
+# Conformal Prediction: Coverage, Calibration Sets, CV+, and Prediction Sets
+
+**Package:** `sciModelFlowR`\
+**Version targeted:** `0.7.0`\
+**Status:** implementation-complete; runtime and numerical validation
+deferred to the consolidated local validation campaign.
+
+> Examples use the public package API. Heavy Bayesian backends are
+> optional. Frozen Gold datasets are simulated validation material, not
+> empirical evidence.
+
+## 1 1. What conformal prediction adds
+
+Conformal prediction addresses a different uncertainty question from
+Bayesian credible intervals or model-based confidence intervals. It uses
+conformity or nonconformity information to build intervals or sets with
+method-specific marginal coverage properties under stated assumptions.
+Version 0.7.0 makes those assumptions visible rather than presenting a
+conformal interval as a generic uncertainty band.
+
+## 2 2. Learning objectives
+
+After this vignette, the reader should be able to:
+
+1.  explain the role of the calibration sample;
+2.  distinguish train, calibration, validation, tuning, and final test
+    roles;
+3.  compute package-native split-conformal regression intervals;
+4.  understand CV+ and its use of out-of-fold residual information;
+5.  conformalize quantile intervals;
+6.  create adaptive prediction sets for classification;
+7.  estimate empirical coverage and interval/set size on untouched data;
+8.  recognize exchangeability assumptions and dependence problems;
+9.  use `probably` adapters without confusing backend and package
+    contracts;
+10. report marginal coverage honestly without claiming conditional
+    coverage.
+
+## 3 3. Gold conformal dataset
+
+``` r
+
+d <- smf_load_dataset("gold_conformal_regression")
+table(d$partition)
+```
+
+The partition is frozen. Training rows fit the model, calibration rows
+estimate nonconformity, and test rows are untouched until final
+evaluation. The target coverage in the reference workflow is 0.90.
+
+## 4 4. Fit only on training data
+
+``` r
+
+train <- subset(d, partition == "train")
+cal   <- subset(d, partition == "calibration")
+test  <- subset(d, partition == "test")
+
+model <- lm(y ~ x1 + x2, data = train)
+```
+
+The final test set must not participate in model fitting, tuning,
+feature selection, threshold selection, or conformal calibration.
+
+## 5 5. Split conformal regression
+
+``` r
+
+cf <- smf_conformal_fit(
+  truth = cal$y,
+  prediction = predict(model, cal),
+  spec = smf_conformal_spec(
+    method = "split",
+    level = 0.90,
+    score = "absolute",
+    exchangeability = "iid"
+  ),
+  calibration_ids = cal$row_id,
+  final_test_ids = test$row_id
+)
+
+intervals <- smf_conformal_predict(
+  cf,
+  prediction = predict(model, test)
+)
+```
+
+The package uses a finite-sample empirical quantile rule rather than an
+ordinary interpolated sample quantile. Calibration residuals are learned
+only from the calibration sample.
+
+## 6 6. Evaluate coverage on untouched test data
+
+``` r
+
+coverage <- smf_conformal_coverage(test$y, intervals)
+coverage
+
+smf_conformal_diagnose(
+  cf,
+  truth = test$y,
+  prediction = intervals
+)
+```
+
+Coverage should be interpreted with Monte Carlo variability. Observing
+0.887 coverage in a finite test sample does not automatically refute a
+0.90 marginal target. The diagnostic reports a binomial-scale standard
+error and a tolerance used only for evaluation, not for recalibrating on
+the test set.
+
+## 7 7. What marginal coverage means
+
+A 90% split-conformal interval targets long-run marginal coverage over
+exchangeable future observations. It does not guarantee 90% coverage for
+every soil type, treatment, cultivar, season, location, or region of
+predictor space. Conditional coverage can vary substantially, especially
+under heteroscedasticity or covariate shift.
+
+Therefore, report subgroup coverage as a diagnostic when scientifically
+important, but do not describe ordinary split conformal as having
+distribution-free conditional coverage.
+
+## 8 8. Exchangeability is a scientific assumption
+
+The calibration and future observations must satisfy the assumptions of
+the conformal method. Repeated measures, spatial clusters, temporal
+dependence, family structure, multi-environment trials, or batch effects
+can violate naive row exchangeability.
+
+[`smf_conformal_spec()`](https://wep69.github.io/sciModelFlowR/reference/bayesian-conformal-070.md)
+therefore records an exchangeability declaration. If IID conformal is
+requested while `DesignSpec` declares groups, time, repeated units, or
+coordinates, the package emits a scientific warning.
+
+## 9 9. Calibration is not a second test set
+
+The calibration set is used to estimate the conformal score quantile. It
+is therefore part of model development. It cannot later be called an
+untouched final test set. `sciModelFlowR` explicitly blocks overlap
+between calibration IDs and final-test IDs.
+
+## 10 10. CV+
+
+CV+ reuses out-of-fold residuals and fold-specific predictions rather
+than reserving one fixed calibration split.
+
+``` r
+
+cv_spec <- smf_conformal_spec(
+  method = "cv_plus",
+  level = 0.90,
+  calibration_role = "out_of_fold"
+)
+
+# oof_truth, oof_prediction, and fold_id must come from honest
+# out-of-fold predictions generated without training on each row.
+# cv_obj <- smf_conformal_fit(
+#   oof_truth,
+#   oof_prediction,
+#   spec = cv_spec,
+#   fold_id = fold_id
+# )
+```
+
+The package stores the fold identity because CV+ prediction for a new
+observation uses each fold-specific model together with residuals from
+the corresponding held-out fold. Mixing residuals from one resampling
+scheme with predictions from another invalidates the construction.
+
+## 11 11. CV+ is not arbitrary repeated CV
+
+Coverage theory depends on the conformal construction. The `probably`
+documentation, for example, notes that its CV+ implementation was
+developed for V-fold cross-validation without repeats. `sciModelFlowR`
+does not silently generalize that guarantee to repeated CV, grouped CV,
+time-series CV, or spatial CV.
+
+## 12 12. Conformalized quantile regression
+
+Quantile models can adapt interval width to heteroscedasticity.
+Conformalization adjusts the lower and upper predicted quantiles using
+calibration scores.
+
+``` r
+
+cq <- smf_conformal_fit(
+  truth = cal$y,
+  lower = cal_lower,
+  upper = cal_upper,
+  spec = smf_conformal_spec(
+    method = "quantile",
+    level = 0.90
+  )
+)
+
+new_interval <- smf_conformal_predict(
+  cq,
+  lower = test_lower,
+  upper = test_upper
+)
+```
+
+The base quantile model still must be trained without the calibration
+outcomes. Conformalization is not permission to tune quantile models on
+the same data used to estimate their coverage adjustment.
+
+## 13 13. Full conformal
+
+Full conformal repeatedly refits or otherwise recomputes scores under
+candidate outcomes. The package-native engine deliberately does not
+pretend that this can be implemented from a vector of predictions alone.
+`method = "full"` requires a compatible refitting adapter.
+
+For tidymodels workflows,
+[`smf_conformal_probably()`](https://wep69.github.io/sciModelFlowR/reference/bayesian-conformal-070.md)
+exposes the corresponding `probably` backend while retaining the package
+result contract.
+
+## 14 14. probably adapter
+
+``` r
+
+# if (requireNamespace("probably", quietly = TRUE)) {
+#   obj <- smf_conformal_probably(
+#     fitted_workflow,
+#     method = "split",
+#     cal_data = calibration_data,
+#     level = 0.90
+#   )
+#
+#   predict_int <- smf_conformal_predict_probably(
+#     obj,
+#     new_data = new_predictor_data
+#   )
+# }
+```
+
+The backend object is stored inside a stable `ConformalResult`. Coverage
+semantics come from the selected conformal method, not from the fact
+that a particular package generated the interval.
+
+## 15 15. Classification prediction sets
+
+A classifier usually returns one label or a probability vector.
+Conformal classification can instead return a set of labels.
+
+``` r
+
+p_cal <- rbind(
+  c(A=.80, B=.15, C=.05),
+  c(A=.20, B=.70, C=.10),
+  c(A=.10, B=.20, C=.70),
+  c(A=.55, B=.35, C=.10)
+)
+truth_cal <- c("A", "B", "C", "B")
+
+aps <- smf_conformal_fit(
+  truth_cal,
+  probabilities = p_cal,
+  spec = smf_conformal_spec(
+    method = "aps",
+    level = 0.80
+  )
+)
+
+sets <- smf_conformal_predict(
+  aps,
+  probabilities = p_cal
+)
+```
+
+The package-native implementation uses deterministic adaptive
+prediction-set scores. Set size is part of performance: a method that
+always returns every class can achieve excellent coverage while being
+scientifically uninformative.
+
+## 16 16. Coverage and efficiency
+
+For regression report at least coverage and interval width. For
+classification report coverage and set size. If groups are
+scientifically important, show subgroup diagnostics. A useful
+uncertainty procedure balances target coverage with informative
+intervals or sets; it does not optimize width on the final test set.
+
+## 17 17. Heteroscedasticity
+
+Absolute-residual split conformal produces an approximately constant
+additive width. In heteroscedastic data, this can overcover low-noise
+regions and undercover high-noise regions while maintaining acceptable
+marginal coverage. Conformalized quantile regression or normalized
+scores can improve adaptivity, but their estimation steps must remain
+leakage-safe.
+
+## 18 18. Covariate shift
+
+Exchangeability can fail when deployment predictor distributions differ
+from calibration. Ordinary conformal coverage may then degrade. Weighted
+conformal or specialized covariate-shift methods require additional
+assumptions and are not silently substituted by version 0.7.0. Diagnose
+shift and state the deployment population.
+
+## 19 19. Time series
+
+Chronological data violate ordinary row exchangeability. Randomly
+splitting future and past observations for conformal calibration can use
+future information to calibrate past predictions. If a time-series
+conformal method is used, its theory and calibration window must be
+stated explicitly. `exchangeability = "time"` is a declaration, not an
+automatic guarantee.
+
+## 20 20. Spatial data
+
+Nearby points can be more similar than distant ones. Random
+calibration/test partitions can therefore overstate effective
+information. Spatially blocked calibration/evaluation can be useful, but
+ordinary split-conformal theory does not automatically transfer. Report
+the sampling unit and spatial separation.
+
+## 21 21. Grouped experiments
+
+For repeated plots, animals, plants, or subjects, resampling and
+calibration may need to occur at the group level. If predictions target
+new observations from known subjects, the problem differs from
+prediction for new subjects. Coverage claims should match that target.
+
+## 22 22. Calibration sample size
+
+Extreme coverage levels require estimation of extreme score quantiles. A
+tiny calibration set cannot estimate a 99% threshold precisely. The
+finite-sample quantile rule can become conservative or coarse. Plan
+calibration size as part of study design rather than allocating whatever
+data remain after tuning.
+
+## 23 23. Conformal versus probability calibration
+
+Probability calibration adjusts predicted class probabilities so they
+match empirical frequencies. Conformal calibration uses conformity
+scores to create sets or intervals. Both use held-out information but
+answer different questions. Do not call a calibrated probability a
+conformal guarantee, or a conformal set a calibrated probability
+distribution.
+
+## 24 24. Conformal versus Bayesian intervals
+
+A Bayesian posterior predictive interval is conditional on a probability
+model and prior. A conformal interval obtains method-specific marginal
+coverage from exchangeability/conformity logic. Either can be useful.
+They are not interchangeable because their probability statements and
+failure modes differ.
+
+## 25 25. Reporting checklist
+
+Document training data, calibration data, final test data, score
+function, method, target coverage, finite-sample quantile convention,
+exchangeability assumption, resampling geometry, coverage estimate,
+width or set size, subgroup diagnostics, any covariate shift, software
+version, and whether a backend adapter or package-native implementation
+was used.
+
+## 26 26. Complete reference workflow
+
+``` r
+
+d <- smf_load_dataset("gold_conformal_regression")
+train <- subset(d, partition == "train")
+cal <- subset(d, partition == "calibration")
+test <- subset(d, partition == "test")
+
+fit <- lm(y ~ x1 + x2, data = train)
+
+cf <- smf_conformal_fit(
+  truth = cal$y,
+  prediction = predict(fit, cal),
+  spec = smf_conformal_spec("split", level=.90),
+  calibration_ids = cal$row_id,
+  final_test_ids = test$row_id
+)
+
+intervals <- smf_conformal_predict(
+  cf,
+  predict(fit, test)
+)
+
+smf_conformal_diagnose(
+  cf,
+  truth = test$y,
+  prediction = intervals
+)
+```
+
+The test data appear only in the final two steps: prediction and
+evaluation.
+
+### 26.1 26.1 Applied case: Irrigation scheduling
+
+If the model predicts daily water demand and calibration dates are
+randomly mixed across a season, temporal dependence can invalidate the
+intended exchangeability. Use a calibration strategy aligned with future
+forecasting and report the horizon.
+
+**Minimum report.** State the unit assumed exchangeable, the calibration
+sample size, target level, observed untouched-test coverage, efficiency
+measure, and the exact scope of the coverage claim.
+
+### 26.2 26.2 Applied case: Soil property maps
+
+Random point calibration can exploit nearby spatial neighbors. When the
+deployment target is a new area, use spatial separation and treat
+ordinary IID coverage as unsupported unless its assumptions are
+defensible.
+
+**Minimum report.** State the unit assumed exchangeable, the calibration
+sample size, target level, observed untouched-test coverage, efficiency
+measure, and the exact scope of the coverage claim.
+
+### 26.3 26.3 Applied case: Spectral prediction
+
+Spectral instruments can shift between sessions. Calibration intervals
+formed on one instrument/session may not cover another. Evaluate
+session-level shift and consider external calibration only if it
+represents the deployment population.
+
+**Minimum report.** State the unit assumed exchangeable, the calibration
+sample size, target level, observed untouched-test coverage, efficiency
+measure, and the exact scope of the coverage claim.
+
+### 26.4 26.4 Applied case: Disease classification
+
+Prediction sets are useful when a single disease label is too uncertain.
+Report both coverage and average set size. A three-class set that almost
+always contains all three diseases has little decision value even if
+coverage is high.
+
+**Minimum report.** State the unit assumed exchangeable, the calibration
+sample size, target level, observed untouched-test coverage, efficiency
+measure, and the exact scope of the coverage claim.
+
+### 26.5 26.5 Applied case: Rare pest species
+
+Class imbalance affects the base probability model. Marginal conformal
+coverage can still hide poor minority-class coverage. Report
+class-conditional diagnostics as descriptive evidence without claiming
+conditional guarantees.
+
+**Minimum report.** State the unit assumed exchangeable, the calibration
+sample size, target level, observed untouched-test coverage, efficiency
+measure, and the exact scope of the coverage claim.
+
+### 26.6 26.6 Applied case: Multi-environment yield
+
+If the target is a new environment, calibration rows from environments
+also represented in training answer an easier question. Freeze
+environment roles before conformal calibration.
+
+**Minimum report.** State the unit assumed exchangeable, the calibration
+sample size, target level, observed untouched-test coverage, efficiency
+measure, and the exact scope of the coverage claim.
+
+### 26.7 26.7 Applied case: Repeated plant measurements
+
+Calibration observations from the same plant as training observations
+are not new experimental units. Decide whether prediction targets future
+measurements on known plants or entirely new plants.
+
+**Minimum report.** State the unit assumed exchangeable, the calibration
+sample size, target level, observed untouched-test coverage, efficiency
+measure, and the exact scope of the coverage claim.
+
+### 26.8 26.8 Applied case: Drone imagery
+
+Neighboring pixels and overlapping image tiles violate naive
+independence. Calibrate/evaluate at field or flight units when
+deployment occurs at that scale.
+
+**Minimum report.** State the unit assumed exchangeable, the calibration
+sample size, target level, observed untouched-test coverage, efficiency
+measure, and the exact scope of the coverage claim.
+
+### 26.9 26.9 Applied case: Climate forecast
+
+Ordinary split conformal with randomized years can leak future regimes
+into calibration. Use chronological construction appropriate to the
+forecast target; version 0.7 does not invent a time-series coverage
+theorem.
+
+**Minimum report.** State the unit assumed exchangeable, the calibration
+sample size, target level, observed untouched-test coverage, efficiency
+measure, and the exact scope of the coverage claim.
+
+### 26.10 26.10 Applied case: Dose-response prediction
+
+Near range boundaries, model bias may be asymmetric. Quantile conformal
+methods can adapt widths, but no conformal method justifies
+extrapolation outside the experimental range without assumptions.
+
+**Minimum report.** State the unit assumed exchangeable, the calibration
+sample size, target level, observed untouched-test coverage, efficiency
+measure, and the exact scope of the coverage claim.
+
+### 26.11 26.11 Applied case: Sensor transfer
+
+A calibration set from the same sensor can provide correct within-sensor
+coverage while transfer to another sensor fails. Treat sensor as an
+external domain if that is the real deployment question.
+
+**Minimum report.** State the unit assumed exchangeable, the calibration
+sample size, target level, observed untouched-test coverage, efficiency
+measure, and the exact scope of the coverage claim.
+
+### 26.12 26.12 Applied case: Small experiments
+
+With very small calibration samples, attainable coverage levels are
+discrete. Report this limitation and consider whether data splitting
+sacrifices too much information; CV+ can help but must match its
+theoretical resampling conditions.
+
+**Minimum report.** State the unit assumed exchangeable, the calibration
+sample size, target level, observed untouched-test coverage, efficiency
+measure, and the exact scope of the coverage claim.
+
+### 26.13 Extended practice note 1: Scientific target
+
+Write the estimand or predictive target before selecting an uncertainty
+procedure. A parameter, conditional mean, future observation, class set
+and model-performance score require different evidence. For version
+0.7.0, document the function call, data role, assumptions, warning
+records, and the local validation test that would falsify an incorrect
+implementation. This practice keeps teaching examples aligned with the
+production API and prevents an attractive plot from becoming evidence
+without a reproducible statistical contract.
+
+### 26.14 Extended practice note 2: Design boundary
+
+Record the experimental unit, grouping, time or space structure, and
+external domain. The uncertainty method inherits these design choices;
+it cannot repair pseudo-replication. For version 0.7.0, document the
+function call, data role, assumptions, warning records, and the local
+validation test that would falsify an incorrect implementation. This
+practice keeps teaching examples aligned with the production API and
+prevents an attractive plot from becoming evidence without a
+reproducible statistical contract.
+
+### 26.15 Extended practice note 3: Training boundary
+
+All learned preprocessing, feature selection, model fitting and tuning
+must be restricted to development data. Calibration is a learned step
+and therefore cannot use final test outcomes. For version 0.7.0,
+document the function call, data role, assumptions, warning records, and
+the local validation test that would falsify an incorrect
+implementation. This practice keeps teaching examples aligned with the
+production API and prevents an attractive plot from becoming evidence
+without a reproducible statistical contract.
+
+### 26.16 Extended practice note 4: Numerical validation
+
+Compare package-native calculations with analytical truth or an
+independent backend where feasible. Use tolerances for stochastic
+quantities and exact hashes for frozen metadata. For version 0.7.0,
+document the function call, data role, assumptions, warning records, and
+the local validation test that would falsify an incorrect
+implementation. This practice keeps teaching examples aligned with the
+production API and prevents an attractive plot from becoming evidence
+without a reproducible statistical contract.
+
+### 26.17 Extended practice note 5: Sensitivity analysis
+
+Vary consequential priors, kernels, calibration splits, resampling units
+or model structures when scientifically plausible. Report whether
+substantive conclusions change. For version 0.7.0, document the function
+call, data role, assumptions, warning records, and the local validation
+test that would falsify an incorrect implementation. This practice keeps
+teaching examples aligned with the production API and prevents an
+attractive plot from becoming evidence without a reproducible
+statistical contract.
+
+### 26.18 Extended practice note 6: Communication
+
+Name interval types directly in text, tables and figure legends. Avoid
+the generic phrase confidence band when the object is posterior
+predictive or conformal. For version 0.7.0, document the function call,
+data role, assumptions, warning records, and the local validation test
+that would falsify an incorrect implementation. This practice keeps
+teaching examples aligned with the production API and prevents an
+attractive plot from becoming evidence without a reproducible
+statistical contract.
+
+### 26.19 Extended practice note 7: Scientific target
+
+Write the estimand or predictive target before selecting an uncertainty
+procedure. A parameter, conditional mean, future observation, class set
+and model-performance score require different evidence. For version
+0.7.0, document the function call, data role, assumptions, warning
+records, and the local validation test that would falsify an incorrect
+implementation. This practice keeps teaching examples aligned with the
+production API and prevents an attractive plot from becoming evidence
+without a reproducible statistical contract.
+
+### 26.20 Extended practice note 8: Design boundary
+
+Record the experimental unit, grouping, time or space structure, and
+external domain. The uncertainty method inherits these design choices;
+it cannot repair pseudo-replication. For version 0.7.0, document the
+function call, data role, assumptions, warning records, and the local
+validation test that would falsify an incorrect implementation. This
+practice keeps teaching examples aligned with the production API and
+prevents an attractive plot from becoming evidence without a
+reproducible statistical contract.
+
+### 26.21 Extended practice note 9: Training boundary
+
+All learned preprocessing, feature selection, model fitting and tuning
+must be restricted to development data. Calibration is a learned step
+and therefore cannot use final test outcomes. For version 0.7.0,
+document the function call, data role, assumptions, warning records, and
+the local validation test that would falsify an incorrect
+implementation. This practice keeps teaching examples aligned with the
+production API and prevents an attractive plot from becoming evidence
+without a reproducible statistical contract.
+
+### 26.22 Extended practice note 10: Numerical validation
+
+Compare package-native calculations with analytical truth or an
+independent backend where feasible. Use tolerances for stochastic
+quantities and exact hashes for frozen metadata. For version 0.7.0,
+document the function call, data role, assumptions, warning records, and
+the local validation test that would falsify an incorrect
+implementation. This practice keeps teaching examples aligned with the
+production API and prevents an attractive plot from becoming evidence
+without a reproducible statistical contract.
+
+### 26.23 Extended practice note 11: Sensitivity analysis
+
+Vary consequential priors, kernels, calibration splits, resampling units
+or model structures when scientifically plausible. Report whether
+substantive conclusions change. For version 0.7.0, document the function
+call, data role, assumptions, warning records, and the local validation
+test that would falsify an incorrect implementation. This practice keeps
+teaching examples aligned with the production API and prevents an
+attractive plot from becoming evidence without a reproducible
+statistical contract.
+
+### 26.24 Extended practice note 12: Communication
+
+Name interval types directly in text, tables and figure legends. Avoid
+the generic phrase confidence band when the object is posterior
+predictive or conformal. For version 0.7.0, document the function call,
+data role, assumptions, warning records, and the local validation test
+that would falsify an incorrect implementation. This practice keeps
+teaching examples aligned with the production API and prevents an
+attractive plot from becoming evidence without a reproducible
+statistical contract.
+
+### 26.25 Extended practice note 13: Scientific target
+
+Write the estimand or predictive target before selecting an uncertainty
+procedure. A parameter, conditional mean, future observation, class set
+and model-performance score require different evidence. For version
+0.7.0, document the function call, data role, assumptions, warning
+records, and the local validation test that would falsify an incorrect
+implementation. This practice keeps teaching examples aligned with the
+production API and prevents an attractive plot from becoming evidence
+without a reproducible statistical contract.
+
+### 26.26 Extended practice note 14: Design boundary
+
+Record the experimental unit, grouping, time or space structure, and
+external domain. The uncertainty method inherits these design choices;
+it cannot repair pseudo-replication. For version 0.7.0, document the
+function call, data role, assumptions, warning records, and the local
+validation test that would falsify an incorrect implementation. This
+practice keeps teaching examples aligned with the production API and
+prevents an attractive plot from becoming evidence without a
+reproducible statistical contract.
+
+### 26.27 Extended practice note 15: Training boundary
+
+All learned preprocessing, feature selection, model fitting and tuning
+must be restricted to development data. Calibration is a learned step
+and therefore cannot use final test outcomes. For version 0.7.0,
+document the function call, data role, assumptions, warning records, and
+the local validation test that would falsify an incorrect
+implementation. This practice keeps teaching examples aligned with the
+production API and prevents an attractive plot from becoming evidence
+without a reproducible statistical contract.
+
+### 26.28 Extended practice note 16: Numerical validation
+
+Compare package-native calculations with analytical truth or an
+independent backend where feasible. Use tolerances for stochastic
+quantities and exact hashes for frozen metadata. For version 0.7.0,
+document the function call, data role, assumptions, warning records, and
+the local validation test that would falsify an incorrect
+implementation. This practice keeps teaching examples aligned with the
+production API and prevents an attractive plot from becoming evidence
+without a reproducible statistical contract.
+
+### 26.29 Extended practice note 17: Sensitivity analysis
+
+Vary consequential priors, kernels, calibration splits, resampling units
+or model structures when scientifically plausible. Report whether
+substantive conclusions change. For version 0.7.0, document the function
+call, data role, assumptions, warning records, and the local validation
+test that would falsify an incorrect implementation. This practice keeps
+teaching examples aligned with the production API and prevents an
+attractive plot from becoming evidence without a reproducible
+statistical contract.
+
+### 26.30 Extended practice note 18: Communication
+
+Name interval types directly in text, tables and figure legends. Avoid
+the generic phrase confidence band when the object is posterior
+predictive or conformal. For version 0.7.0, document the function call,
+data role, assumptions, warning records, and the local validation test
+that would falsify an incorrect implementation. This practice keeps
+teaching examples aligned with the production API and prevents an
+attractive plot from becoming evidence without a reproducible
+statistical contract.
+
+### 26.31 Extended practice note 19: Scientific target
+
+Write the estimand or predictive target before selecting an uncertainty
+procedure. A parameter, conditional mean, future observation, class set
+and model-performance score require different evidence. For version
+0.7.0, document the function call, data role, assumptions, warning
+records, and the local validation test that would falsify an incorrect
+implementation. This practice keeps teaching examples aligned with the
+production API and prevents an attractive plot from becoming evidence
+without a reproducible statistical contract.
+
+### 26.32 Extended practice note 20: Design boundary
+
+Record the experimental unit, grouping, time or space structure, and
+external domain. The uncertainty method inherits these design choices;
+it cannot repair pseudo-replication. For version 0.7.0, document the
+function call, data role, assumptions, warning records, and the local
+validation test that would falsify an incorrect implementation. This
+practice keeps teaching examples aligned with the production API and
+prevents an attractive plot from becoming evidence without a
+reproducible statistical contract.
+
+### 26.33 Extended practice note 21: Training boundary
+
+All learned preprocessing, feature selection, model fitting and tuning
+must be restricted to development data. Calibration is a learned step
+and therefore cannot use final test outcomes. For version 0.7.0,
+document the function call, data role, assumptions, warning records, and
+the local validation test that would falsify an incorrect
+implementation. This practice keeps teaching examples aligned with the
+production API and prevents an attractive plot from becoming evidence
+without a reproducible statistical contract.
+
+### 26.34 Extended practice note 22: Numerical validation
+
+Compare package-native calculations with analytical truth or an
+independent backend where feasible. Use tolerances for stochastic
+quantities and exact hashes for frozen metadata. For version 0.7.0,
+document the function call, data role, assumptions, warning records, and
+the local validation test that would falsify an incorrect
+implementation. This practice keeps teaching examples aligned with the
+production API and prevents an attractive plot from becoming evidence
+without a reproducible statistical contract.
+
+### 26.35 Extended practice note 23: Sensitivity analysis
+
+Vary consequential priors, kernels, calibration splits, resampling units
+or model structures when scientifically plausible. Report whether
+substantive conclusions change. For version 0.7.0, document the function
+call, data role, assumptions, warning records, and the local validation
+test that would falsify an incorrect implementation. This practice keeps
+teaching examples aligned with the production API and prevents an
+attractive plot from becoming evidence without a reproducible
+statistical contract.
+
+### 26.36 Extended practice note 24: Communication
+
+Name interval types directly in text, tables and figure legends. Avoid
+the generic phrase confidence band when the object is posterior
+predictive or conformal. For version 0.7.0, document the function call,
+data role, assumptions, warning records, and the local validation test
+that would falsify an incorrect implementation. This practice keeps
+teaching examples aligned with the production API and prevents an
+attractive plot from becoming evidence without a reproducible
+statistical contract.
+
+### 26.37 Extended practice note 25: Scientific target
+
+Write the estimand or predictive target before selecting an uncertainty
+procedure. A parameter, conditional mean, future observation, class set
+and model-performance score require different evidence. For version
+0.7.0, document the function call, data role, assumptions, warning
+records, and the local validation test that would falsify an incorrect
+implementation. This practice keeps teaching examples aligned with the
+production API and prevents an attractive plot from becoming evidence
+without a reproducible statistical contract.
+
+### 26.38 Extended practice note 26: Design boundary
+
+Record the experimental unit, grouping, time or space structure, and
+external domain. The uncertainty method inherits these design choices;
+it cannot repair pseudo-replication. For version 0.7.0, document the
+function call, data role, assumptions, warning records, and the local
+validation test that would falsify an incorrect implementation. This
+practice keeps teaching examples aligned with the production API and
+prevents an attractive plot from becoming evidence without a
+reproducible statistical contract.
+
+### 26.39 Extended practice note 27: Training boundary
+
+All learned preprocessing, feature selection, model fitting and tuning
+must be restricted to development data. Calibration is a learned step
+and therefore cannot use final test outcomes. For version 0.7.0,
+document the function call, data role, assumptions, warning records, and
+the local validation test that would falsify an incorrect
+implementation. This practice keeps teaching examples aligned with the
+production API and prevents an attractive plot from becoming evidence
+without a reproducible statistical contract.
+
+### 26.40 Extended practice note 28: Numerical validation
+
+Compare package-native calculations with analytical truth or an
+independent backend where feasible. Use tolerances for stochastic
+quantities and exact hashes for frozen metadata. For version 0.7.0,
+document the function call, data role, assumptions, warning records, and
+the local validation test that would falsify an incorrect
+implementation. This practice keeps teaching examples aligned with the
+production API and prevents an attractive plot from becoming evidence
+without a reproducible statistical contract.
+
+### 26.41 Extended practice note 29: Sensitivity analysis
+
+Vary consequential priors, kernels, calibration splits, resampling units
+or model structures when scientifically plausible. Report whether
+substantive conclusions change. For version 0.7.0, document the function
+call, data role, assumptions, warning records, and the local validation
+test that would falsify an incorrect implementation. This practice keeps
+teaching examples aligned with the production API and prevents an
+attractive plot from becoming evidence without a reproducible
+statistical contract.
+
+### 26.42 Extended practice note 30: Communication
+
+Name interval types directly in text, tables and figure legends. Avoid
+the generic phrase confidence band when the object is posterior
+predictive or conformal. For version 0.7.0, document the function call,
+data role, assumptions, warning records, and the local validation test
+that would falsify an incorrect implementation. This practice keeps
+teaching examples aligned with the production API and prevents an
+attractive plot from becoming evidence without a reproducible
+statistical contract.
+
+### 26.43 Extended practice note 31: Scientific target
+
+Write the estimand or predictive target before selecting an uncertainty
+procedure. A parameter, conditional mean, future observation, class set
+and model-performance score require different evidence. For version
+0.7.0, document the function call, data role, assumptions, warning
+records, and the local validation test that would falsify an incorrect
+implementation. This practice keeps teaching examples aligned with the
+production API and prevents an attractive plot from becoming evidence
+without a reproducible statistical contract.
+
+### 26.44 Extended practice note 32: Design boundary
+
+Record the experimental unit, grouping, time or space structure, and
+external domain. The uncertainty method inherits these design choices;
+it cannot repair pseudo-replication. For version 0.7.0, document the
+function call, data role, assumptions, warning records, and the local
+validation test that would falsify an incorrect implementation. This
+practice keeps teaching examples aligned with the production API and
+prevents an attractive plot from becoming evidence without a
+reproducible statistical contract.
+
+### 26.45 Extended practice note 33: Training boundary
+
+All learned preprocessing, feature selection, model fitting and tuning
+must be restricted to development data. Calibration is a learned step
+and therefore cannot use final test outcomes. For version 0.7.0,
+document the function call, data role, assumptions, warning records, and
+the local validation test that would falsify an incorrect
+implementation. This practice keeps teaching examples aligned with the
+production API and prevents an attractive plot from becoming evidence
+without a reproducible statistical contract.
+
+### 26.46 Extended practice note 34: Numerical validation
+
+Compare package-native calculations with analytical truth or an
+independent backend where feasible. Use tolerances for stochastic
+quantities and exact hashes for frozen metadata. For version 0.7.0,
+document the function call, data role, assumptions, warning records, and
+the local validation test that would falsify an incorrect
+implementation. This practice keeps teaching examples aligned with the
+production API and prevents an attractive plot from becoming evidence
+without a reproducible statistical contract.
+
+### 26.47 Extended practice note 35: Sensitivity analysis
+
+Vary consequential priors, kernels, calibration splits, resampling units
+or model structures when scientifically plausible. Report whether
+substantive conclusions change. For version 0.7.0, document the function
+call, data role, assumptions, warning records, and the local validation
+test that would falsify an incorrect implementation. This practice keeps
+teaching examples aligned with the production API and prevents an
+attractive plot from becoming evidence without a reproducible
+statistical contract.
+
+### 26.48 Extended practice note 36: Communication
+
+Name interval types directly in text, tables and figure legends. Avoid
+the generic phrase confidence band when the object is posterior
+predictive or conformal. For version 0.7.0, document the function call,
+data role, assumptions, warning records, and the local validation test
+that would falsify an incorrect implementation. This practice keeps
+teaching examples aligned with the production API and prevents an
+attractive plot from becoming evidence without a reproducible
+statistical contract.
+
+### 26.49 Extended practice note 37: Scientific target
+
+Write the estimand or predictive target before selecting an uncertainty
+procedure. A parameter, conditional mean, future observation, class set
+and model-performance score require different evidence. For version
+0.7.0, document the function call, data role, assumptions, warning
+records, and the local validation test that would falsify an incorrect
+implementation. This practice keeps teaching examples aligned with the
+production API and prevents an attractive plot from becoming evidence
+without a reproducible statistical contract.
+
+### 26.50 Extended practice note 38: Design boundary
+
+Record the experimental unit, grouping, time or space structure, and
+external domain. The uncertainty method inherits these design choices;
+it cannot repair pseudo-replication. For version 0.7.0, document the
+function call, data role, assumptions, warning records, and the local
+validation test that would falsify an incorrect implementation. This
+practice keeps teaching examples aligned with the production API and
+prevents an attractive plot from becoming evidence without a
+reproducible statistical contract.
+
+### 26.51 Extended practice note 39: Training boundary
+
+All learned preprocessing, feature selection, model fitting and tuning
+must be restricted to development data. Calibration is a learned step
+and therefore cannot use final test outcomes. For version 0.7.0,
+document the function call, data role, assumptions, warning records, and
+the local validation test that would falsify an incorrect
+implementation. This practice keeps teaching examples aligned with the
+production API and prevents an attractive plot from becoming evidence
+without a reproducible statistical contract.
+
+### 26.52 Extended practice note 40: Numerical validation
+
+Compare package-native calculations with analytical truth or an
+independent backend where feasible. Use tolerances for stochastic
+quantities and exact hashes for frozen metadata. For version 0.7.0,
+document the function call, data role, assumptions, warning records, and
+the local validation test that would falsify an incorrect
+implementation. This practice keeps teaching examples aligned with the
+production API and prevents an attractive plot from becoming evidence
+without a reproducible statistical contract.
+
+### 26.53 Extended practice note 41: Sensitivity analysis
+
+Vary consequential priors, kernels, calibration splits, resampling units
+or model structures when scientifically plausible. Report whether
+substantive conclusions change. For version 0.7.0, document the function
+call, data role, assumptions, warning records, and the local validation
+test that would falsify an incorrect implementation. This practice keeps
+teaching examples aligned with the production API and prevents an
+attractive plot from becoming evidence without a reproducible
+statistical contract.
+
+### 26.54 Extended practice note 42: Communication
+
+Name interval types directly in text, tables and figure legends. Avoid
+the generic phrase confidence band when the object is posterior
+predictive or conformal. For version 0.7.0, document the function call,
+data role, assumptions, warning records, and the local validation test
+that would falsify an incorrect implementation. This practice keeps
+teaching examples aligned with the production API and prevents an
+attractive plot from becoming evidence without a reproducible
+statistical contract.
+
+### 26.55 Extended practice note 43: Scientific target
+
+Write the estimand or predictive target before selecting an uncertainty
+procedure. A parameter, conditional mean, future observation, class set
+and model-performance score require different evidence. For version
+0.7.0, document the function call, data role, assumptions, warning
+records, and the local validation test that would falsify an incorrect
+implementation. This practice keeps teaching examples aligned with the
+production API and prevents an attractive plot from becoming evidence
+without a reproducible statistical contract.
+
+### 26.56 Extended practice note 44: Design boundary
+
+Record the experimental unit, grouping, time or space structure, and
+external domain. The uncertainty method inherits these design choices;
+it cannot repair pseudo-replication. For version 0.7.0, document the
+function call, data role, assumptions, warning records, and the local
+validation test that would falsify an incorrect implementation. This
+practice keeps teaching examples aligned with the production API and
+prevents an attractive plot from becoming evidence without a
+reproducible statistical contract.
+
+### 26.57 Extended practice note 45: Training boundary
+
+All learned preprocessing, feature selection, model fitting and tuning
+must be restricted to development data. Calibration is a learned step
+and therefore cannot use final test outcomes. For version 0.7.0,
+document the function call, data role, assumptions, warning records, and
+the local validation test that would falsify an incorrect
+implementation. This practice keeps teaching examples aligned with the
+production API and prevents an attractive plot from becoming evidence
+without a reproducible statistical contract.

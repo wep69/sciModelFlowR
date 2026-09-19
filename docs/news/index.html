@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">sciModelFlowR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -33,6 +33,38 @@
       <small>Source: <a href="https://github.com/wep69/sciModelFlowR/blob/HEAD/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="1.0.2" id="scimodelflowr-102">sciModelFlowR 1.0.2<a class="anchor" aria-label="anchor" href="#scimodelflowr-102"></a></h2>
+<div class="section level3">
+<h3 id="patch-release---audited-tutorial-corrections-1-0-2">Patch release - audited-tutorial corrections<a class="anchor" aria-label="anchor" href="#patch-release---audited-tutorial-corrections-1-0-2"></a></h3>
+<p>Version 1.0.2 fixes the five defects reported by the audited tutorial of the 1.0.1 installed library (<code>RELATORIO-AO-AUTOR.md</code> in the tutorial project), each with a regression test in <code>tests/testthat/test-regressions-102.R</code>. The 246-symbol public API is unchanged; the 1.0.0 freeze and the 1.0.1 corrections remain the historical reference.</p>
+<div class="section level4">
+<h4 id="portable-persistence-1-0-2">Portable persistence<a class="anchor" aria-label="anchor" href="#portable-persistence-1-0-2"></a></h4>
+<ul><li>
+<code>R/core-serialization.R</code>, <code><a href="../reference/smf_core_api.html">smf_to_json()</a></code>: added <code>na = "null"</code>. Without it, <code>NA_real_</code> was written as the text <code>"NA"</code>; a portable bundle saved under the default preprocessing (<code>impute_numeric = "none"</code>) validated and loaded but failed at prediction with <code>argumento não-numérico para operador binário</code>.</li>
+<li>
+<code>R/preprocess.R</code>, <code><a href="../reference/smf_core_api.html">smf_apply_preprocessor()</a></code>: the imputation state is coerced with <code><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric()</a></code> before the subassignment, tolerating textual/NULL values restored from bundles written by earlier versions.</li>
+<li>
+<code>R/tracking.R</code>, <code>.smf_atomic_write_json()</code>: same <code>na = "null"</code> hygiene for run records and manifests.</li>
+</ul></div>
+<div class="section level4">
+<h4 id="tuning-contract-1-0-2">Tuning contract<a class="anchor" aria-label="anchor" href="#tuning-contract-1-0-2"></a></h4>
+<ul><li>
+<code>R/tuning-core.R</code>, <code><a href="../reference/smf_tuning_api.html">smf_tune()</a></code>: a tuning objective that is not declared in <code>spec@metrics</code> now aborts with <code>smf_tuning_error</code> (class <code>TUNING_OBJECTIVE_NOT_IN_METRICS</code>) and lists the available metrics, instead of producing an all-NA archive column and a silently empty selection.</li>
+<li>
+<code>R/print-methods.R</code>, <code>print.TuningResult</code>: the “selected” line distinguishes “no trial produced finite objective values” from “explicit compromise required for multi-objective tuning”.</li>
+</ul></div>
+<div class="section level4">
+<h4 id="interface-and-type-1-0-2">Interface and type<a class="anchor" aria-label="anchor" href="#interface-and-type-1-0-2"></a></h4>
+<ul><li>
+<code>R/explain.R</code>, <code><a href="../reference/additional-api-070.html">smf_pdp()</a></code>/<code><a href="../reference/additional-api-070.html">smf_ice()</a></code>: the <code>value</code> column keeps the numeric type for numeric predictors (text remains only for factors), matching <code><a href="../reference/additional-api-070.html">smf_ale()</a></code>; this also removes the internal <code><a href="https://rdrr.io/r/base/character.html" class="external-link">as.character()</a></code> sensitivity to <code>OutDec</code>.</li>
+<li>
+<code>R/probabilistic-core.R</code>, <code><a href="../reference/additional-api-070.html">smf_dist_interval()</a></code>: the <code>point</code> representation is refused with <code>smf_capability_error</code>, like <code><a href="../reference/additional-api-070.html">smf_dist_cdf()</a></code> on the same representation, instead of silently returning a degenerate <code>[m, m]</code> interval.</li>
+<li>
+<code>R/core-capabilities.R</code>, <code><a href="../reference/smf_core_api.html">smf_backend_capabilities()</a></code>: the unknown-engine message now lists the accepted engines and points to <code><a href="../reference/additional-api-070.html">smf_available_model_adapters()</a></code>.</li>
+</ul></div>
+</div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="1.0.1" id="scimodelflowr-101">sciModelFlowR 1.0.1<a class="anchor" aria-label="anchor" href="#scimodelflowr-101"></a></h2>
 <div class="section level3">

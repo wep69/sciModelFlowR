@@ -1,3 +1,48 @@
+# sciModelFlowR 1.0.2
+
+## Patch release - audited-tutorial corrections
+
+Version 1.0.2 fixes the five defects reported by the audited tutorial of the
+1.0.1 installed library (`RELATORIO-AO-AUTOR.md` in the tutorial project), each
+with a regression test in `tests/testthat/test-regressions-102.R`. The
+246-symbol public API is unchanged; the 1.0.0 freeze and the 1.0.1 corrections
+remain the historical reference.
+
+### Portable persistence
+
+- `R/core-serialization.R`, `smf_to_json()`: added `na = "null"`. Without it,
+  `NA_real_` was written as the text `"NA"`; a portable bundle saved under the
+  default preprocessing (`impute_numeric = "none"`) validated and loaded but
+  failed at prediction with `argumento não-numérico para operador binário`.
+- `R/preprocess.R`, `smf_apply_preprocessor()`: the imputation state is coerced
+  with `as.numeric()` before the subassignment, tolerating textual/NULL values
+  restored from bundles written by earlier versions.
+- `R/tracking.R`, `.smf_atomic_write_json()`: same `na = "null"` hygiene for run
+  records and manifests.
+
+### Tuning contract
+
+- `R/tuning-core.R`, `smf_tune()`: a tuning objective that is not declared in
+  `spec@metrics` now aborts with `smf_tuning_error` (class
+  `TUNING_OBJECTIVE_NOT_IN_METRICS`) and lists the available metrics, instead of
+  producing an all-NA archive column and a silently empty selection.
+- `R/print-methods.R`, `print.TuningResult`: the "selected" line distinguishes
+  "no trial produced finite objective values" from "explicit compromise
+  required for multi-objective tuning".
+
+### Interface and type
+
+- `R/explain.R`, `smf_pdp()`/`smf_ice()`: the `value` column keeps the numeric
+  type for numeric predictors (text remains only for factors), matching
+  `smf_ale()`; this also removes the internal `as.character()` sensitivity to
+  `OutDec`.
+- `R/probabilistic-core.R`, `smf_dist_interval()`: the `point` representation is
+  refused with `smf_capability_error`, like `smf_dist_cdf()` on the same
+  representation, instead of silently returning a degenerate `[m, m]` interval.
+- `R/core-capabilities.R`, `smf_backend_capabilities()`: the unknown-engine
+  message now lists the accepted engines and points to
+  `smf_available_model_adapters()`.
+
 # sciModelFlowR 1.0.1
 
 ## Patch release — local validation campaign corrections

@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="index.html">sciModelFlowR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -335,6 +335,20 @@
 <li>
 <strong>Publicação (2026-09-18):</strong> repo público <code>https://github.com/wep69/sciModelFlowR</code> (branch <code>main</code>, sem CI); GitHub Pages ativo via <em>Deploy from a branch</em> → <code>main</code> → <code>/docs</code> (<code>https://wep69.github.io/sciModelFlowR/</code>, build <code>built</code>; home/reference/artigo verificados HTTP 200). Tarball final reconstruído (<code>B35A37D0E6F8FAE2DFF32DE838EBC3D860B40E69CB7CBB58F352CEC25172289B</code>) e check re-executado: <strong>0 ERROR / 0 WARNING / 2 NOTEs</strong> — a nota de URLs inválidas desapareceu com o repo publicado.</li>
 </ul></div>
+<div class="section level2">
+<h2 id="correções-102-auditoria-do-tutorial-da-101">Correções 1.0.2 (auditoria do tutorial da 1.0.1)<a class="anchor" aria-label="anchor" href="#corre%C3%A7%C3%B5es-102-auditoria-do-tutorial-da-101"></a></h2>
+<p>Cinco correções derivadas da auditoria da biblioteca instalada (skill <code>api-audited-tutorial</code>), com o relatório ao autor em <code>RELATORIO-AO-AUTOR.md</code> (projeto do roteiro) e testes de regressão em <code>tests/testthat/test-regressions-102.R</code>. A API pública de 246 símbolos e o freeze 1.0.0 permanecem intactos; detalhes completos em <code>NEWS.md</code> (1.0.2).</p>
+<ol style="list-style-type: decimal"><li>
+<strong><code><a href="reference/smf_core_api.html">smf_to_json()</a></code> sem <code>na = "null"</code></strong> — <code>NA_real_</code> virava texto <code>"NA"</code> e o bundle portátil com pré-processamento padrão falhava só na previsão; corrigido em <code>R/core-serialization.R</code> (+ higiene em <code>R/tracking.R</code>) e tolerância a estados textuais/NULL em <code>R/preprocess.R</code>.</li>
+<li>
+<strong>Objetivo de tuning fora de <code>spec@metrics</code></strong> — archive com coluna toda <code>NA</code> e seleção vazia sem aviso; agora aborta com <code>smf_tuning_error</code> (<code>R/tuning-core.R</code>) e o <code>print</code> distingue o motivo (<code>R/print-methods.R</code>).</li>
+<li>
+<strong><code>value</code> textual no PDP/ICE numérico</strong> — passa a preservar o tipo numérico (<code>R/explain.R</code>), como o ALE, eliminando também a sensibilidade a <code>OutDec</code>.</li>
+<li>
+<strong>Intervalo degenerado em representação <code>point</code></strong> — agora recusa, como o CDF da mesma representação (<code>R/probabilistic-core.R</code>).</li>
+<li>
+<strong>Mensagem de engine desconhecido</strong> — passa a listar os engines aceitos e apontar <code><a href="reference/additional-api-070.html">smf_available_model_adapters()</a></code> (<code>R/core-capabilities.R</code>).</li>
+</ol></div>
 </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

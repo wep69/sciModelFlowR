@@ -1,0 +1,894 @@
+# sciModelFlowR 0.3.0: Imbalance, Calibration, and Thresholds
+
+## Imbalance, calibration, and thresholds
+
+Imbalanced classification is not one problem. It combines at least four
+distinct questions: how a learner sees the training data, how
+probabilities reflect the target population, how performance is
+summarized across classes, and how a probability is converted into an
+action. `sciModelFlowR` 0.3.0 keeps these questions separate.
+
+The governing rule is:
+
+**Sampling and weighting belong to analysis data. Calibration belongs to
+independent calibration evidence. Threshold choice belongs to a declared
+decision objective. Final test labels belong to evaluation only.**
+
+### 1. Learning objectives
+
+After this vignette, the reader should be able to explain why class
+imbalance does not automatically justify SMOTE, apply class weights or
+sampling only inside training folds, distinguish training prevalence
+from deployment prevalence, evaluate minority-class performance with
+appropriate metrics, recalibrate probabilities after imbalance handling,
+choose a threshold on validation/calibration data, and document the
+entire sequence without allowing final test labels to influence a
+decision rule.
+
+### 2. The Gold multiclass fixture
+
+``` r
+
+library(sciModelFlowR)
+
+d <- smf_load_dataset("gold_multiclass_imbalanced")
+table(d$class)
+```
+
+Class `C` is deliberately uncommon. The `true_p_A`, `true_p_B`, and
+`true_p_C` columns are generator metadata and must be excluded from
+predictors. Their purpose is validation of simulated behavior, not model
+fitting.
+
+The dataset is intentionally not perfectly separable. This prevents a
+sophisticated algorithm from making the imbalance problem disappear
+simply because classes are trivial to distinguish.
+
+### 3. Declare imbalance handling
+
+``` r
+
+smf_imbalance_spec("none")
+smf_imbalance_spec("weights")
+smf_imbalance_spec("downsample")
+smf_imbalance_spec("upsample")
+smf_imbalance_spec("smote", ratio = 1, neighbors = 5L)
+```
+
+An `ImbalanceSpec` is part of the experiment specification. This makes
+the sampling rule auditable and prevents a notebook from applying an
+undocumented transformation before the package sees the data.
+
+### 4. The fold boundary is non-negotiable
+
+Oversampling before cross-validation allows synthetic or duplicated
+information derived from assessment observations to enter training. Even
+when the exact assessment row is not copied, nearest-neighbor synthesis
+can encode its geometry.
+
+`sciModelFlowR` therefore refuses to apply imbalance learning with
+`context = "assessment"` or `context = "test"`. In resampling, the
+operation is invoked separately for each analysis fold after
+preprocessing and feature-state learning have established the training
+boundary.
+
+### 5. Class weights
+
+Inverse-frequency weights increase the contribution of observations from
+uncommon classes without fabricating new predictor vectors. They are
+often a useful first alternative when the selected learner supports case
+weights.
+
+``` r
+
+weighted <- smf_apply_imbalance(
+  data = training_table,
+  outcome = "class",
+  spec = smf_imbalance_spec("weights"),
+  context = "analysis"
+)
+```
+
+Weights change the fitting objective. They do not automatically change
+the event prevalence represented by the raw data, and they do not
+guarantee calibrated probabilities for the target population.
+
+### 6. Random undersampling
+
+Undersampling can reduce majority-class dominance and computation but
+discards observed information. The retained majority examples also vary
+with the seed. Use it when there is a clear reason, then evaluate
+stability across repetitions rather than treating one sampled training
+set as uniquely correct.
+
+If the majority class contains important substructure, aggressive
+undersampling can remove rare but scientifically relevant majority
+patterns.
+
+### 7. Random oversampling
+
+Random oversampling duplicates minority observations. It increases their
+contribution to the fitting process but does not create new independent
+information. A learner may overfit duplicated rare examples,
+particularly when the minority sample is very small.
+
+The scientific unit remains the original unit. Replicated rows created
+for training must never be counted as additional experimental
+replication in inference or reporting.
+
+### 8. SMOTE and variants
+
+The optional `themis` adapter provides SMOTE-family operations. In the
+managed workflow, they are used only on analysis data. The synthetic
+observations are not carried into the assessment set, calibration set,
+or scientific sample-size accounting.
+
+SMOTE requires a meaningful predictor geometry. Distance after scaling
+numeric predictors can be useful; distance across poorly encoded
+categories or irrelevant high-dimensional variables can be misleading.
+The existence of an implementation is not evidence that synthetic
+interpolation is scientifically appropriate.
+
+### 9. Sampling order and preprocessing
+
+A defensible sequence is generally:
+
+1.  define the analysis fold;
+2.  fit training-only preprocessing;
+3.  fit training-only feature state;
+4.  apply the resulting representation to the analysis rows;
+5.  learn weights or synthetic sampling only from those rows;
+6.  fit the model;
+7.  transform assessment rows with the saved preprocessing/feature state
+    only;
+8.  predict assessment rows without resampling them.
+
+This order keeps the assessment outcome invisible to the entire training
+pipeline.
+
+### 10. Why accuracy is inadequate
+
+A model that predicts the majority class for every observation can have
+high accuracy when prevalence is extreme. Balanced accuracy averages
+sensitivity across classes and therefore gives rare classes equal
+class-level importance. MCC summarizes the full binary confusion matrix
+and is often informative under imbalance. PR-AUC focuses attention on
+precision-recall behavior for a chosen event.
+
+The right metric depends on the scientific cost structure. No imbalance
+method should be judged solely by how much it improves one metric
+selected after looking at the test set.
+
+### 11. ROC-AUC versus PR-AUC
+
+ROC-AUC summarizes ranking between positive and negative cases and is
+relatively insensitive to prevalence. This can be useful, but a high
+ROC-AUC can coexist with low precision when the event is rare. PR-AUC
+makes false positives more visible through precision.
+
+For rare pest detection, disease screening, or failure prediction, show
+both ranking and operational consequences rather than using one curve as
+a universal performance certificate.
+
+### 12. Calibration after reweighting or sampling
+
+Changing the training class distribution can change the relationship
+between model scores and deployment probabilities. A classifier trained
+on artificially balanced data may rank cases well while its raw
+probabilities no longer reflect the target prevalence.
+
+Version 0.3.0 therefore allows an explicit calibration stage using a
+subset of analysis-side data that was not used for model fitting. Final
+test labels remain protected.
+
+### 13. Calibration specification
+
+``` r
+
+cal_spec <- smf_calibration_spec(
+  method = "platt",
+  source = "analysis_holdout",
+  calibration_prop = 0.20,
+  bins = 10L
+)
+```
+
+The managed experiment subdivides its training portion into a
+model-fitting subset and a calibration subset. Preprocessing and feature
+state are learned on the model-fitting subset, then applied to
+calibration data. The calibration model is estimated from calibration
+predictions and outcomes. Only then is the untouched final test set
+predicted and calibrated.
+
+### 14. Platt calibration
+
+Platt calibration fits a logistic relationship between the model score
+and the observed binary outcome. In the package-native implementation,
+probabilities are converted to log odds before fitting the calibration
+model.
+
+It is appropriate when a smooth monotonic correction is scientifically
+plausible and the calibration sample is sufficient. It cannot rescue a
+model that contains no useful ranking information.
+
+### 15. Isotonic calibration
+
+Isotonic regression estimates a monotonic but flexible probability
+mapping. It can represent nonlinear miscalibration without choosing a
+sigmoid form. The flexibility also means that small calibration samples
+can produce unstable step functions.
+
+For multiclass outcomes, 0.3.0 applies one-vs-rest isotonic maps and
+renormalizes the resulting probabilities. The report should mention that
+this renormalization can affect perfect one-vs-rest calibration.
+
+### 16. Multinomial calibration
+
+Multiclass calibration can be modeled jointly through a multinomial
+calibration adapter. Version 0.3.0 provides an optional `nnet`-based
+path using log-probability contrasts as predictors. This is more
+coherent than applying a binary Platt model independently and pretending
+the outputs will necessarily sum to one.
+
+Multinomial calibration requires enough observations from every class.
+If a rare class has only a handful of calibration examples, the correct
+response may be to report uncertainty and gather more data rather than
+to fit a high-dimensional calibration model.
+
+### 17. Beta calibration status
+
+The specification reserves `beta` calibration because the method is
+useful for probability distortions not captured by a single sigmoid. The
+0.3.0 package does not automatically select it. The optional
+`probably`/`betacal` route remains adapter-gated until runtime
+validation is completed in the final local validation cycle.
+
+A declared method that cannot be certified should fail explicitly rather
+than fall back to Platt calibration.
+
+### 18. Reliability diagrams
+
+[`smf_calibration_report()`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+groups probability predictions into bins and reports mean predicted
+probability, observed frequency, sample size, and absolute gap.
+`smf_plot(..., type = "calibration")` can visualize the same
+relationship.
+
+A reliability diagram should show how much data support each region. A
+point at 0.9 based on three observations is not equivalent to a point
+based on three hundred observations.
+
+### 19. Expected calibration error
+
+ECE is the weighted mean of absolute bin-wise calibration gaps. It is
+compact and useful for comparison, but it changes with the number and
+placement of bins. Avoid reporting ECE to several decimal places without
+saying how it was calculated.
+
+Calibration plots, Brier score, log loss, and class counts provide
+necessary context.
+
+### 20. Thresholds are decisions, not calibration
+
+A calibrated probability does not specify the correct classification
+threshold.
+[`smf_optimize_threshold()`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+searches a user-provided threshold grid using calibration or validation
+evidence and a declared metric.
+
+``` r
+
+thr <- smf_optimize_threshold(
+  truth = validation_truth,
+  probability = validation_probability,
+  metric = "balanced_accuracy",
+  positive_label = "event"
+)
+```
+
+The chosen threshold belongs in the report and manifest. It must not be
+recomputed on the final test set.
+
+### 21. Cost-sensitive decisions
+
+Balanced accuracy, F1, or MCC are generic criteria. A real intervention
+may have an asymmetric loss: missing a severe pest outbreak can cost far
+more than an unnecessary scouting visit. In that case the scientifically
+meaningful decision rule should use explicit costs or utilities.
+
+Version 0.3.0 provides metric-based threshold optimization as a
+foundation. A later decision-analysis layer can incorporate richer cost
+structures without changing the probability model itself.
+
+### 22. Prevalence shift
+
+Calibration is conditional on the population represented by the
+calibration data. If deployment prevalence changes, a previously
+calibrated model may no longer be calibrated. This is especially
+important for disease surveillance across seasons, regions, cultivars,
+or management systems.
+
+External validation should therefore report event prevalence and
+probability calibration, not only discrimination.
+
+### 23. Binary workflow
+
+``` r
+
+b <- smf_load_dataset("gold_binary_calibration")
+b$event <- factor(ifelse(b$event == 1, "yes", "no"), levels = c("no", "yes"))
+
+spec <- smf_experiment_spec(
+  task = smf_task_spec("binary", "event", positive_label = "yes"),
+  data = smf_data_spec("event", c("x1", "x2"), id_column = "obs_id"),
+  design = smf_design_spec(id_column = "obs_id"),
+  preprocessing = smf_preprocess_spec(center = TRUE, scale = TRUE),
+  resampling = smf_resampling_spec("stratified_holdout", .75, strata = "event"),
+  model = smf_model_spec("logistic_regression", "stats"),
+  metrics = list(
+    smf_metric_spec("balanced_accuracy"),
+    smf_metric_spec("log_loss"),
+    smf_metric_spec("brier")
+  ),
+  imbalance = smf_imbalance_spec("weights", threshold = .40),
+  calibration = smf_calibration_spec("platt", calibration_prop = .20)
+)
+
+fit <- smf_fit_experiment(spec, b)
+```
+
+This sequence is deliberately explicit. Weight learning uses only the
+model-training portion. Platt calibration uses a separate calibration
+portion. The final test labels contribute only to the reported metrics.
+
+### 24. Multiclass workflow
+
+For the imbalanced multiclass Gold fixture, prefer class weights or
+fold-safe sampling coupled with a backend that can produce multiclass
+probabilities. Calibration can use isotonic one-vs-rest or a multinomial
+method when there is enough calibration evidence.
+
+The final report should include the confusion matrix or class-wise
+recall, probability scores, class prevalence, and calibration by class.
+A pooled accuracy value hides too much information.
+
+### 25. Scientifically inappropriate workflow
+
+The following procedure is invalid: apply SMOTE to the complete dataset,
+optimize the probability threshold on the test set, fit isotonic
+calibration on those same test predictions, then report the improved
+test Brier score.
+
+Every post-processing choice has used the labels that were supposed to
+evaluate generalization. The reported test result is therefore a
+development score, not independent evidence. A correct workflow reserves
+calibration/validation data for these decisions and keeps the final test
+set untouched until the entire pipeline is fixed.
+
+### 26. Reporting checklist
+
+original class prevalence reported;
+
+scientific event/positive class defined;
+
+resampling unit declared;
+
+weighting or sampling method named;
+
+sampling performed only within analysis folds;
+
+synthetic rows excluded from scientific sample-size claims;
+
+calibration source declared;
+
+calibration sample separated from final test;
+
+calibration method and bins reported;
+
+threshold selection data and criterion reported;
+
+balanced/class-specific metrics shown;
+
+log loss or Brier score shown when probabilities matter;
+
+external/deployment prevalence discussed;
+
+manifest records sampling, calibration, threshold, seed, and backend.
+
+#### Extended scenario 1: Pest outbreak detection
+
+Only a small fraction of scouting observations contain the target pest.
+In a `sciModelFlowR` analysis, the first step is to translate this
+situation into an explicit prediction target and a validation unit. Use
+group-aware folds if multiple observations come from the same field and
+learn weights or sampling inside each analysis fold. The important point
+is that the estimator is not allowed to redefine the scientific question
+after performance results are visible.
+
+The main failure mode is oversampling before the field split. A
+defensible workflow stores the split or resampling geometry, fits all
+learned transformations only on analysis rows, and evaluates the
+relevant quantities on held-out observations. Report precision, recall,
+PR-AUC, probability calibration, and the action threshold. The evidence
+should be reported together with the model family, backend, probability
+or response scale, warnings, seed, and manifest hash. This keeps the
+result interpretable even if a different backend is evaluated later.
+
+#### Extended scenario 2: Disease screening
+
+A sensor model identifies diseased plants when disease prevalence varies
+by greenhouse. In a `sciModelFlowR` analysis, the first step is to
+translate this situation into an explicit prediction target and a
+validation unit. Treat greenhouse as a grouping or external domain and
+examine prevalence-specific calibration. The important point is that the
+estimator is not allowed to redefine the scientific question after
+performance results are visible.
+
+The main failure mode is using a single random split that mixes
+greenhouse effects. A defensible workflow stores the split or resampling
+geometry, fits all learned transformations only on analysis rows, and
+evaluates the relevant quantities on held-out observations. Report
+calibration and sensitivity by greenhouse as well as pooled performance.
+The evidence should be reported together with the model family, backend,
+probability or response scale, warnings, seed, and manifest hash. This
+keeps the result interpretable even if a different backend is evaluated
+later.
+
+#### Extended scenario 3: Rare nutrient disorder
+
+A multiclass image model has one rare deficiency category. In a
+`sciModelFlowR` analysis, the first step is to translate this situation
+into an explicit prediction target and a validation unit. Preserve class
+labels in every probability matrix and use class-wise recall plus
+multiclass log loss. The important point is that the estimator is not
+allowed to redefine the scientific question after performance results
+are visible.
+
+The main failure mode is optimizing pooled accuracy while never
+detecting the rare disorder. A defensible workflow stores the split or
+resampling geometry, fits all learned transformations only on analysis
+rows, and evaluates the relevant quantities on held-out observations.
+Show the rare-class sample count and its calibration evidence. The
+evidence should be reported together with the model family, backend,
+probability or response scale, warnings, seed, and manifest hash. This
+keeps the result interpretable even if a different backend is evaluated
+later.
+
+#### Extended scenario 4: Quality rejection
+
+A classifier flags rare unacceptable produce where false negatives are
+expensive. In a `sciModelFlowR` analysis, the first step is to translate
+this situation into an explicit prediction target and a validation unit.
+Choose the threshold using a validation objective that reflects the
+asymmetric consequence. The important point is that the estimator is not
+allowed to redefine the scientific question after performance results
+are visible.
+
+The main failure mode is choosing 0.5 because it is conventional. A
+defensible workflow stores the split or resampling geometry, fits all
+learned transformations only on analysis rows, and evaluates the
+relevant quantities on held-out observations. Report the decision
+criterion and sensitivity analysis across plausible thresholds. The
+evidence should be reported together with the model family, backend,
+probability or response scale, warnings, seed, and manifest hash. This
+keeps the result interpretable even if a different backend is evaluated
+later.
+
+#### Extended scenario 5: Seasonal prevalence shift
+
+A disease event is common in wet seasons and uncommon in dry seasons. In
+a `sciModelFlowR` analysis, the first step is to translate this
+situation into an explicit prediction target and a validation unit. Use
+temporally honest validation and evaluate calibration separately by
+season. The important point is that the estimator is not allowed to
+redefine the scientific question after performance results are visible.
+
+The main failure mode is assuming one calibration map remains valid
+under changed base rates. A defensible workflow stores the split or
+resampling geometry, fits all learned transformations only on analysis
+rows, and evaluates the relevant quantities on held-out observations.
+Report seasonal prevalence, calibration gap, and threshold implications.
+The evidence should be reported together with the model family, backend,
+probability or response scale, warnings, seed, and manifest hash. This
+keeps the result interpretable even if a different backend is evaluated
+later.
+
+#### Extended scenario 6: Spatially clustered rare events
+
+Rare soil contamination cases occur in spatial clusters. In a
+`sciModelFlowR` analysis, the first step is to translate this situation
+into an explicit prediction target and a validation unit. Use spatial
+validation and ensure synthetic sampling never crosses the assessment
+boundary. The important point is that the estimator is not allowed to
+redefine the scientific question after performance results are visible.
+
+The main failure mode is random row-wise SMOTE that creates
+near-neighbors of held-out locations. A defensible workflow stores the
+split or resampling geometry, fits all learned transformations only on
+analysis rows, and evaluates the relevant quantities on held-out
+observations. Report spatial separation and class-specific errors. The
+evidence should be reported together with the model family, backend,
+probability or response scale, warnings, seed, and manifest hash. This
+keeps the result interpretable even if a different backend is evaluated
+later.
+
+#### Extended scenario 7: Instrument anomaly detection
+
+Failures are rare and instruments contribute repeated records. In a
+`sciModelFlowR` analysis, the first step is to translate this situation
+into an explicit prediction target and a validation unit. Keep
+instrument identity grouped and evaluate thresholds on unseen
+instruments when deployment requires it. The important point is that the
+estimator is not allowed to redefine the scientific question after
+performance results are visible.
+
+The main failure mode is letting records from the same failing
+instrument appear on both sides of a split. A defensible workflow stores
+the split or resampling geometry, fits all learned transformations only
+on analysis rows, and evaluates the relevant quantities on held-out
+observations. Report instrument-level event counts and external
+calibration. The evidence should be reported together with the model
+family, backend, probability or response scale, warnings, seed, and
+manifest hash. This keeps the result interpretable even if a different
+backend is evaluated later.
+
+#### Extended scenario 8: Breeding selection
+
+A rare superior genotype class is predicted across environments. In a
+`sciModelFlowR` analysis, the first step is to translate this situation
+into an explicit prediction target and a validation unit. Separate
+environment transfer from class imbalance and do not create synthetic
+genotypes that are interpreted as real experimental units. The important
+point is that the estimator is not allowed to redefine the scientific
+question after performance results are visible.
+
+The main failure mode is counting oversampled records as biological
+replication. A defensible workflow stores the split or resampling
+geometry, fits all learned transformations only on analysis rows, and
+evaluates the relevant quantities on held-out observations. Report
+original genotype counts and environment-wise probability performance.
+The evidence should be reported together with the model family, backend,
+probability or response scale, warnings, seed, and manifest hash. This
+keeps the result interpretable even if a different backend is evaluated
+later.
+
+#### Extended scenario 9: Pest outbreak detection
+
+Only a small fraction of scouting observations contain the target pest.
+In a `sciModelFlowR` analysis, the first step is to translate this
+situation into an explicit prediction target and a validation unit. Use
+group-aware folds if multiple observations come from the same field and
+learn weights or sampling inside each analysis fold. The important point
+is that the estimator is not allowed to redefine the scientific question
+after performance results are visible.
+
+The main failure mode is oversampling before the field split. A
+defensible workflow stores the split or resampling geometry, fits all
+learned transformations only on analysis rows, and evaluates the
+relevant quantities on held-out observations. Report precision, recall,
+PR-AUC, probability calibration, and the action threshold. The evidence
+should be reported together with the model family, backend, probability
+or response scale, warnings, seed, and manifest hash. This keeps the
+result interpretable even if a different backend is evaluated later.
+
+#### Extended scenario 10: Disease screening
+
+A sensor model identifies diseased plants when disease prevalence varies
+by greenhouse. In a `sciModelFlowR` analysis, the first step is to
+translate this situation into an explicit prediction target and a
+validation unit. Treat greenhouse as a grouping or external domain and
+examine prevalence-specific calibration. The important point is that the
+estimator is not allowed to redefine the scientific question after
+performance results are visible.
+
+The main failure mode is using a single random split that mixes
+greenhouse effects. A defensible workflow stores the split or resampling
+geometry, fits all learned transformations only on analysis rows, and
+evaluates the relevant quantities on held-out observations. Report
+calibration and sensitivity by greenhouse as well as pooled performance.
+The evidence should be reported together with the model family, backend,
+probability or response scale, warnings, seed, and manifest hash. This
+keeps the result interpretable even if a different backend is evaluated
+later.
+
+#### Extended scenario 11: Rare nutrient disorder
+
+A multiclass image model has one rare deficiency category. In a
+`sciModelFlowR` analysis, the first step is to translate this situation
+into an explicit prediction target and a validation unit. Preserve class
+labels in every probability matrix and use class-wise recall plus
+multiclass log loss. The important point is that the estimator is not
+allowed to redefine the scientific question after performance results
+are visible.
+
+The main failure mode is optimizing pooled accuracy while never
+detecting the rare disorder. A defensible workflow stores the split or
+resampling geometry, fits all learned transformations only on analysis
+rows, and evaluates the relevant quantities on held-out observations.
+Show the rare-class sample count and its calibration evidence. The
+evidence should be reported together with the model family, backend,
+probability or response scale, warnings, seed, and manifest hash. This
+keeps the result interpretable even if a different backend is evaluated
+later.
+
+#### Extended scenario 12: Quality rejection
+
+A classifier flags rare unacceptable produce where false negatives are
+expensive. In a `sciModelFlowR` analysis, the first step is to translate
+this situation into an explicit prediction target and a validation unit.
+Choose the threshold using a validation objective that reflects the
+asymmetric consequence. The important point is that the estimator is not
+allowed to redefine the scientific question after performance results
+are visible.
+
+The main failure mode is choosing 0.5 because it is conventional. A
+defensible workflow stores the split or resampling geometry, fits all
+learned transformations only on analysis rows, and evaluates the
+relevant quantities on held-out observations. Report the decision
+criterion and sensitivity analysis across plausible thresholds. The
+evidence should be reported together with the model family, backend,
+probability or response scale, warnings, seed, and manifest hash. This
+keeps the result interpretable even if a different backend is evaluated
+later.
+
+#### Extended scenario 13: Seasonal prevalence shift
+
+A disease event is common in wet seasons and uncommon in dry seasons. In
+a `sciModelFlowR` analysis, the first step is to translate this
+situation into an explicit prediction target and a validation unit. Use
+temporally honest validation and evaluate calibration separately by
+season. The important point is that the estimator is not allowed to
+redefine the scientific question after performance results are visible.
+
+The main failure mode is assuming one calibration map remains valid
+under changed base rates. A defensible workflow stores the split or
+resampling geometry, fits all learned transformations only on analysis
+rows, and evaluates the relevant quantities on held-out observations.
+Report seasonal prevalence, calibration gap, and threshold implications.
+The evidence should be reported together with the model family, backend,
+probability or response scale, warnings, seed, and manifest hash. This
+keeps the result interpretable even if a different backend is evaluated
+later.
+
+#### Extended scenario 14: Spatially clustered rare events
+
+Rare soil contamination cases occur in spatial clusters. In a
+`sciModelFlowR` analysis, the first step is to translate this situation
+into an explicit prediction target and a validation unit. Use spatial
+validation and ensure synthetic sampling never crosses the assessment
+boundary. The important point is that the estimator is not allowed to
+redefine the scientific question after performance results are visible.
+
+The main failure mode is random row-wise SMOTE that creates
+near-neighbors of held-out locations. A defensible workflow stores the
+split or resampling geometry, fits all learned transformations only on
+analysis rows, and evaluates the relevant quantities on held-out
+observations. Report spatial separation and class-specific errors. The
+evidence should be reported together with the model family, backend,
+probability or response scale, warnings, seed, and manifest hash. This
+keeps the result interpretable even if a different backend is evaluated
+later.
+
+#### Extended scenario 15: Instrument anomaly detection
+
+Failures are rare and instruments contribute repeated records. In a
+`sciModelFlowR` analysis, the first step is to translate this situation
+into an explicit prediction target and a validation unit. Keep
+instrument identity grouped and evaluate thresholds on unseen
+instruments when deployment requires it. The important point is that the
+estimator is not allowed to redefine the scientific question after
+performance results are visible.
+
+The main failure mode is letting records from the same failing
+instrument appear on both sides of a split. A defensible workflow stores
+the split or resampling geometry, fits all learned transformations only
+on analysis rows, and evaluates the relevant quantities on held-out
+observations. Report instrument-level event counts and external
+calibration. The evidence should be reported together with the model
+family, backend, probability or response scale, warnings, seed, and
+manifest hash. This keeps the result interpretable even if a different
+backend is evaluated later.
+
+#### Extended scenario 16: Breeding selection
+
+A rare superior genotype class is predicted across environments. In a
+`sciModelFlowR` analysis, the first step is to translate this situation
+into an explicit prediction target and a validation unit. Separate
+environment transfer from class imbalance and do not create synthetic
+genotypes that are interpreted as real experimental units. The important
+point is that the estimator is not allowed to redefine the scientific
+question after performance results are visible.
+
+The main failure mode is counting oversampled records as biological
+replication. A defensible workflow stores the split or resampling
+geometry, fits all learned transformations only on analysis rows, and
+evaluates the relevant quantities on held-out observations. Report
+original genotype counts and environment-wise probability performance.
+The evidence should be reported together with the model family, backend,
+probability or response scale, warnings, seed, and manifest hash. This
+keeps the result interpretable even if a different backend is evaluated
+later.
+
+#### Extended scenario 17: Pest outbreak detection
+
+Only a small fraction of scouting observations contain the target pest.
+In a `sciModelFlowR` analysis, the first step is to translate this
+situation into an explicit prediction target and a validation unit. Use
+group-aware folds if multiple observations come from the same field and
+learn weights or sampling inside each analysis fold. The important point
+is that the estimator is not allowed to redefine the scientific question
+after performance results are visible.
+
+The main failure mode is oversampling before the field split. A
+defensible workflow stores the split or resampling geometry, fits all
+learned transformations only on analysis rows, and evaluates the
+relevant quantities on held-out observations. Report precision, recall,
+PR-AUC, probability calibration, and the action threshold. The evidence
+should be reported together with the model family, backend, probability
+or response scale, warnings, seed, and manifest hash. This keeps the
+result interpretable even if a different backend is evaluated later.
+
+#### Extended scenario 18: Disease screening
+
+A sensor model identifies diseased plants when disease prevalence varies
+by greenhouse. In a `sciModelFlowR` analysis, the first step is to
+translate this situation into an explicit prediction target and a
+validation unit. Treat greenhouse as a grouping or external domain and
+examine prevalence-specific calibration. The important point is that the
+estimator is not allowed to redefine the scientific question after
+performance results are visible.
+
+The main failure mode is using a single random split that mixes
+greenhouse effects. A defensible workflow stores the split or resampling
+geometry, fits all learned transformations only on analysis rows, and
+evaluates the relevant quantities on held-out observations. Report
+calibration and sensitivity by greenhouse as well as pooled performance.
+The evidence should be reported together with the model family, backend,
+probability or response scale, warnings, seed, and manifest hash. This
+keeps the result interpretable even if a different backend is evaluated
+later.
+
+#### Extended scenario 19: Rare nutrient disorder
+
+A multiclass image model has one rare deficiency category. In a
+`sciModelFlowR` analysis, the first step is to translate this situation
+into an explicit prediction target and a validation unit. Preserve class
+labels in every probability matrix and use class-wise recall plus
+multiclass log loss. The important point is that the estimator is not
+allowed to redefine the scientific question after performance results
+are visible.
+
+The main failure mode is optimizing pooled accuracy while never
+detecting the rare disorder. A defensible workflow stores the split or
+resampling geometry, fits all learned transformations only on analysis
+rows, and evaluates the relevant quantities on held-out observations.
+Show the rare-class sample count and its calibration evidence. The
+evidence should be reported together with the model family, backend,
+probability or response scale, warnings, seed, and manifest hash. This
+keeps the result interpretable even if a different backend is evaluated
+later.
+
+#### Extended scenario 20: Quality rejection
+
+A classifier flags rare unacceptable produce where false negatives are
+expensive. In a `sciModelFlowR` analysis, the first step is to translate
+this situation into an explicit prediction target and a validation unit.
+Choose the threshold using a validation objective that reflects the
+asymmetric consequence. The important point is that the estimator is not
+allowed to redefine the scientific question after performance results
+are visible.
+
+The main failure mode is choosing 0.5 because it is conventional. A
+defensible workflow stores the split or resampling geometry, fits all
+learned transformations only on analysis rows, and evaluates the
+relevant quantities on held-out observations. Report the decision
+criterion and sensitivity analysis across plausible thresholds. The
+evidence should be reported together with the model family, backend,
+probability or response scale, warnings, seed, and manifest hash. This
+keeps the result interpretable even if a different backend is evaluated
+later.
+
+#### Extended scenario 21: Seasonal prevalence shift
+
+A disease event is common in wet seasons and uncommon in dry seasons. In
+a `sciModelFlowR` analysis, the first step is to translate this
+situation into an explicit prediction target and a validation unit. Use
+temporally honest validation and evaluate calibration separately by
+season. The important point is that the estimator is not allowed to
+redefine the scientific question after performance results are visible.
+
+The main failure mode is assuming one calibration map remains valid
+under changed base rates. A defensible workflow stores the split or
+resampling geometry, fits all learned transformations only on analysis
+rows, and evaluates the relevant quantities on held-out observations.
+Report seasonal prevalence, calibration gap, and threshold implications.
+The evidence should be reported together with the model family, backend,
+probability or response scale, warnings, seed, and manifest hash. This
+keeps the result interpretable even if a different backend is evaluated
+later.
+
+#### Extended scenario 22: Spatially clustered rare events
+
+Rare soil contamination cases occur in spatial clusters. In a
+`sciModelFlowR` analysis, the first step is to translate this situation
+into an explicit prediction target and a validation unit. Use spatial
+validation and ensure synthetic sampling never crosses the assessment
+boundary. The important point is that the estimator is not allowed to
+redefine the scientific question after performance results are visible.
+
+The main failure mode is random row-wise SMOTE that creates
+near-neighbors of held-out locations. A defensible workflow stores the
+split or resampling geometry, fits all learned transformations only on
+analysis rows, and evaluates the relevant quantities on held-out
+observations. Report spatial separation and class-specific errors. The
+evidence should be reported together with the model family, backend,
+probability or response scale, warnings, seed, and manifest hash. This
+keeps the result interpretable even if a different backend is evaluated
+later.
+
+#### Extended scenario 23: Instrument anomaly detection
+
+Failures are rare and instruments contribute repeated records. In a
+`sciModelFlowR` analysis, the first step is to translate this situation
+into an explicit prediction target and a validation unit. Keep
+instrument identity grouped and evaluate thresholds on unseen
+instruments when deployment requires it. The important point is that the
+estimator is not allowed to redefine the scientific question after
+performance results are visible.
+
+The main failure mode is letting records from the same failing
+instrument appear on both sides of a split. A defensible workflow stores
+the split or resampling geometry, fits all learned transformations only
+on analysis rows, and evaluates the relevant quantities on held-out
+observations. Report instrument-level event counts and external
+calibration. The evidence should be reported together with the model
+family, backend, probability or response scale, warnings, seed, and
+manifest hash. This keeps the result interpretable even if a different
+backend is evaluated later.
+
+#### Extended scenario 24: Breeding selection
+
+A rare superior genotype class is predicted across environments. In a
+`sciModelFlowR` analysis, the first step is to translate this situation
+into an explicit prediction target and a validation unit. Separate
+environment transfer from class imbalance and do not create synthetic
+genotypes that are interpreted as real experimental units. The important
+point is that the estimator is not allowed to redefine the scientific
+question after performance results are visible.
+
+The main failure mode is counting oversampled records as biological
+replication. A defensible workflow stores the split or resampling
+geometry, fits all learned transformations only on analysis rows, and
+evaluates the relevant quantities on held-out observations. Report
+original genotype counts and environment-wise probability performance.
+The evidence should be reported together with the model family, backend,
+probability or response scale, warnings, seed, and manifest hash. This
+keeps the result interpretable even if a different backend is evaluated
+later.
+
+#### Extended scenario 25: Pest outbreak detection
+
+Only a small fraction of scouting observations contain the target pest.
+In a `sciModelFlowR` analysis, the first step is to translate this
+situation into an explicit prediction target and a validation unit. Use
+group-aware folds if multiple observations come from the same field and
+learn weights or sampling inside each analysis fold. The important point
+is that the estimator is not allowed to redefine the scientific question
+after performance results are visible.
+
+The main failure mode is oversampling before the field split. A
+defensible workflow stores the split or resampling geometry, fits all
+learned transformations only on analysis rows, and evaluates the
+relevant quantities on held-out observations. Report precision, recall,
+PR-AUC, probability calibration, and the action threshold. The evidence
+should be reported together with the model family, backend, probability
+or response scale, warnings, seed, and manifest hash. This keeps the
+result interpretable even if a different backend is evaluated later.
+
+### 1.0.0 consolidation note
+
+In the 1.0.0 Consolidated Scientific Release, this workflow keeps the
+same scientific semantics established during development. The public
+function contract is frozen from 0.9.0; final certification changes
+evidence and backend status, not the design, leakage, uncertainty, or
+provenance rules taught in this vignette.

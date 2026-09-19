@@ -1,0 +1,852 @@
+# sciModelFlowR 0.3.0: Probabilistic Machine Learning
+
+## Probabilistic prediction as a scientific contract
+
+Version 0.3.0 introduces the first stable probabilistic layer in
+`sciModelFlowR`. The objective is not to label every uncertain output a
+“distribution.” The package distinguishes point predictions, class
+probabilities, empirical samples, quantiles, parametric distributions,
+and interval-only objects. Operations that are not mathematically
+available for a representation must fail rather than fabricate a density
+or variance.
+
+The central rule is:
+
+**Name the predictive object first, then choose scores and uncertainty
+statements that are valid for that object.**
+
+### 1. Learning objectives
+
+The reader should be able to distinguish a class-probability vector from
+a continuous predictive distribution, explain why CRPS and log loss
+answer different questions, calculate calibration error without using
+final test labels to recalibrate the model, understand sharpness versus
+calibration, request only distribution operations supported by the
+fitted representation, and report the source and target of uncertainty
+explicitly.
+
+### 2. The stable `PredictionDistribution`
+
+A prediction distribution is created with:
+
+``` r
+
+smf_prediction_distribution()
+```
+
+The supported representations in 0.3.0 are `point`,
+`class_probabilities`, `samples`, `quantiles`, `parametric`, and
+`interval`. The payload differs by representation. The stable object
+records what the representation is and which operations it can support.
+
+Representative operations are:
+
+``` r
+
+smf_dist_mean()
+smf_dist_median()
+smf_dist_variance()
+smf_dist_sd()
+smf_dist_quantile()
+smf_dist_interval()
+smf_dist_sample()
+smf_dist_log_prob()
+smf_dist_cdf()
+```
+
+A class-probability matrix supports log probability for observed class
+labels and calibration diagnostics. It does not expose a meaningful
+numeric predictive mean merely because the class labels can be coerced
+to integers.
+
+### 3. A parametric Gaussian example
+
+``` r
+
+pd <- smf_prediction_distribution(
+  "parametric",
+  payload = list(
+    distribution = "normal",
+    mean = c(50, 55, 60),
+    sd = c(3, 4, 5)
+  )
+)
+
+smf_dist_mean(pd)
+smf_dist_quantile(pd, c(0.025, 0.5, 0.975))
+smf_dist_interval(pd, level = 0.95)
+```
+
+For a Normal distribution, the mean, variance, quantiles, density, CDF,
+and random sampling are well defined. If a later model only returns two
+interval bounds, however, those bounds do not identify a unique density.
+The package therefore does not infer an arbitrary Normal distribution
+from an interval.
+
+### 4. Class probabilities
+
+A binary or multiclass classifier in 0.3.0 produces named probability
+columns. The package validates three basic properties: probabilities are
+finite and remain in the unit interval, each row sums to one within
+numerical tolerance, and the observed class labels can be mapped to
+columns.
+
+``` r
+
+b <- smf_load_dataset("gold_binary_calibration")
+b$event <- factor(ifelse(b$event == 1, "yes", "no"), levels = c("no", "yes"))
+
+binary_spec <- smf_experiment_spec(
+  task = smf_task_spec("binary", "event", positive_label = "yes"),
+  data = smf_data_spec("event", c("x1", "x2"), id_column = "obs_id"),
+  design = smf_design_spec(id_column = "obs_id"),
+  preprocessing = smf_preprocess_spec(center = TRUE, scale = TRUE),
+  resampling = smf_resampling_spec("stratified_holdout", train_prop = .75, strata = "event"),
+  model = smf_model_spec("logistic_regression", "stats"),
+  metrics = list(smf_metric_spec("log_loss"), smf_metric_spec("brier"))
+)
+
+binary_fit <- smf_fit_experiment(binary_spec, b)
+pd <- smf_predict_distribution(binary_fit)
+```
+
+The observed-class log probability can then be computed through the
+distribution contract rather than by reaching into a backend object.
+
+### 5. Log loss
+
+For classification, log loss rewards assigning high probability to the
+event that actually occurs and strongly penalizes confident errors. It
+therefore detects differences that accuracy cannot see. A classifier
+assigning 0.51 to the correct class and another assigning 0.99 receive
+the same hard-label accuracy but different log losses.
+
+The scientific caution is that log loss can be dominated by a small
+number of extremely confident mistakes. That is not necessarily a
+defect; it reflects the severe cost of claiming near certainty and being
+wrong. Inspect such cases rather than hiding them.
+
+### 6. Brier score
+
+The Brier score measures squared error between class indicators and
+class probabilities. For binary outcomes it is directly analogous to
+mean squared probability error. For multiclass outcomes, the package
+computes the row-wise squared discrepancy across all classes and
+averages it.
+
+Brier score combines calibration and discrimination effects. A good
+Brier value is useful, but it should not replace a calibration plot or
+class-specific diagnostic when the intended use depends on trustworthy
+probabilities.
+
+### 7. CRPS for continuous predictive distributions
+
+CRPS compares an entire predictive CDF with an observed continuous
+outcome. Version 0.3.0 implements the closed-form Gaussian CRPS for a
+Normal parametric `PredictionDistribution`. This creates a validated
+foundation for later distributional models without pretending that every
+deterministic regression supplies a continuous predictive distribution.
+
+A deterministic point predictor can be scored with RMSE or MAE. It
+should not receive a “CRPS” produced by assuming an undocumented
+variance.
+
+### 8. Interval coverage and width
+
+Coverage asks whether the observed value lies within an interval. Width
+describes how concentrated the interval is. A method can obtain very
+high coverage by returning excessively broad intervals. Therefore
+coverage and width must be read together.
+
+[`smf_evaluate_probabilistic()`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+can calculate empirical coverage, mean width, and interval score when
+the distribution supports quantile extraction. The nominal level should
+always be reported alongside empirical coverage.
+
+### 9. Interval score
+
+The interval score rewards narrow intervals that contain the observation
+and penalizes misses in proportion to how far the observation lies
+outside the bounds. It is a proper scoring rule for central prediction
+intervals at a specified level.
+
+The interval score is not a replacement for CRPS when a full predictive
+distribution is available, but it is often useful when a scientific
+workflow naturally communicates selected uncertainty levels.
+
+### 10. Expected calibration error
+
+For classification,
+[`smf_calibration_report()`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+bins predicted probabilities and compares the mean probability with
+observed frequency. The weighted absolute discrepancy is summarized as
+expected calibration error (ECE).
+
+``` r
+
+cal <- smf_calibration_report(
+  truth = binary_fit@prediction@truth,
+  probabilities = binary_fit@prediction@probabilities,
+  bins = 10L
+)
+
+cal$ece
+cal$table
+```
+
+ECE depends on binning. It is therefore a diagnostic summary, not an
+intrinsic property of a model independent of analyst choices. Report the
+bin definition or use a calibration curve alongside the number.
+
+### 11. Calibration and discrimination are different
+
+A classifier may rank cases very well but produce probabilities that are
+systematically too extreme or too conservative. ROC-AUC can remain high
+while probability calibration is poor. Conversely, a model that predicts
+the event prevalence for every observation can be well calibrated in a
+weak aggregate sense but discriminate poorly.
+
+A scientific probability model should be evaluated on both axes. If
+probabilities drive risk decisions, expected losses, or resource
+allocation, calibration may be as important as ranking.
+
+### 12. Sharpness
+
+Sharpness describes the concentration of predictive distributions
+without reference to the observations. A calibrated forecast that is
+sharper is generally more informative than an equally calibrated but
+diffuse forecast. Sharpness alone, however, can be maximized by an
+overconfident model.
+
+The package treats sharpness as a companion to calibration and proper
+scores, not as an optimization target in isolation.
+
+### 13. PIT diagnostics
+
+Probability integral transform diagnostics are meaningful when a
+continuous predictive CDF is available. They are not appropriate for a
+deterministic point estimate or a class-probability vector. Later
+distributional and Bayesian modules will extend PIT support after the
+underlying distributions are validated.
+
+This illustrates why `PredictionDistribution` carries representation and
+capabilities rather than merely a numeric array called “uncertainty.”
+
+### 14. Empirical sample distributions
+
+Bootstrap predictions, ensembles, posterior predictive draws, and
+MC-dropout samples can all be represented as empirical samples. Their
+scientific interpretations are not identical. An empirical matrix of
+samples only says what operations can be performed computationally; the
+`UncertaintyDescriptor` states where those samples came from and what
+they target.
+
+Bootstrap sampling variation must not be relabeled posterior
+uncertainty. Deep-ensemble variation must not automatically be claimed
+to identify epistemic uncertainty. The package intentionally separates
+computational representation from inferential interpretation.
+
+### 15. Quantile-only predictions
+
+Some models estimate selected conditional quantiles without providing a
+likelihood. The quantile representation can support interpolation,
+selected intervals, coverage, and interval scores. It does not
+automatically support log density or CDF evaluation outside the fitted
+quantile grid.
+
+This distinction will be important when quantile boosting and
+conformalized quantile regression are added in later versions.
+
+### 16. The heteroscedastic Gold dataset
+
+`gold_heteroscedastic_regression` was designed so the conditional mean
+and conditional variance behave differently across the predictor space.
+A point model can approximate the mean and still fail to describe
+changing predictive spread.
+
+Use this fixture to teach why RMSE alone cannot establish quality of
+uncertainty. A later probabilistic model should be judged by both mean
+performance and distributional scores, including whether interval width
+changes where the generator variance changes.
+
+### 17. Scientifically inappropriate workflow
+
+An invalid workflow fits a deterministic regression, calculates its
+residual standard deviation using the full dataset, attaches
+`mean ± 1.96 * sd` to every future prediction, and calls the result a
+calibrated 95% predictive distribution. The procedure leaks test
+residuals, assumes constant variance, ignores parameter uncertainty, and
+silently imposes Normality.
+
+The correct response is not to find a more impressive name for the
+interval. The correct response is to fit or construct an uncertainty
+method whose assumptions and calibration data are explicit.
+
+### 18. Probability scores and prevalence
+
+Rare-event classification deserves special care. Accuracy can be
+dominated by the majority class. ROC-AUC can remain visually strong in
+problems where precision is poor because false positives accumulate
+against a large negative population. PR-oriented metrics and probability
+calibration can reveal this behavior.
+
+The `gold_multiclass_imbalanced` fixture provides a controlled setting
+for these comparisons.
+
+### 19. Probability scale versus decision scale
+
+A probability is not yet a decision. A 0.30 pest-risk estimate can
+trigger action in one context and no action in another depending on
+false-negative cost, intervention cost, prevalence, and available
+capacity. Threshold choice belongs to an explicit decision rule and
+should be tuned on validation/calibration evidence, not on the final
+test set.
+
+Keeping probability estimation separate from thresholding allows the
+same model to be re-evaluated under a different operational objective
+without retraining.
+
+### 20. Reporting probabilistic predictions
+
+Report the predictive representation, distribution family when
+parametric, probability classes, interval level, uncertainty source,
+calibration method, calibration sample, scoring rules, held-out design,
+and any operations unavailable for the representation. A manuscript
+should not use “uncertainty interval” as a generic label when the method
+can be named more precisely.
+
+### 21. Minimum probabilistic checklist
+
+predictive representation named;
+
+class probabilities normalized and named;
+
+uncertainty source and target stated;
+
+scores matched to the representation;
+
+final test labels excluded from calibration fitting;
+
+coverage paired with interval width or score;
+
+calibration paired with discrimination/ranking where relevant;
+
+no density claimed from interval-only output;
+
+no posterior interpretation assigned to bootstrap/ensemble variation;
+
+manifest preserves model, split, score, and calibration metadata.
+
+#### Extended scenario 1: Disease-risk probabilities
+
+A crop disease classifier outputs infection probabilities for scouting
+decisions. In a `sciModelFlowR` analysis, the first step is to translate
+this situation into an explicit prediction target and a validation unit.
+Evaluate log loss, Brier score, calibration, and an operational
+threshold separately. The important point is that the estimator is not
+allowed to redefine the scientific question after performance results
+are visible.
+
+The main failure mode is using accuracy as evidence that the numerical
+probabilities are trustworthy. A defensible workflow stores the split or
+resampling geometry, fits all learned transformations only on analysis
+rows, and evaluates the relevant quantities on held-out observations.
+Show a reliability table and the number of observations contributing to
+each probability region. The evidence should be reported together with
+the model family, backend, probability or response scale, warnings,
+seed, and manifest hash. This keeps the result interpretable even if a
+different backend is evaluated later.
+
+#### Extended scenario 2: Yield prediction intervals
+
+A model predicts yield with a central 90% interval. In a `sciModelFlowR`
+analysis, the first step is to translate this situation into an explicit
+prediction target and a validation unit. Evaluate empirical coverage and
+width on design-appropriate held-out observations. The important point
+is that the estimator is not allowed to redefine the scientific question
+after performance results are visible.
+
+The main failure mode is reporting nominal 90% as if empirical coverage
+had already been demonstrated. A defensible workflow stores the split or
+resampling geometry, fits all learned transformations only on analysis
+rows, and evaluates the relevant quantities on held-out observations.
+Report misses, interval width, and whether spread changes across the
+predictor range. The evidence should be reported together with the model
+family, backend, probability or response scale, warnings, seed, and
+manifest hash. This keeps the result interpretable even if a different
+backend is evaluated later.
+
+#### Extended scenario 3: Heteroscedastic soil response
+
+Measurement variability increases with the predicted soil property. In a
+`sciModelFlowR` analysis, the first step is to translate this situation
+into an explicit prediction target and a validation unit. Use a
+distributional or quantile representation that can change spread with
+predictors. The important point is that the estimator is not allowed to
+redefine the scientific question after performance results are visible.
+
+The main failure mode is adding one global residual standard deviation
+to every point prediction. A defensible workflow stores the split or
+resampling geometry, fits all learned transformations only on analysis
+rows, and evaluates the relevant quantities on held-out observations.
+Compare interval widths across low- and high-variance regions. The
+evidence should be reported together with the model family, backend,
+probability or response scale, warnings, seed, and manifest hash. This
+keeps the result interpretable even if a different backend is evaluated
+later.
+
+#### Extended scenario 4: Multiclass nutrient deficiency
+
+A classifier returns probabilities for several deficiency classes. In a
+`sciModelFlowR` analysis, the first step is to translate this situation
+into an explicit prediction target and a validation unit. Score the full
+probability vector and inspect one-vs-rest calibration by class. The
+important point is that the estimator is not allowed to redefine the
+scientific question after performance results are visible.
+
+The main failure mode is renormalizing arbitrary scores and calling them
+calibrated probabilities. A defensible workflow stores the split or
+resampling geometry, fits all learned transformations only on analysis
+rows, and evaluates the relevant quantities on held-out observations.
+Report class prevalence and calibration gaps for rare classes. The
+evidence should be reported together with the model family, backend,
+probability or response scale, warnings, seed, and manifest hash. This
+keeps the result interpretable even if a different backend is evaluated
+later.
+
+#### Extended scenario 5: Ensemble prediction
+
+Several fitted learners generate an empirical prediction distribution.
+In a `sciModelFlowR` analysis, the first step is to translate this
+situation into an explicit prediction target and a validation unit.
+Treat ensemble samples as an empirical representation and state what
+sources of variation they contain. The important point is that the
+estimator is not allowed to redefine the scientific question after
+performance results are visible.
+
+The main failure mode is calling ensemble spread a Bayesian posterior
+standard deviation. A defensible workflow stores the split or resampling
+geometry, fits all learned transformations only on analysis rows, and
+evaluates the relevant quantities on held-out observations. Compare
+ensemble spread with observed error and calibration. The evidence should
+be reported together with the model family, backend, probability or
+response scale, warnings, seed, and manifest hash. This keeps the result
+interpretable even if a different backend is evaluated later.
+
+#### Extended scenario 6: Bootstrap prediction
+
+Repeated bootstrap fits produce a predictive sample per observation. In
+a `sciModelFlowR` analysis, the first step is to translate this
+situation into an explicit prediction target and a validation unit.
+Label the uncertainty source as bootstrap and distinguish
+parameter/statistical resampling from outcome noise. The important point
+is that the estimator is not allowed to redefine the scientific question
+after performance results are visible.
+
+The main failure mode is interpreting bootstrap samples as direct draws
+from the posterior predictive distribution. A defensible workflow stores
+the split or resampling geometry, fits all learned transformations only
+on analysis rows, and evaluates the relevant quantities on held-out
+observations. Report bootstrap scheme, sampling unit, successful
+replicates, and interval construction. The evidence should be reported
+together with the model family, backend, probability or response scale,
+warnings, seed, and manifest hash. This keeps the result interpretable
+even if a different backend is evaluated later.
+
+#### Extended scenario 7: Quantile regression
+
+A model provides 0.1, 0.5, and 0.9 conditional quantiles. In a
+`sciModelFlowR` analysis, the first step is to translate this situation
+into an explicit prediction target and a validation unit. Use quantile
+and interval operations while leaving density operations unavailable.
+The important point is that the estimator is not allowed to redefine the
+scientific question after performance results are visible.
+
+The main failure mode is inventing a Normal density solely from three
+quantiles. A defensible workflow stores the split or resampling
+geometry, fits all learned transformations only on analysis rows, and
+evaluates the relevant quantities on held-out observations. Evaluate
+quantile coverage and crossing or ordering behavior. The evidence should
+be reported together with the model family, backend, probability or
+response scale, warnings, seed, and manifest hash. This keeps the result
+interpretable even if a different backend is evaluated later.
+
+#### Extended scenario 8: Climate probability forecast
+
+A seasonal model predicts categories of dry, normal, and wet conditions.
+In a `sciModelFlowR` analysis, the first step is to translate this
+situation into an explicit prediction target and a validation unit. Use
+multiclass probability scores and calibration across truly future
+seasons. The important point is that the estimator is not allowed to
+redefine the scientific question after performance results are visible.
+
+The main failure mode is calibrating and evaluating on the same future
+years. A defensible workflow stores the split or resampling geometry,
+fits all learned transformations only on analysis rows, and evaluates
+the relevant quantities on held-out observations. Separate calibration
+years from the final forecast-evaluation period. The evidence should be
+reported together with the model family, backend, probability or
+response scale, warnings, seed, and manifest hash. This keeps the result
+interpretable even if a different backend is evaluated later.
+
+#### Extended scenario 9: Disease-risk probabilities
+
+A crop disease classifier outputs infection probabilities for scouting
+decisions. In a `sciModelFlowR` analysis, the first step is to translate
+this situation into an explicit prediction target and a validation unit.
+Evaluate log loss, Brier score, calibration, and an operational
+threshold separately. The important point is that the estimator is not
+allowed to redefine the scientific question after performance results
+are visible.
+
+The main failure mode is using accuracy as evidence that the numerical
+probabilities are trustworthy. A defensible workflow stores the split or
+resampling geometry, fits all learned transformations only on analysis
+rows, and evaluates the relevant quantities on held-out observations.
+Show a reliability table and the number of observations contributing to
+each probability region. The evidence should be reported together with
+the model family, backend, probability or response scale, warnings,
+seed, and manifest hash. This keeps the result interpretable even if a
+different backend is evaluated later.
+
+#### Extended scenario 10: Yield prediction intervals
+
+A model predicts yield with a central 90% interval. In a `sciModelFlowR`
+analysis, the first step is to translate this situation into an explicit
+prediction target and a validation unit. Evaluate empirical coverage and
+width on design-appropriate held-out observations. The important point
+is that the estimator is not allowed to redefine the scientific question
+after performance results are visible.
+
+The main failure mode is reporting nominal 90% as if empirical coverage
+had already been demonstrated. A defensible workflow stores the split or
+resampling geometry, fits all learned transformations only on analysis
+rows, and evaluates the relevant quantities on held-out observations.
+Report misses, interval width, and whether spread changes across the
+predictor range. The evidence should be reported together with the model
+family, backend, probability or response scale, warnings, seed, and
+manifest hash. This keeps the result interpretable even if a different
+backend is evaluated later.
+
+#### Extended scenario 11: Heteroscedastic soil response
+
+Measurement variability increases with the predicted soil property. In a
+`sciModelFlowR` analysis, the first step is to translate this situation
+into an explicit prediction target and a validation unit. Use a
+distributional or quantile representation that can change spread with
+predictors. The important point is that the estimator is not allowed to
+redefine the scientific question after performance results are visible.
+
+The main failure mode is adding one global residual standard deviation
+to every point prediction. A defensible workflow stores the split or
+resampling geometry, fits all learned transformations only on analysis
+rows, and evaluates the relevant quantities on held-out observations.
+Compare interval widths across low- and high-variance regions. The
+evidence should be reported together with the model family, backend,
+probability or response scale, warnings, seed, and manifest hash. This
+keeps the result interpretable even if a different backend is evaluated
+later.
+
+#### Extended scenario 12: Multiclass nutrient deficiency
+
+A classifier returns probabilities for several deficiency classes. In a
+`sciModelFlowR` analysis, the first step is to translate this situation
+into an explicit prediction target and a validation unit. Score the full
+probability vector and inspect one-vs-rest calibration by class. The
+important point is that the estimator is not allowed to redefine the
+scientific question after performance results are visible.
+
+The main failure mode is renormalizing arbitrary scores and calling them
+calibrated probabilities. A defensible workflow stores the split or
+resampling geometry, fits all learned transformations only on analysis
+rows, and evaluates the relevant quantities on held-out observations.
+Report class prevalence and calibration gaps for rare classes. The
+evidence should be reported together with the model family, backend,
+probability or response scale, warnings, seed, and manifest hash. This
+keeps the result interpretable even if a different backend is evaluated
+later.
+
+#### Extended scenario 13: Ensemble prediction
+
+Several fitted learners generate an empirical prediction distribution.
+In a `sciModelFlowR` analysis, the first step is to translate this
+situation into an explicit prediction target and a validation unit.
+Treat ensemble samples as an empirical representation and state what
+sources of variation they contain. The important point is that the
+estimator is not allowed to redefine the scientific question after
+performance results are visible.
+
+The main failure mode is calling ensemble spread a Bayesian posterior
+standard deviation. A defensible workflow stores the split or resampling
+geometry, fits all learned transformations only on analysis rows, and
+evaluates the relevant quantities on held-out observations. Compare
+ensemble spread with observed error and calibration. The evidence should
+be reported together with the model family, backend, probability or
+response scale, warnings, seed, and manifest hash. This keeps the result
+interpretable even if a different backend is evaluated later.
+
+#### Extended scenario 14: Bootstrap prediction
+
+Repeated bootstrap fits produce a predictive sample per observation. In
+a `sciModelFlowR` analysis, the first step is to translate this
+situation into an explicit prediction target and a validation unit.
+Label the uncertainty source as bootstrap and distinguish
+parameter/statistical resampling from outcome noise. The important point
+is that the estimator is not allowed to redefine the scientific question
+after performance results are visible.
+
+The main failure mode is interpreting bootstrap samples as direct draws
+from the posterior predictive distribution. A defensible workflow stores
+the split or resampling geometry, fits all learned transformations only
+on analysis rows, and evaluates the relevant quantities on held-out
+observations. Report bootstrap scheme, sampling unit, successful
+replicates, and interval construction. The evidence should be reported
+together with the model family, backend, probability or response scale,
+warnings, seed, and manifest hash. This keeps the result interpretable
+even if a different backend is evaluated later.
+
+#### Extended scenario 15: Quantile regression
+
+A model provides 0.1, 0.5, and 0.9 conditional quantiles. In a
+`sciModelFlowR` analysis, the first step is to translate this situation
+into an explicit prediction target and a validation unit. Use quantile
+and interval operations while leaving density operations unavailable.
+The important point is that the estimator is not allowed to redefine the
+scientific question after performance results are visible.
+
+The main failure mode is inventing a Normal density solely from three
+quantiles. A defensible workflow stores the split or resampling
+geometry, fits all learned transformations only on analysis rows, and
+evaluates the relevant quantities on held-out observations. Evaluate
+quantile coverage and crossing or ordering behavior. The evidence should
+be reported together with the model family, backend, probability or
+response scale, warnings, seed, and manifest hash. This keeps the result
+interpretable even if a different backend is evaluated later.
+
+#### Extended scenario 16: Climate probability forecast
+
+A seasonal model predicts categories of dry, normal, and wet conditions.
+In a `sciModelFlowR` analysis, the first step is to translate this
+situation into an explicit prediction target and a validation unit. Use
+multiclass probability scores and calibration across truly future
+seasons. The important point is that the estimator is not allowed to
+redefine the scientific question after performance results are visible.
+
+The main failure mode is calibrating and evaluating on the same future
+years. A defensible workflow stores the split or resampling geometry,
+fits all learned transformations only on analysis rows, and evaluates
+the relevant quantities on held-out observations. Separate calibration
+years from the final forecast-evaluation period. The evidence should be
+reported together with the model family, backend, probability or
+response scale, warnings, seed, and manifest hash. This keeps the result
+interpretable even if a different backend is evaluated later.
+
+#### Extended scenario 17: Disease-risk probabilities
+
+A crop disease classifier outputs infection probabilities for scouting
+decisions. In a `sciModelFlowR` analysis, the first step is to translate
+this situation into an explicit prediction target and a validation unit.
+Evaluate log loss, Brier score, calibration, and an operational
+threshold separately. The important point is that the estimator is not
+allowed to redefine the scientific question after performance results
+are visible.
+
+The main failure mode is using accuracy as evidence that the numerical
+probabilities are trustworthy. A defensible workflow stores the split or
+resampling geometry, fits all learned transformations only on analysis
+rows, and evaluates the relevant quantities on held-out observations.
+Show a reliability table and the number of observations contributing to
+each probability region. The evidence should be reported together with
+the model family, backend, probability or response scale, warnings,
+seed, and manifest hash. This keeps the result interpretable even if a
+different backend is evaluated later.
+
+#### Extended scenario 18: Yield prediction intervals
+
+A model predicts yield with a central 90% interval. In a `sciModelFlowR`
+analysis, the first step is to translate this situation into an explicit
+prediction target and a validation unit. Evaluate empirical coverage and
+width on design-appropriate held-out observations. The important point
+is that the estimator is not allowed to redefine the scientific question
+after performance results are visible.
+
+The main failure mode is reporting nominal 90% as if empirical coverage
+had already been demonstrated. A defensible workflow stores the split or
+resampling geometry, fits all learned transformations only on analysis
+rows, and evaluates the relevant quantities on held-out observations.
+Report misses, interval width, and whether spread changes across the
+predictor range. The evidence should be reported together with the model
+family, backend, probability or response scale, warnings, seed, and
+manifest hash. This keeps the result interpretable even if a different
+backend is evaluated later.
+
+#### Extended scenario 19: Heteroscedastic soil response
+
+Measurement variability increases with the predicted soil property. In a
+`sciModelFlowR` analysis, the first step is to translate this situation
+into an explicit prediction target and a validation unit. Use a
+distributional or quantile representation that can change spread with
+predictors. The important point is that the estimator is not allowed to
+redefine the scientific question after performance results are visible.
+
+The main failure mode is adding one global residual standard deviation
+to every point prediction. A defensible workflow stores the split or
+resampling geometry, fits all learned transformations only on analysis
+rows, and evaluates the relevant quantities on held-out observations.
+Compare interval widths across low- and high-variance regions. The
+evidence should be reported together with the model family, backend,
+probability or response scale, warnings, seed, and manifest hash. This
+keeps the result interpretable even if a different backend is evaluated
+later.
+
+#### Extended scenario 20: Multiclass nutrient deficiency
+
+A classifier returns probabilities for several deficiency classes. In a
+`sciModelFlowR` analysis, the first step is to translate this situation
+into an explicit prediction target and a validation unit. Score the full
+probability vector and inspect one-vs-rest calibration by class. The
+important point is that the estimator is not allowed to redefine the
+scientific question after performance results are visible.
+
+The main failure mode is renormalizing arbitrary scores and calling them
+calibrated probabilities. A defensible workflow stores the split or
+resampling geometry, fits all learned transformations only on analysis
+rows, and evaluates the relevant quantities on held-out observations.
+Report class prevalence and calibration gaps for rare classes. The
+evidence should be reported together with the model family, backend,
+probability or response scale, warnings, seed, and manifest hash. This
+keeps the result interpretable even if a different backend is evaluated
+later.
+
+#### Extended scenario 21: Ensemble prediction
+
+Several fitted learners generate an empirical prediction distribution.
+In a `sciModelFlowR` analysis, the first step is to translate this
+situation into an explicit prediction target and a validation unit.
+Treat ensemble samples as an empirical representation and state what
+sources of variation they contain. The important point is that the
+estimator is not allowed to redefine the scientific question after
+performance results are visible.
+
+The main failure mode is calling ensemble spread a Bayesian posterior
+standard deviation. A defensible workflow stores the split or resampling
+geometry, fits all learned transformations only on analysis rows, and
+evaluates the relevant quantities on held-out observations. Compare
+ensemble spread with observed error and calibration. The evidence should
+be reported together with the model family, backend, probability or
+response scale, warnings, seed, and manifest hash. This keeps the result
+interpretable even if a different backend is evaluated later.
+
+#### Extended scenario 22: Bootstrap prediction
+
+Repeated bootstrap fits produce a predictive sample per observation. In
+a `sciModelFlowR` analysis, the first step is to translate this
+situation into an explicit prediction target and a validation unit.
+Label the uncertainty source as bootstrap and distinguish
+parameter/statistical resampling from outcome noise. The important point
+is that the estimator is not allowed to redefine the scientific question
+after performance results are visible.
+
+The main failure mode is interpreting bootstrap samples as direct draws
+from the posterior predictive distribution. A defensible workflow stores
+the split or resampling geometry, fits all learned transformations only
+on analysis rows, and evaluates the relevant quantities on held-out
+observations. Report bootstrap scheme, sampling unit, successful
+replicates, and interval construction. The evidence should be reported
+together with the model family, backend, probability or response scale,
+warnings, seed, and manifest hash. This keeps the result interpretable
+even if a different backend is evaluated later.
+
+#### Extended scenario 23: Quantile regression
+
+A model provides 0.1, 0.5, and 0.9 conditional quantiles. In a
+`sciModelFlowR` analysis, the first step is to translate this situation
+into an explicit prediction target and a validation unit. Use quantile
+and interval operations while leaving density operations unavailable.
+The important point is that the estimator is not allowed to redefine the
+scientific question after performance results are visible.
+
+The main failure mode is inventing a Normal density solely from three
+quantiles. A defensible workflow stores the split or resampling
+geometry, fits all learned transformations only on analysis rows, and
+evaluates the relevant quantities on held-out observations. Evaluate
+quantile coverage and crossing or ordering behavior. The evidence should
+be reported together with the model family, backend, probability or
+response scale, warnings, seed, and manifest hash. This keeps the result
+interpretable even if a different backend is evaluated later.
+
+#### Extended scenario 24: Climate probability forecast
+
+A seasonal model predicts categories of dry, normal, and wet conditions.
+In a `sciModelFlowR` analysis, the first step is to translate this
+situation into an explicit prediction target and a validation unit. Use
+multiclass probability scores and calibration across truly future
+seasons. The important point is that the estimator is not allowed to
+redefine the scientific question after performance results are visible.
+
+The main failure mode is calibrating and evaluating on the same future
+years. A defensible workflow stores the split or resampling geometry,
+fits all learned transformations only on analysis rows, and evaluates
+the relevant quantities on held-out observations. Separate calibration
+years from the final forecast-evaluation period. The evidence should be
+reported together with the model family, backend, probability or
+response scale, warnings, seed, and manifest hash. This keeps the result
+interpretable even if a different backend is evaluated later.
+
+#### Extended scenario 25: Disease-risk probabilities
+
+A crop disease classifier outputs infection probabilities for scouting
+decisions. In a `sciModelFlowR` analysis, the first step is to translate
+this situation into an explicit prediction target and a validation unit.
+Evaluate log loss, Brier score, calibration, and an operational
+threshold separately. The important point is that the estimator is not
+allowed to redefine the scientific question after performance results
+are visible.
+
+The main failure mode is using accuracy as evidence that the numerical
+probabilities are trustworthy. A defensible workflow stores the split or
+resampling geometry, fits all learned transformations only on analysis
+rows, and evaluates the relevant quantities on held-out observations.
+Show a reliability table and the number of observations contributing to
+each probability region. The evidence should be reported together with
+the model family, backend, probability or response scale, warnings,
+seed, and manifest hash. This keeps the result interpretable even if a
+different backend is evaluated later.
+
+#### Extended scenario 26: Yield prediction intervals
+
+A model predicts yield with a central 90% interval. In a `sciModelFlowR`
+analysis, the first step is to translate this situation into an explicit
+prediction target and a validation unit. Evaluate empirical coverage and
+width on design-appropriate held-out observations. The important point
+is that the estimator is not allowed to redefine the scientific question
+after performance results are visible.
+
+The main failure mode is reporting nominal 90% as if empirical coverage
+had already been demonstrated. A defensible workflow stores the split or
+resampling geometry, fits all learned transformations only on analysis
+rows, and evaluates the relevant quantities on held-out observations.
+Report misses, interval width, and whether spread changes across the
+predictor range. The evidence should be reported together with the model
+family, backend, probability or response scale, warnings, seed, and
+manifest hash. This keeps the result interpretable even if a different
+backend is evaluated later.
+
+#### Extended scenario 27: Heteroscedastic soil response
+
+Measurement variability increases with the predicted soil property. In a
+`sciModelFlowR` analysis, the first step is to translate this situation
+into an explicit prediction target and a validation unit. Use a
+distributional or quantile representation that can change spread with
+predictors. The important point is that the estimator is not allowed to
+redefine the scientific question after performance results are visible.
+
+The main failure mode is adding one global residual standard deviation
+to every point prediction. A defensible workflow stores the split or
+resampling geometry, fits all learned transformations only on analysis
+rows, and evaluates the relevant quantities on held-out observations.
+Compare interval widths across low- and high-variance regions. The
+evidence should be reported together with the model family, backend,
+probability or response scale, warnings, seed, and manifest hash. This
+keeps the result interpretable even if a different backend is evaluated
+later.

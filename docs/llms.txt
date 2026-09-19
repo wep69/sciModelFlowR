@@ -1,0 +1,439 @@
+# sciModelFlowR
+
+**Version 1.0.2 - patch release of the Consolidated Scientific Release**
+
+`sciModelFlowR` is a design-aware scientific modeling framework for
+explicit data/design declarations, leakage-safe preprocessing and
+resampling, deterministic and probabilistic ML, tuning, benchmarking,
+explainability, Deep Learning, Bayesian and conformal inference, typed
+uncertainty, experiment tracking, safe persistence, scalable inference,
+protected external validation, and scientific reporting.
+
+Version 1.0.2 releases the five corrections reported by the audited
+tutorial of the 1.0.1 installed library (`NEWS.md`; regression tests in
+`tests/testthat/test-regressions-102.R`), on top of the 22 documented
+corrections of 1.0.1 from the local validation campaign of the frozen
+1.0.0 source tree (see `DERIVED_PATCH_NOTES.md`). The **246-symbol
+public API** is unchanged; the 1.0.0 freeze, hashes and release metadata
+remain the historical reference.
+
+## Installation
+
+``` r
+
+# Installs the vignettes, and pays the full rebuild locally.
+remotes::install_github("wep69/sciModelFlowR", build_vignettes = TRUE, dependencies=TRUE, upgrade="ask")
+```
+
+``` r
+
+library(sciModelFlowR)
+smf_doctor()
+smf_list_datasets()
+head(smf_api_catalog())
+smf_backend_matrix()
+```
+
+Recommended scientific sequence:
+
+**question -\> design -\> audit -\> protected domains -\> design-aware
+resampling -\> training-only learning -\> baseline -\> justified
+complexity -\> diagnostics -\> typed uncertainty -\> explanation
+stability -\> external validation -\> reporting -\> reproducibility
+manifest**
+
+The distributed Gold datasets are synthetic software-validation and
+teaching fixtures. They are not empirical field evidence.
+
+## Certification status
+
+Local validation campaign (Windows 11, R 4.6.0, Quarto 1.11.0,
+2026-09-18): `testthat` 62 files / 322 pass / 0 fail, Gold 25/25,
+cross-language 25/25, reference tolerances ~1e-15, 28/28 vignettes
+rendered, 27/27 notebooks executed in clean IR kernels, and
+`R CMD build` + `R CMD check --as-cran` completed with **0 ERROR / 0
+WARNING / 2 NOTEs** (new-submission metadata; intentional top-level
+release documents). The 2 NOTEs are reviewed and accepted.
+
+The package is **not claimed CRAN-ready**. Optional backends are
+exercised by the frozen test suite where installed but are not formally
+certified; GPU/CUDA was unavailable (`SKIP`); ONNX remains
+`QUARANTINED`; the historical 0.1.0–0.9.0 campaigns require their own
+snapshots and remain `NOT RUN` in this environment. Full evidence:
+`outputs/final-reports/VALIDATION_RECORD_1.0.2.md`.
+
+## Stable API
+
+`inst/metadata/API_FREEZE_1.0.0.csv` contains the stable 1.x export
+contract (the 1.0.0 freeze point; preserved unchanged in 1.0.1).
+`inst/metadata/API_DIFF_0.9.0_TO_1.0.0.csv` records that no public
+symbol or signature was intentionally changed during consolidation. Any
+future 1.x deprecation follows `DEPRECATION_POLICY.md`.
+
+## Release evidence
+
+Key release evidence is stored under `inst/metadata/`: final
+compatibility matrix, Gold release manifest, benchmark baselines,
+security review, API freeze/diff, bibliography ledger, and the
+1.0.0/1.0.1/1.0.2 release manifests.
+`inst/metadata/RELEASE_MANIFEST_1.0.2.json` records the audited-tutorial
+corrections and validation outcomes without redefining scientific
+semantics.
+
+# Package index
+
+## All functions
+
+- [`additional-api-070`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+  [`smf_ale`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+  [`smf_apply_calibration`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+  [`smf_apply_imbalance`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+  [`smf_apply_representation`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+  [`smf_available_model_adapters`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+  [`smf_blocked_cv`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+  [`smf_bootstrap`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+  [`smf_bootstrap_interval`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+  [`smf_bootstrap_stability`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+  [`smf_build_representation`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+  [`smf_calibrate`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+  [`smf_calibration_report`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+  [`smf_calibration_spec`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+  [`smf_check_pseudoreplication`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+  [`smf_counterfactual`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+  [`smf_dist_cdf`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+  [`smf_dist_interval`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+  [`smf_dist_log_prob`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+  [`smf_dist_mean`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+  [`smf_dist_median`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+  [`smf_dist_quantile`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+  [`smf_dist_sample`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+  [`smf_dist_sd`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+  [`smf_dist_variance`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+  [`smf_evaluate_probabilistic`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+  [`smf_explain`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+  [`smf_explain_spec`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+  [`smf_explanation_agreement`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+  [`smf_explanation_domain`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+  [`smf_explanation_stability`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+  [`smf_external_split`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+  [`smf_feature_select_resamples`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+  [`smf_feature_spec`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+  [`smf_feature_stability`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+  [`smf_fit_model`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+  [`smf_group_vfold_cv`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+  [`smf_ice`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+  [`smf_imbalance_spec`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+  [`smf_local_explain`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+  [`smf_make_resampler`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+  [`smf_monte_carlo_cv`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+  [`smf_nested_resampler`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+  [`smf_optimize_threshold`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+  [`smf_pdp`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+  [`smf_permutation_importance`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+  [`smf_predict_distribution`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+  [`smf_predict_model`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+  [`smf_prediction_distribution`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+  [`smf_reporting_spec`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+  [`smf_resample_experiment`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+  [`smf_resample_manifest`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+  [`smf_select_features`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+  [`smf_shap`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+  [`smf_spatial_cv`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+  [`smf_time_cv`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+  [`smf_trace_features`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+  [`smf_validate_bootstrap_design`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+  [`smf_validate_resampling_design`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+  [`smf_vfold_cv`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+  : Additional workflow, resampling, probabilistic, and explainability
+  interfaces
+- [`bayesian-conformal-070`](https://wep69.github.io/sciModelFlowR/reference/bayesian-conformal-070.md)
+  [`smf_bayes_prior`](https://wep69.github.io/sciModelFlowR/reference/bayesian-conformal-070.md)
+  [`smf_bayes_fit`](https://wep69.github.io/sciModelFlowR/reference/bayesian-conformal-070.md)
+  [`smf_bayes_prior_predictive`](https://wep69.github.io/sciModelFlowR/reference/bayesian-conformal-070.md)
+  [`smf_bayes_draws`](https://wep69.github.io/sciModelFlowR/reference/bayesian-conformal-070.md)
+  [`smf_bayes_summary`](https://wep69.github.io/sciModelFlowR/reference/bayesian-conformal-070.md)
+  [`smf_bayes_epred`](https://wep69.github.io/sciModelFlowR/reference/bayesian-conformal-070.md)
+  [`smf_bayes_predict`](https://wep69.github.io/sciModelFlowR/reference/bayesian-conformal-070.md)
+  [`smf_bayes_diagnostic_flags`](https://wep69.github.io/sciModelFlowR/reference/bayesian-conformal-070.md)
+  [`smf_bayes_diagnose`](https://wep69.github.io/sciModelFlowR/reference/bayesian-conformal-070.md)
+  [`smf_bayes_pp_check`](https://wep69.github.io/sciModelFlowR/reference/bayesian-conformal-070.md)
+  [`smf_bayes_loo`](https://wep69.github.io/sciModelFlowR/reference/bayesian-conformal-070.md)
+  [`smf_bayes_compare`](https://wep69.github.io/sciModelFlowR/reference/bayesian-conformal-070.md)
+  [`smf_bayes_stacking`](https://wep69.github.io/sciModelFlowR/reference/bayesian-conformal-070.md)
+  [`smf_bart_fit`](https://wep69.github.io/sciModelFlowR/reference/bayesian-conformal-070.md)
+  [`smf_bart_predict`](https://wep69.github.io/sciModelFlowR/reference/bayesian-conformal-070.md)
+  [`smf_gp_fit`](https://wep69.github.io/sciModelFlowR/reference/bayesian-conformal-070.md)
+  [`smf_gp_predict`](https://wep69.github.io/sciModelFlowR/reference/bayesian-conformal-070.md)
+  [`smf_conformal_spec`](https://wep69.github.io/sciModelFlowR/reference/bayesian-conformal-070.md)
+  [`smf_conformal_fit`](https://wep69.github.io/sciModelFlowR/reference/bayesian-conformal-070.md)
+  [`smf_conformal_predict`](https://wep69.github.io/sciModelFlowR/reference/bayesian-conformal-070.md)
+  [`smf_conformal_coverage`](https://wep69.github.io/sciModelFlowR/reference/bayesian-conformal-070.md)
+  [`smf_conformal_diagnose`](https://wep69.github.io/sciModelFlowR/reference/bayesian-conformal-070.md)
+  [`smf_conformal_probably`](https://wep69.github.io/sciModelFlowR/reference/bayesian-conformal-070.md)
+  [`smf_conformal_predict_probably`](https://wep69.github.io/sciModelFlowR/reference/bayesian-conformal-070.md)
+  [`smf_uncertainty_descriptor`](https://wep69.github.io/sciModelFlowR/reference/bayesian-conformal-070.md)
+  [`smf_uncertainty_semantics`](https://wep69.github.io/sciModelFlowR/reference/bayesian-conformal-070.md)
+  [`smf_uncertainty_label`](https://wep69.github.io/sciModelFlowR/reference/bayesian-conformal-070.md)
+  [`smf_uncertainty_compare`](https://wep69.github.io/sciModelFlowR/reference/bayesian-conformal-070.md)
+  [`smf_uncertainty_validate`](https://wep69.github.io/sciModelFlowR/reference/bayesian-conformal-070.md)
+  [`smf_uncertainty_decompose`](https://wep69.github.io/sciModelFlowR/reference/bayesian-conformal-070.md)
+  [`smf_uncertainty_from_distribution`](https://wep69.github.io/sciModelFlowR/reference/bayesian-conformal-070.md)
+  [`smf_uncertainty_report`](https://wep69.github.io/sciModelFlowR/reference/bayesian-conformal-070.md)
+  : Bayesian modeling, conformal prediction, and typed uncertainty
+- [`deep-learning-060`](https://wep69.github.io/sciModelFlowR/reference/deep-learning-060.md)
+  [`smf_dl_architecture`](https://wep69.github.io/sciModelFlowR/reference/deep-learning-060.md)
+  [`smf_mlp`](https://wep69.github.io/sciModelFlowR/reference/deep-learning-060.md)
+  [`smf_cnn1d`](https://wep69.github.io/sciModelFlowR/reference/deep-learning-060.md)
+  [`smf_cnn2d`](https://wep69.github.io/sciModelFlowR/reference/deep-learning-060.md)
+  [`smf_rnn`](https://wep69.github.io/sciModelFlowR/reference/deep-learning-060.md)
+  [`smf_lstm`](https://wep69.github.io/sciModelFlowR/reference/deep-learning-060.md)
+  [`smf_gru`](https://wep69.github.io/sciModelFlowR/reference/deep-learning-060.md)
+  [`smf_tcn`](https://wep69.github.io/sciModelFlowR/reference/deep-learning-060.md)
+  [`smf_transformer`](https://wep69.github.io/sciModelFlowR/reference/deep-learning-060.md)
+  [`smf_vit`](https://wep69.github.io/sciModelFlowR/reference/deep-learning-060.md)
+  [`smf_autoencoder`](https://wep69.github.io/sciModelFlowR/reference/deep-learning-060.md)
+  [`smf_vae`](https://wep69.github.io/sciModelFlowR/reference/deep-learning-060.md)
+  [`smf_transfer_learning`](https://wep69.github.io/sciModelFlowR/reference/deep-learning-060.md)
+  [`smf_multimodal`](https://wep69.github.io/sciModelFlowR/reference/deep-learning-060.md)
+  [`smf_multitask`](https://wep69.github.io/sciModelFlowR/reference/deep-learning-060.md)
+  [`smf_dl_optimizer`](https://wep69.github.io/sciModelFlowR/reference/deep-learning-060.md)
+  [`smf_dl_scheduler`](https://wep69.github.io/sciModelFlowR/reference/deep-learning-060.md)
+  [`smf_dl_early_stopping`](https://wep69.github.io/sciModelFlowR/reference/deep-learning-060.md)
+  [`smf_dl_device`](https://wep69.github.io/sciModelFlowR/reference/deep-learning-060.md)
+  [`smf_dl_determinism`](https://wep69.github.io/sciModelFlowR/reference/deep-learning-060.md)
+  [`smf_dl_mixed_precision`](https://wep69.github.io/sciModelFlowR/reference/deep-learning-060.md)
+  [`smf_dl_train`](https://wep69.github.io/sciModelFlowR/reference/deep-learning-060.md)
+  [`smf_dl_train_tensor`](https://wep69.github.io/sciModelFlowR/reference/deep-learning-060.md)
+  [`smf_dl_predict`](https://wep69.github.io/sciModelFlowR/reference/deep-learning-060.md)
+  [`smf_dl_predict_tensor`](https://wep69.github.io/sciModelFlowR/reference/deep-learning-060.md)
+  [`smf_dl_checkpoint`](https://wep69.github.io/sciModelFlowR/reference/deep-learning-060.md)
+  [`smf_dl_save_checkpoint`](https://wep69.github.io/sciModelFlowR/reference/deep-learning-060.md)
+  [`smf_dl_load_checkpoint`](https://wep69.github.io/sciModelFlowR/reference/deep-learning-060.md)
+  [`smf_dl_resume`](https://wep69.github.io/sciModelFlowR/reference/deep-learning-060.md)
+  [`smf_dl_distributional_head`](https://wep69.github.io/sciModelFlowR/reference/deep-learning-060.md)
+  [`smf_dl_mc_dropout`](https://wep69.github.io/sciModelFlowR/reference/deep-learning-060.md)
+  [`smf_dl_ensemble`](https://wep69.github.io/sciModelFlowR/reference/deep-learning-060.md)
+  [`smf_dl_predict_distribution`](https://wep69.github.io/sciModelFlowR/reference/deep-learning-060.md)
+  [`smf_dl_interval`](https://wep69.github.io/sciModelFlowR/reference/deep-learning-060.md)
+  [`smf_dl_uncertainty_decompose`](https://wep69.github.io/sciModelFlowR/reference/deep-learning-060.md)
+  [`smf_dl_saliency`](https://wep69.github.io/sciModelFlowR/reference/deep-learning-060.md)
+  [`smf_dl_integrated_gradients`](https://wep69.github.io/sciModelFlowR/reference/deep-learning-060.md)
+  [`smf_dl_gradient_x_input`](https://wep69.github.io/sciModelFlowR/reference/deep-learning-060.md)
+  [`smf_dl_gradcam`](https://wep69.github.io/sciModelFlowR/reference/deep-learning-060.md)
+  : Deep Learning and probabilistic Deep Learning interfaces
+- [`smf_external_validate`](https://wep69.github.io/sciModelFlowR/reference/external-validation-090.md)
+  [`smf_compare_validation_domains`](https://wep69.github.io/sciModelFlowR/reference/external-validation-090.md)
+  : Protected external validation
+- [`smf_api_catalog`](https://wep69.github.io/sciModelFlowR/reference/release-candidate-090.md)
+  [`smf_backend_matrix`](https://wep69.github.io/sciModelFlowR/reference/release-candidate-090.md)
+  [`smf_deprecation_policy`](https://wep69.github.io/sciModelFlowR/reference/release-candidate-090.md)
+  [`smf_release_candidate_audit`](https://wep69.github.io/sciModelFlowR/reference/release-candidate-090.md)
+  [`smf_run_crosslang_validation`](https://wep69.github.io/sciModelFlowR/reference/release-candidate-090.md)
+  [`smf_run_reference_validation`](https://wep69.github.io/sciModelFlowR/reference/release-candidate-090.md)
+  [`smf_validate_crosslang_fixtures`](https://wep69.github.io/sciModelFlowR/reference/release-candidate-090.md)
+  : Release-candidate validation and API evidence
+- [`smf_publication_table`](https://wep69.github.io/sciModelFlowR/reference/reporting-090.md)
+  [`smf_publication_plot`](https://wep69.github.io/sciModelFlowR/reference/reporting-090.md)
+  [`smf_reporting_checklist`](https://wep69.github.io/sciModelFlowR/reference/reporting-090.md)
+  : Publication reporting helpers
+- [`sciModelFlowR`](https://wep69.github.io/sciModelFlowR/reference/sciModelFlowR-package.md)
+  [`sciModelFlowR-package`](https://wep69.github.io/sciModelFlowR/reference/sciModelFlowR-package.md)
+  : Design-Aware Scientific Modeling Workflows
+- [`smf_apply_preprocessor`](https://wep69.github.io/sciModelFlowR/reference/smf_core_api.md)
+  [`smf_audit_data`](https://wep69.github.io/sciModelFlowR/reference/smf_core_api.md)
+  [`smf_backend_capabilities`](https://wep69.github.io/sciModelFlowR/reference/smf_core_api.md)
+  [`smf_backend_object`](https://wep69.github.io/sciModelFlowR/reference/smf_core_api.md)
+  [`smf_bayesian_spec`](https://wep69.github.io/sciModelFlowR/reference/smf_core_api.md)
+  [`smf_bootstrap_spec`](https://wep69.github.io/sciModelFlowR/reference/smf_core_api.md)
+  [`smf_capabilities`](https://wep69.github.io/sciModelFlowR/reference/smf_core_api.md)
+  [`smf_data_hash`](https://wep69.github.io/sciModelFlowR/reference/smf_core_api.md)
+  [`smf_data_spec`](https://wep69.github.io/sciModelFlowR/reference/smf_core_api.md)
+  [`smf_dataset_card`](https://wep69.github.io/sciModelFlowR/reference/smf_core_api.md)
+  [`smf_design_spec`](https://wep69.github.io/sciModelFlowR/reference/smf_core_api.md)
+  [`smf_design_summary`](https://wep69.github.io/sciModelFlowR/reference/smf_core_api.md)
+  [`smf_detect_leakage`](https://wep69.github.io/sciModelFlowR/reference/smf_core_api.md)
+  [`smf_diagnose`](https://wep69.github.io/sciModelFlowR/reference/smf_core_api.md)
+  [`smf_dl_spec`](https://wep69.github.io/sciModelFlowR/reference/smf_core_api.md)
+  [`smf_doctor`](https://wep69.github.io/sciModelFlowR/reference/smf_core_api.md)
+  [`smf_evaluate`](https://wep69.github.io/sciModelFlowR/reference/smf_core_api.md)
+  [`smf_experiment_spec`](https://wep69.github.io/sciModelFlowR/reference/smf_core_api.md)
+  [`smf_fit_experiment`](https://wep69.github.io/sciModelFlowR/reference/smf_core_api.md)
+  [`smf_fit_preprocessor`](https://wep69.github.io/sciModelFlowR/reference/smf_core_api.md)
+  [`smf_from_json`](https://wep69.github.io/sciModelFlowR/reference/smf_core_api.md)
+  [`smf_from_list`](https://wep69.github.io/sciModelFlowR/reference/smf_core_api.md)
+  [`smf_hash`](https://wep69.github.io/sciModelFlowR/reference/smf_core_api.md)
+  [`smf_holdout_split`](https://wep69.github.io/sciModelFlowR/reference/smf_core_api.md)
+  [`smf_import_split_manifest`](https://wep69.github.io/sciModelFlowR/reference/smf_core_api.md)
+  [`smf_list_datasets`](https://wep69.github.io/sciModelFlowR/reference/smf_core_api.md)
+  [`smf_load_dataset`](https://wep69.github.io/sciModelFlowR/reference/smf_core_api.md)
+  [`smf_manifest`](https://wep69.github.io/sciModelFlowR/reference/smf_core_api.md)
+  [`smf_metric_spec`](https://wep69.github.io/sciModelFlowR/reference/smf_core_api.md)
+  [`smf_missingness_report`](https://wep69.github.io/sciModelFlowR/reference/smf_core_api.md)
+  [`smf_model_spec`](https://wep69.github.io/sciModelFlowR/reference/smf_core_api.md)
+  [`smf_plot`](https://wep69.github.io/sciModelFlowR/reference/smf_core_api.md)
+  [`smf_predict`](https://wep69.github.io/sciModelFlowR/reference/smf_core_api.md)
+  [`smf_preprocess_provenance`](https://wep69.github.io/sciModelFlowR/reference/smf_core_api.md)
+  [`smf_preprocess_spec`](https://wep69.github.io/sciModelFlowR/reference/smf_core_api.md)
+  [`smf_probabilistic_spec`](https://wep69.github.io/sciModelFlowR/reference/smf_core_api.md)
+  [`smf_register_backend`](https://wep69.github.io/sciModelFlowR/reference/smf_core_api.md)
+  [`smf_report`](https://wep69.github.io/sciModelFlowR/reference/smf_core_api.md)
+  [`smf_reproducibility_spec`](https://wep69.github.io/sciModelFlowR/reference/smf_core_api.md)
+  [`smf_require_capability`](https://wep69.github.io/sciModelFlowR/reference/smf_core_api.md)
+  [`smf_resampling_spec`](https://wep69.github.io/sciModelFlowR/reference/smf_core_api.md)
+  [`smf_rng_info`](https://wep69.github.io/sciModelFlowR/reference/smf_core_api.md)
+  [`smf_run_gold_validation`](https://wep69.github.io/sciModelFlowR/reference/smf_core_api.md)
+  [`smf_save_manifest`](https://wep69.github.io/sciModelFlowR/reference/smf_core_api.md)
+  [`smf_spec_hash`](https://wep69.github.io/sciModelFlowR/reference/smf_core_api.md)
+  [`smf_split_manifest`](https://wep69.github.io/sciModelFlowR/reference/smf_core_api.md)
+  [`smf_task_spec`](https://wep69.github.io/sciModelFlowR/reference/smf_core_api.md)
+  [`smf_to_json`](https://wep69.github.io/sciModelFlowR/reference/smf_core_api.md)
+  [`smf_to_list`](https://wep69.github.io/sciModelFlowR/reference/smf_core_api.md)
+  [`smf_to_yaml`](https://wep69.github.io/sciModelFlowR/reference/smf_core_api.md)
+  [`smf_uncertainty_spec`](https://wep69.github.io/sciModelFlowR/reference/smf_core_api.md)
+  [`smf_validate_design`](https://wep69.github.io/sciModelFlowR/reference/smf_core_api.md)
+  [`smf_validate_schema`](https://wep69.github.io/sciModelFlowR/reference/smf_core_api.md)
+  [`smf_validate_split`](https://wep69.github.io/sciModelFlowR/reference/smf_core_api.md)
+  [`smf_warning_record`](https://wep69.github.io/sciModelFlowR/reference/smf_core_api.md)
+  [`smf_with_seed`](https://wep69.github.io/sciModelFlowR/reference/smf_core_api.md)
+  : sciModelFlowR Core Scientific Workflow API
+- [`smf_param_dbl`](https://wep69.github.io/sciModelFlowR/reference/smf_tuning_api.md)
+  [`smf_param_int`](https://wep69.github.io/sciModelFlowR/reference/smf_tuning_api.md)
+  [`smf_param_fct`](https://wep69.github.io/sciModelFlowR/reference/smf_tuning_api.md)
+  [`smf_param_lgl`](https://wep69.github.io/sciModelFlowR/reference/smf_tuning_api.md)
+  [`smf_search_space`](https://wep69.github.io/sciModelFlowR/reference/smf_tuning_api.md)
+  [`smf_search_grid`](https://wep69.github.io/sciModelFlowR/reference/smf_tuning_api.md)
+  [`smf_search_random`](https://wep69.github.io/sciModelFlowR/reference/smf_tuning_api.md)
+  [`smf_tuning_spec`](https://wep69.github.io/sciModelFlowR/reference/smf_tuning_api.md)
+  [`smf_tune_objective`](https://wep69.github.io/sciModelFlowR/reference/smf_tuning_api.md)
+  [`smf_tune`](https://wep69.github.io/sciModelFlowR/reference/smf_tuning_api.md)
+  [`smf_nested_tune`](https://wep69.github.io/sciModelFlowR/reference/smf_tuning_api.md)
+  [`smf_pareto_front`](https://wep69.github.io/sciModelFlowR/reference/smf_tuning_api.md)
+  [`smf_select_compromise`](https://wep69.github.io/sciModelFlowR/reference/smf_tuning_api.md)
+  [`smf_benchmark_spec`](https://wep69.github.io/sciModelFlowR/reference/smf_tuning_api.md)
+  [`smf_benchmark`](https://wep69.github.io/sciModelFlowR/reference/smf_tuning_api.md)
+  [`smf_decide_benchmark`](https://wep69.github.io/sciModelFlowR/reference/smf_tuning_api.md)
+  : Scientific Hyperparameter Tuning and Benchmarking
+- [`smf_tracking_spec`](https://wep69.github.io/sciModelFlowR/reference/tracking-persistence-080.md)
+  [`smf_tracker_local`](https://wep69.github.io/sciModelFlowR/reference/tracking-persistence-080.md)
+  [`smf_tracker_mlflow`](https://wep69.github.io/sciModelFlowR/reference/tracking-persistence-080.md)
+  [`smf_start_run`](https://wep69.github.io/sciModelFlowR/reference/tracking-persistence-080.md)
+  [`smf_log_metric`](https://wep69.github.io/sciModelFlowR/reference/tracking-persistence-080.md)
+  [`smf_log_params`](https://wep69.github.io/sciModelFlowR/reference/tracking-persistence-080.md)
+  [`smf_log_artifact`](https://wep69.github.io/sciModelFlowR/reference/tracking-persistence-080.md)
+  [`smf_log_result`](https://wep69.github.io/sciModelFlowR/reference/tracking-persistence-080.md)
+  [`smf_end_run`](https://wep69.github.io/sciModelFlowR/reference/tracking-persistence-080.md)
+  [`smf_list_runs`](https://wep69.github.io/sciModelFlowR/reference/tracking-persistence-080.md)
+  [`smf_get_run`](https://wep69.github.io/sciModelFlowR/reference/tracking-persistence-080.md)
+  [`smf_persistence_spec`](https://wep69.github.io/sciModelFlowR/reference/tracking-persistence-080.md)
+  [`smf_deployment_spec`](https://wep69.github.io/sciModelFlowR/reference/tracking-persistence-080.md)
+  [`smf_scalability_spec`](https://wep69.github.io/sciModelFlowR/reference/tracking-persistence-080.md)
+  [`smf_save_bundle`](https://wep69.github.io/sciModelFlowR/reference/tracking-persistence-080.md)
+  [`smf_validate_bundle`](https://wep69.github.io/sciModelFlowR/reference/tracking-persistence-080.md)
+  [`smf_load_bundle`](https://wep69.github.io/sciModelFlowR/reference/tracking-persistence-080.md)
+  [`smf_predict_bundle`](https://wep69.github.io/sciModelFlowR/reference/tracking-persistence-080.md)
+  [`smf_bundle_info`](https://wep69.github.io/sciModelFlowR/reference/tracking-persistence-080.md)
+  [`smf_hardware_info`](https://wep69.github.io/sciModelFlowR/reference/tracking-persistence-080.md)
+  [`smf_chunk_plan`](https://wep69.github.io/sciModelFlowR/reference/tracking-persistence-080.md)
+  [`smf_data_iterator`](https://wep69.github.io/sciModelFlowR/reference/tracking-persistence-080.md)
+  [`smf_iterator_next`](https://wep69.github.io/sciModelFlowR/reference/tracking-persistence-080.md)
+  [`smf_iterator_reset`](https://wep69.github.io/sciModelFlowR/reference/tracking-persistence-080.md)
+  [`smf_map_iterator`](https://wep69.github.io/sciModelFlowR/reference/tracking-persistence-080.md)
+  [`smf_batch_predict`](https://wep69.github.io/sciModelFlowR/reference/tracking-persistence-080.md)
+  [`smf_pins_publish_bundle`](https://wep69.github.io/sciModelFlowR/reference/tracking-persistence-080.md)
+  [`smf_pins_fetch_bundle`](https://wep69.github.io/sciModelFlowR/reference/tracking-persistence-080.md)
+  [`smf_vetiver_model`](https://wep69.github.io/sciModelFlowR/reference/tracking-persistence-080.md)
+  [`smf_vetiver_pin_write`](https://wep69.github.io/sciModelFlowR/reference/tracking-persistence-080.md)
+  [`smf_write_plumber`](https://wep69.github.io/sciModelFlowR/reference/tracking-persistence-080.md)
+  [`smf_export_onnx`](https://wep69.github.io/sciModelFlowR/reference/tracking-persistence-080.md)
+  : Tracking, safe persistence, deployment, and scalable inference
+
+# Articles
+
+### Foundations and validation
+
+- [sciModelFlowR 0.5.0
+  Overview](https://wep69.github.io/sciModelFlowR/articles/v00-overview.md):
+- [sciModelFlowR: From Scientific Design to Reproducible Modeling
+  Workflows](https://wep69.github.io/sciModelFlowR/articles/v01-foundations-to-advanced-scientific-modeling.md):
+- [Data Audit and Leakage: A Design-Aware
+  Workflow](https://wep69.github.io/sciModelFlowR/articles/v02-data-audit-and-leakage.md):
+- [Validation, Gold Data, and
+  Reproducibility](https://wep69.github.io/sciModelFlowR/articles/v27-validation-and-reproducibility.md):
+
+### Resampling, bootstrap, and features
+
+- [Resampling and Scientific Design: Validation Geometry Before Model
+  Ranking](https://wep69.github.io/sciModelFlowR/articles/v03-resampling-and-scientific-design.md):
+- [Bootstrap and Stability: Match the Resampling Unit to the Scientific
+  Dependence](https://wep69.github.io/sciModelFlowR/articles/v04-bootstrap-and-stability.md):
+- [Feature Engineering and Selection: Learn Inside the
+  Fold](https://wep69.github.io/sciModelFlowR/articles/v05-feature-engineering-and-selection.md):
+
+### Supervised, probabilistic, and imbalance workflows
+
+- [sciModelFlowR 0.3.0: Supervised Machine
+  Learning](https://wep69.github.io/sciModelFlowR/articles/v06-supervised-machine-learning.md):
+- [sciModelFlowR 0.3.0: Probabilistic Machine
+  Learning](https://wep69.github.io/sciModelFlowR/articles/v07-probabilistic-machine-learning.md):
+- [sciModelFlowR 0.3.0: Imbalance, Calibration, and
+  Thresholds](https://wep69.github.io/sciModelFlowR/articles/v09-imbalance-calibration-and-thresholds.md):
+
+### Tuning and scientific benchmarking
+
+- [Scientific Tuning, Nested Model Selection, and Hyperparameter
+  Search](https://wep69.github.io/sciModelFlowR/articles/v08-tuning-and-scientific-benchmarking.md):
+- [Complete Design-Aware Scientific Modeling
+  Workflow](https://wep69.github.io/sciModelFlowR/articles/v19-complete-scientific-workflow.md):
+
+### Explainable AI and stability
+
+- [Explainable AI and Explanation
+  Stability](https://wep69.github.io/sciModelFlowR/articles/v10-explainable-ai-and-stability.md):
+
+### Deep Learning
+
+- [Deep Learning Foundations: Training, Reproducibility, and Scientific
+  Safeguards](https://wep69.github.io/sciModelFlowR/articles/v11-deep-learning-foundations.md):
+- [Deep Learning Architectures for Tabular, Spectral, Image, and
+  Sequential
+  Data](https://wep69.github.io/sciModelFlowR/articles/v12-deep-learning-architectures.md):
+- [Probabilistic Deep Learning: Distributional Heads, MC Dropout, and
+  Deep
+  Ensembles](https://wep69.github.io/sciModelFlowR/articles/v13-probabilistic-deep-learning.md):
+- [Deep Learning Explainability, Checkpoints, and Reproducible
+  Scientific
+  Reporting](https://wep69.github.io/sciModelFlowR/articles/v14-deep-learning-xai-and-reproducibility.md):
+
+### Bayesian, conformal, and uncertainty
+
+- [Bayesian Modeling: Priors, Posterior Inference, BART, and Gaussian
+  Processes](https://wep69.github.io/sciModelFlowR/articles/v15-bayesian-modeling.md):
+- [Bayesian Diagnostics, Posterior Predictive Checking, and Predictive
+  Comparison](https://wep69.github.io/sciModelFlowR/articles/v16-bayesian-diagnostics-and-predictive-checking.md):
+- [Conformal Prediction: Coverage, Calibration Sets, CV+, and Prediction
+  Sets](https://wep69.github.io/sciModelFlowR/articles/v17-conformal-prediction.md):
+- [Full Uncertainty: Typed Intervals, Decomposition, and Scientific
+  Communication](https://wep69.github.io/sciModelFlowR/articles/v18-full-uncertainty.md):
+
+### Tracking, persistence, and scalable inference
+
+- [Tracking, Persistence, Deployment, and Scalable
+  Inference](https://wep69.github.io/sciModelFlowR/articles/v20-tracking-persistence-and-scalable-inference.md):
+
+### Scientific domain workflows
+
+- [Agronomy and Soil Scientific
+  Workflow](https://wep69.github.io/sciModelFlowR/articles/v21-agronomy-soil-workflow.md):
+- [Spectroscopy and Phenotyping
+  Workflow](https://wep69.github.io/sciModelFlowR/articles/v22-spectroscopy-phenotyping-workflow.md):
+- [Spatial and Environmental
+  Workflow](https://wep69.github.io/sciModelFlowR/articles/v23-spatial-environmental-workflow.md):
+- [Protected External
+  Validation](https://wep69.github.io/sciModelFlowR/articles/v24-protected-external-validation.md):
+
+### API, migration, and release governance
+
+- [Stable 1.x API
+  Catalog](https://wep69.github.io/sciModelFlowR/articles/v25-api-catalog.md):
+- [Migration and Deprecation
+  Guide](https://wep69.github.io/sciModelFlowR/articles/v26-migration-and-deprecation.md):

@@ -400,3 +400,26 @@ com três desvios documentados em relação ao freeze. Originais preservados em
   (`B35A37D0E6F8FAE2DFF32DE838EBC3D860B40E69CB7CBB58F352CEC25172289B`) e
   check re-executado: **0 ERROR / 0 WARNING / 2 NOTEs** — a nota de URLs
   inválidas desapareceu com o repo publicado.
+
+## Correções 1.0.2 (auditoria do tutorial da 1.0.1)
+
+Cinco correções derivadas da auditoria da biblioteca instalada (skill
+`api-audited-tutorial`), com o relatório ao autor em `RELATORIO-AO-AUTOR.md`
+(projeto do roteiro) e testes de regressão em
+`tests/testthat/test-regressions-102.R`. A API pública de 246 símbolos e o
+freeze 1.0.0 permanecem intactos; detalhes completos em `NEWS.md` (1.0.2).
+
+1. **`smf_to_json()` sem `na = "null"`** — `NA_real_` virava texto `"NA"` e o
+   bundle portátil com pré-processamento padrão falhava só na previsão;
+   corrigido em `R/core-serialization.R` (+ higiene em `R/tracking.R`) e
+   tolerância a estados textuais/NULL em `R/preprocess.R`.
+2. **Objetivo de tuning fora de `spec@metrics`** — archive com coluna toda
+   `NA` e seleção vazia sem aviso; agora aborta com `smf_tuning_error`
+   (`R/tuning-core.R`) e o `print` distingue o motivo (`R/print-methods.R`).
+3. **`value` textual no PDP/ICE numérico** — passa a preservar o tipo
+   numérico (`R/explain.R`), como o ALE, eliminando também a sensibilidade a
+   `OutDec`.
+4. **Intervalo degenerado em representação `point`** — agora recusa, como o
+   CDF da mesma representação (`R/probabilistic-core.R`).
+5. **Mensagem de engine desconhecido** — passa a listar os engines aceitos e
+   apontar `smf_available_model_adapters()` (`R/core-capabilities.R`).

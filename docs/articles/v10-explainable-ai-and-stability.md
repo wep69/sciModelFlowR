@@ -1,0 +1,924 @@
+# Explainable AI and Explanation Stability
+
+## 1. Why explanation is a scientific workflow, not a decoration
+
+The purpose of explainability in `sciModelFlowR` is not to make a
+complex model look transparent after the fact. The purpose is to ask
+disciplined questions about how predictions change with predictors, how
+local decisions are supported by the fitted model, whether those
+patterns survive reasonable perturbations, and where an explanation is
+too unstable to support a strong scientific statement. Version 0.5.0
+therefore treats explanation as an analysis object with its own
+specification, provenance, warnings, resampling geometry, and stability
+diagnostics. Every package-native explanation carries
+`causal_interpretation = FALSE`. Feature attribution answers a
+predictive question conditional on the fitted model and the supplied
+data distribution; it does not identify interventions or causal effects.
+
+A useful workflow is: fit and validate the predictive model first,
+define the explanation target and background distribution, inspect
+correlation and domain shift, compute complementary global and local
+explanations, quantify stability, and only then write a scientific
+interpretation. A high importance score is not automatically a stable
+importance score. A stable association is not automatically causal. A
+visually smooth partial dependence curve is not evidence that the
+feature can be manipulated independently of correlated covariates.
+
+## 2. Learning objectives
+
+After completing this vignette, the reader should be able to distinguish
+predictive importance from causal effect; choose between permutation
+importance, partial dependence, ICE, ALE, SHAP and local perturbation
+explanations; define the background data used by an explanation; trace
+transformed features to their source variables when a mapping exists;
+detect when correlated predictors make perturbation explanations
+fragile; diagnose explanation data outside the training domain; quantify
+explanation stability across design-aware resamples; compare explanation
+rankings without forcing a single universal ranking; and report sign,
+direction, uncertainty, stability, provenance and limitations
+explicitly.
+
+## 3. A compact map of the 0.5.0 API
+
+``` r
+
+library(sciModelFlowR)
+
+ex_spec <- smf_explain_spec(
+  methods = c("permutation", "pdp", "ale"),
+  scope = "both",
+  n_repeats = 20,
+  grid_size = 20,
+  seed = 260915
+)
+
+smf_explain()
+smf_permutation_importance()
+smf_pdp()
+smf_ice()
+smf_ale()
+smf_local_explain()
+smf_shap()
+smf_counterfactual()
+smf_trace_features()
+smf_explanation_domain()
+smf_explanation_agreement()
+smf_explanation_stability()
+```
+
+The package uses its own result classes. Optional XAI packages can be
+adapters, but they do not define the scientific contract. This allows
+the same warning structure, feature provenance and non-causal labeling
+to remain visible across model engines.
+
+## 4. Gold data for explanation stability
+
+Version 0.5.0 adds `gold_xai_stability`, a deterministic synthetic
+regression fixture. `signal_primary` drives the response,
+`signal_correlated` is intentionally very highly correlated with it, and
+`weak_feature` has a much smaller direct contribution. The fixture
+exists to demonstrate an important limitation: when predictors carry
+overlapping information, model-agnostic perturbation can redistribute
+predictive importance between them. That redistribution is an expected
+property of the explanation problem, not evidence that one variable has
+no biological relevance.
+
+``` r
+
+d <- smf_load_dataset("gold_xai_stability")
+cor(d$signal_primary, d$signal_correlated)
+smf_dataset_card("gold_xai_stability")
+```
+
+The data are synthetic teaching and validation data. They are not field
+evidence. Their deterministic generator makes cross-language property
+checks possible without requiring R and Python to share a pseudo-random
+number generator.
+
+## 5. Fit before explaining
+
+Explanation should follow an already defensible predictive workflow. The
+example below uses the reference linear engine so that the explanation
+layer can be inspected without an optional ML backend. The same public
+explanation interface is intended for supported `tidymodels`, `mlr3` and
+XGBoost fits because the package explains the prediction function rather
+than exposing backend-specific objects as the primary interface.
+
+``` r
+
+sp <- smf_experiment_spec(
+  task = smf_task_spec("regression", "response"),
+  data = smf_data_spec(
+    "response",
+    c("signal_primary", "signal_correlated", "weak_feature"),
+    "obs_id"
+  ),
+  design = smf_design_spec(id_column = "obs_id"),
+  preprocessing = smf_preprocess_spec(),
+  resampling = smf_resampling_spec("holdout", train_prop = 0.80, seed = 41),
+  model = smf_model_spec("linear", "stats"),
+  metrics = list(smf_metric_spec("rmse")),
+  explain = ex_spec
+)
+
+fit <- smf_fit_experiment(sp, d)
+test <- d[fit@split@test_index, , drop = FALSE]
+fit@metrics
+```
+
+Do not use the final test set repeatedly to choose an explanation
+method, select features or tune the model. If explanation itself becomes
+a model-development decision, estimate its behavior inside the
+development resampling structure and preserve an untouched final
+validation target.
+
+## 6. Permutation importance
+
+Permutation importance asks how much predictive performance deteriorates
+when the association between one feature and the observed outcome is
+broken by permutation. In this package, a positive importance value
+always means worse predictive performance after permutation, regardless
+of whether the underlying metric is minimized or maximized. The baseline
+metric, permuted mean, standard deviation across repetitions, direction
+and number of repetitions are retained. The method is attractive because
+it is model-agnostic, but it is not immune to dependence among
+predictors. Permuting one variable can create combinations that were
+rare or impossible in the observed data, and two correlated variables
+can substitute for one another. Therefore, the package emits a
+structured correlated-feature warning rather than presenting the ranking
+as unqualified truth.
+
+``` r
+
+imp <- smf_permutation_importance(
+  fit, test, metric = smf_metric_spec("rmse"),
+  n_repeats = 50, seed = 260915
+)
+imp
+```
+
+Interpret the signed `importance` column as deterioration in the
+declared metric after permutation. The standard deviation describes
+Monte Carlo variability of the perturbation step, not uncertainty from
+refitting the whole model. For that broader uncertainty, use explanation
+stability across resamples.
+
+## 7. Partial dependence
+
+Partial dependence averages predictions after setting a selected
+predictor to grid values while leaving other predictors at their
+observed values. It answers a model-based marginal question. The curve
+can be useful for nonlinear relationships and thresholds, but it can
+evaluate unrealistic combinations when predictors are strongly
+dependent. The grid should remain within scientifically defensible
+support, and the analyst should inspect the underlying data density
+rather than interpret every segment of a smooth curve equally. In
+`sciModelFlowR`, the prediction direction is kept on the response or
+chosen class-probability scale so the sign and direction of the effect
+remain interpretable.
+
+``` r
+
+pdp <- smf_pdp(fit, test, "signal_primary", grid_size = 25)
+pdp
+```
+
+The curve should be read over the support of the predictor. A
+source-feature trace and domain check should accompany plots whenever
+preprocessing or external prediction populations are involved.
+
+## 8. ICE
+
+Individual conditional expectation profiles retain one trajectory per
+selected observation instead of averaging immediately. They can reveal
+heterogeneity that a single partial-dependence curve hides. Diverging
+trajectories may indicate interactions, subgroup structure, or
+extrapolation. ICE is descriptive of the fitted prediction surface; the
+package does not reinterpret those patterns as treatment heterogeneity
+or individual causal response. The number of profiles should be
+controlled for readability, while sampling of rows is seeded and
+recorded for reproducibility.
+
+``` r
+
+ice <- smf_ice(fit, test, "signal_primary", grid_size = 20, n = 30, seed = 260915)
+```
+
+Plotting many profiles is useful only when line identity and the
+distribution of the observed predictor remain visible. Centered ICE can
+be added later without changing the result contract.
+
+## 9. ALE
+
+Accumulated local effects approximate local prediction differences
+within intervals of the observed predictor distribution and accumulate
+those differences. ALE is often more defensible than partial dependence
+under predictor dependence because it focuses on locally observed
+regions, although it does not eliminate every interpretation problem.
+Version 0.5.0 implements one-dimensional ALE for numeric predictors.
+Empty or poorly supported bins should be treated as weak evidence, and
+higher-order interaction ALE is deferred until its semantics and
+plotting contracts are validated.
+
+``` r
+
+ale <- smf_ale(fit, test, "signal_primary", bins = 20)
+```
+
+The `effect` column is centered. Its zero therefore has a
+model-explanation reference meaning, not a biological zero. Preserve
+that distinction in figures and captions.
+
+## 10. SHAP adapters
+
+SHAP-style values allocate a prediction difference among features
+according to a cooperative-game framework. The apparent additivity of a
+SHAP decomposition should not be confused with causal decomposition.
+Background choice, dependence assumptions, approximation scheme and
+model-specific algorithm all affect the result.
+[`smf_shap()`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+uses `fastshap` as an optional adapter and keeps the package result
+outside the backend. The prediction wrapper passes raw data through the
+fitted `sciModelFlowR` preprocessing and feature state, so the
+explanation is tied to the actual deployed prediction path rather than
+to an accidentally different representation.
+
+## 11. Local perturbation explanations
+
+A local explanation asks why a particular prediction differs from a
+reference prediction. The package-native local perturbation method
+replaces one feature at a time with a background reference value, using
+a median for numeric predictors and a modal category for categorical
+predictors, and records the change in prediction. This is deliberately
+simple and auditable. It is not a unique attribution theorem and can be
+misleading when features interact strongly. The reference distribution
+must therefore be reported with the result.
+
+## 12. Counterfactual candidates
+
+Counterfactual explanations are optional because they can easily be
+overinterpreted. The package provides a conservative observed-data
+candidate search rather than claiming to solve a causal intervention
+problem. Candidate rows are searched in a supplied reference set and
+ranked by a simple mixed numeric/categorical distance. A candidate shows
+that the fitted model predicts a different target for a nearby observed
+configuration; it does not prove that changing one feature would cause
+the target to change. Domain constraints and actionability are
+scientific inputs, not defaults.
+
+## 13. Source-feature tracing
+
+Preprocessing can split one source variable into several dummy columns,
+and PCA or PLS can replace source variables by latent components.
+Scientific reporting should not lose that provenance.
+[`smf_trace_features()`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+reconstructs direct mappings for numeric variables and one-hot columns
+and exposes loading-based mappings when a representation object carries
+a feature map. A transformed component is not renamed as if it were a
+source variable; the relationship and weight are retained. This fulfills
+the requirement that transformed features trace back to source features
+whenever a mapping exists.
+
+``` r
+
+map <- smf_trace_features(fit)
+map
+```
+
+For one-hot encoding, each dummy is mapped back to the categorical
+source. For PCA or PLS, component-to-source loadings are exposed rather
+than collapsed into an unsupported single-source label.
+
+## 14. Correlated-feature warnings
+
+High correlation creates a specific interpretation hazard for
+permutation, SHAP variants, PDP and local perturbations. The package
+screens numeric explained features and emits
+`CORRELATED_FEATURE_EXPLANATION` when absolute pairwise correlation
+exceeds the configured threshold. The warning does not prohibit
+explanation. It tells the analyst that unique-feature rankings are
+conditional on a perturbation scheme that may violate the joint data
+structure. Grouped features, domain-informed composite explanations or
+conditional methods may be more appropriate.
+
+## 15. Explanation domain and extrapolation
+
+An explanation can be numerically valid and scientifically irrelevant if
+it is computed far outside the model’s training support.
+[`smf_explanation_domain()`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+compares numeric ranges and categorical levels between a reference set
+and the data being explained. Range checks are intentionally simple and
+transparent; later versions may add multivariate density and
+representation-aware domain diagnostics. The report should distinguish
+interpolation from extrapolation and identify novel categorical levels.
+
+``` r
+
+domain <- smf_explanation_domain(
+  reference = d[fit@split@train_index, ],
+  new_data  = test
+)
+domain
+```
+
+A zero univariate outside fraction does not prove that the multivariate
+combination is in distribution. It is a transparent first diagnostic,
+not a full density-ratio estimator.
+
+## 16. Stability across folds
+
+A single importance ranking is a random quantity because the fitted
+model, data partition and explanation perturbations vary.
+[`smf_explanation_stability()`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+refits the model within each design-aware resample, computes permutation
+importance only on the corresponding assessment partition, and
+summarizes mean importance, standard deviation, coefficient of
+variation, positive-importance frequency, mean rank and rank dispersion.
+It also computes top-k Jaccard agreement across folds. Final external
+validation folds are blocked from repeated stability estimation.
+
+``` r
+
+cv_spec <- smf_resampling_spec("kfold", n_splits = 5, seed = 81)
+sp_cv <- sp
+# Construct the experiment with cv_spec in a regular analysis workflow.
+stab <- smf_explanation_stability(
+  sp_cv, d,
+  smf_explain_spec("permutation", n_repeats = 20, seed = 91),
+  top_k = 3
+)
+stab
+```
+
+The fold-level table is retained, so a summary statistic never prevents
+the analyst from inspecting the actual pattern of variation.
+
+## 17. Stability across seeds
+
+Stochastic models and stochastic explainers should be evaluated across
+independent seeds when seed variation is scientifically consequential.
+Version 0.5.0 records the seed in every package-native explanation and
+exposes a stable interface for repeated calls. A future backend-specific
+seed ensemble can be layered on the same result contract. The key
+reporting principle is already fixed: an explanation that changes
+materially with the seed should not be written as a deterministic
+property of the scientific system.
+
+## 18. Stability across bootstrap samples
+
+Bootstrap stability asks whether explanatory conclusions persist when
+the observational sampling process is perturbed according to the
+declared design. The bootstrap unit must match the scientific sampling
+unit. Row bootstrap is inappropriate for clustered, repeated, temporal
+or spatial observations when dependence matters. The 0.5.0 stability
+interface is built on the package’s design-aware resampling contracts so
+bootstrap-based explanation stability can reuse the same scientific
+guardrails rather than bypassing them.
+
+## 19. Comparing explanation methods
+
+Different explanation methods target different functionals. Agreement is
+informative, disagreement is also informative.
+[`smf_explanation_agreement()`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+compares feature ranks with Spearman correlation and compares top-k sets
+with Jaccard similarity. The function does not declare one method
+correct. Large disagreement should trigger investigation of correlation,
+interactions, background choice, extrapolation, model instability or
+method-specific assumptions. A scientific report should name the
+explanation functional instead of referring vaguely to ‘the importance’.
+
+## 20. Classification explanations
+
+For binary and multiclass models an explanation must identify the
+probability scale being explained. By default, binary explanations use
+the positive label declared in `TaskSpec`; multiclass explanations
+require a class choice when a scalar response is needed. Explaining hard
+class labels is discouraged because thresholds create discontinuities
+and conceal probability information. Calibration should be evaluated
+before interpreting changes in predicted probability as meaningful
+changes in risk.
+
+## 21. Preprocessing and leakage
+
+The explanation layer calls
+[`smf_predict()`](https://wep69.github.io/sciModelFlowR/reference/smf_core_api.md),
+which reapplies the preprocessing and feature state learned on the
+training partition. It does not refit imputation, scaling, dummy
+encoding, feature selection or latent representations on the data being
+explained. This matters because a seemingly harmless XAI helper can
+otherwise reintroduce leakage after a correctly designed modeling
+pipeline. Explanation data may contain the outcome for metric-based
+importance, but the outcome is never used to refit preprocessing in the
+explanation path.
+
+## 22. Interactions
+
+Interactions can make one-dimensional explanations incomplete. ICE
+fan-out, PDP-ALE disagreement and local contribution changes across
+observations can signal interaction structure, but they are not formal
+interaction tests. Version 0.5.0 emphasizes interaction diagnostics
+through comparison rather than adding a large collection of unstable
+scores. Interaction summaries can be expanded later behind the same
+`ExplainSpec` contract once numerical reference tests are available.
+
+## 23. Scientific language
+
+Preferred wording is predictive and conditional: ‘the model relied
+strongly on nitrogen within the evaluated data’, ‘permutation importance
+was stable across folds’, or ‘the predicted probability increased over
+this observed range’. Avoid causal wording such as ‘nitrogen caused the
+prediction increase’ unless a separate causal design and estimand
+justify it. The package records `causal_interpretation = FALSE`
+precisely so downstream reports can preserve this distinction.
+
+## 24. Figures
+
+Explanation plots must preserve sign and direction semantics. A positive
+local contribution should not silently flip sign because a plotting
+function sorts absolute values. PDP, ICE and ALE axes should use source
+units when the source feature is directly interpretable. If the model
+works on latent components, the component should be labeled as such and
+accompanied by the source-feature map. Observed support or density
+should be shown when possible so visually impressive extrapolated
+segments are not mistaken for well-supported evidence.
+
+## 25. Reporting stability
+
+Report both magnitude and stability. A variable can have high mean
+importance and large rank dispersion, or moderate importance and very
+stable rank. These are different scientific statements. At minimum,
+report the explanation method, evaluation data, metric, background
+definition, number of perturbation repetitions, resampling design, seed
+policy, correlation warnings, domain warnings, rank stability and
+whether the result was computed before or after calibration.
+
+## 26. Common mistake: explaining the training set
+
+Training-set explanations can be useful for model inspection but should
+not be confused with out-of-sample explanatory behavior. If the
+scientific claim concerns generalization, compute explanation magnitude
+on assessment data and explanation stability across resamples. Do not
+select a model on a test set and then repeatedly mine that same test set
+for the most attractive explanation narrative.
+
+## 27. Common mistake: treating a rank as truth
+
+Ranks exaggerate small numerical differences and hide uncertainty. Two
+features with almost equal importance can swap rank under trivial
+perturbations. `sciModelFlowR` therefore retains the numerical
+importance, dispersion and rank-stability summaries rather than
+returning only an ordered list. A rank should be interpreted together
+with its magnitude and resampling variability.
+
+## 28. Common mistake: ignoring correlation
+
+When two agronomic covariates measure closely related processes,
+permutation can make one look unimportant because the other preserves
+predictive information, or can create unrealistic combinations and
+inflate loss. The correlated-feature warning is not a nuisance to
+suppress. It is part of the result and should be reflected in the
+scientific interpretation.
+
+## 29. Common mistake: causal SHAP language
+
+SHAP values are often described with verbs such as ‘drives’, ‘causes’ or
+‘increases’ without specifying that the statement concerns the fitted
+prediction function. The package deliberately uses predictive language
+and stores the non-causal flag. Causal attribution requires assumptions
+about intervention, confounding and identification that ordinary
+predictive XAI does not provide.
+
+## 30. Integrated XAI workflow
+
+The integrated workflow begins with a validated model, a declared
+explanation specification and a held-out assessment set. First inspect
+feature tracing and correlation. Then calculate permutation importance
+for a performance-linked global summary, PDP and ALE for shape, ICE for
+heterogeneity, and local perturbations or SHAP for selected
+observations. Compare methods, inspect domain support, and quantify fold
+stability. Only after these steps should a result be converted into a
+manuscript statement or decision-support figure.
+
+## 31. Reproducibility
+
+Every package-native explanation stores data hashes where appropriate,
+the explanation seed, selected methods and non-causal status. The
+stability result stores the resampling manifest hash and records that
+final test data were not used. Optional backend versions are captured by
+the wider experiment manifest and should be retained in a release
+analysis. Cross-language fixtures test semantic properties, not bitwise
+identity of stochastic explainers.
+
+## 32. Validation strategy
+
+Local validation of the 0.5.0 layer should include analytical checks for
+linear models, Gold-property tests, repeated-seed determinism,
+correlated-feature warnings, sign-preserving plot data, source-feature
+mapping, fold containment, SHAP smoke tests when `fastshap` is
+installed, and differential checks against selected external XAI
+libraries. Stability thresholds should be justified by simulation rather
+than chosen after observing a desired ranking.
+
+## 33. Function-selection guide
+
+Use permutation importance when a performance-linked global ranking is
+needed; PDP for an average marginal prediction profile; ICE when
+individual trajectories matter; ALE when local distribution-aware shape
+is preferred; SHAP when additive local attribution is specifically
+needed and its assumptions are acceptable; local perturbation for a
+simple auditable case explanation; counterfactual candidates for
+constrained observed alternatives; domain diagnostics before explaining
+new populations; and explanation stability whenever the scientific
+conclusion depends on a ranking or sign being reproducible.
+
+## 34. Minimum reporting checklist
+
+Before publishing an explanation, document the fitted model and
+validation context, the explained outcome or class, source and
+transformed features, explanation method, background data, evaluation
+partition, metric where relevant, seeds and repetitions, correlation
+structure, extrapolation checks, magnitude and sign, stability across
+resamples, optional backend and version, and the statement that
+predictive explanation is not causal inference. If any of those items
+materially changes the conclusion, that sensitivity is itself a result.
+
+## 35. Final perspective
+
+Explainability is strongest when it narrows scientific uncertainty
+rather than supplying a persuasive graphic after modeling is finished.
+The 0.5.0 layer makes explanations first-class scientific objects: they
+have declared targets, training-safe prediction paths, provenance,
+correlation warnings, domain diagnostics and stability summaries. The
+intended progression is model validity, explanation validity,
+explanation stability, and only then interpretation. This keeps XAI
+connected to the same design-aware philosophy used throughout
+`sciModelFlowR`.
+
+## Appendix A. Interpretation questions for reviewers and students
+
+For every global explanation, ask what population the evaluation rows
+represent, whether the metric is scientifically appropriate, whether
+correlation changes the perturbation meaning, whether the model is
+calibrated when probabilities are explained, and whether the ranking
+persists across folds. For every local explanation, ask what reference
+was used, whether the focal point is within training support, whether
+the explanation changes under a plausible alternative background, and
+whether the feature can actually vary independently of the others. For
+counterfactual candidates, distinguish a nearby observed configuration
+from an actionable intervention. For all methods, ask whether the result
+would be written differently if its stability interval or rank
+dispersion were shown next to the point estimate.
+
+## Appendix B. Suggested publication language
+
+A defensible results paragraph names the method and data partition
+before interpreting magnitude. For example: permutation importance
+evaluated on held-out folds identified a consistently large predictive
+contribution for a source feature, but importance was shared with a
+strongly correlated covariate and rank order varied across resamples. An
+ALE profile indicated the direction of the fitted association over the
+supported predictor range. These patterns characterize the fitted
+predictive model and should not be interpreted as causal effects. This
+wording is less dramatic than causal attribution, but it is
+scientifically more faithful to what the analysis establishes.
+
+## Appendix C. What is deliberately deferred
+
+Version 0.5.0 does not yet implement gradient-based explanations,
+saliency, Grad-CAM or attention visualization because those belong to
+the Deep Learning architecture introduced in 0.6.0. Higher-order ALE,
+specialized tree SHAP engines and sophisticated causal or constrained
+counterfactual optimization are also not silently substituted for the
+package-native methods. Their future adapters must satisfy the same
+provenance, sign, feature-tracing, stability and non-causal-reporting
+contracts before being promoted to validated status.
+
+## Appendix D. Glossary and interpretation notes
+
+### Background Distribution
+
+In this vignette, **background distribution** means the empirical or
+declared reference distribution over which an explanation averages or
+constructs replacement values. The term should be reported with enough
+context that a reader can reconstruct the corresponding computation. Its
+meaning is intentionally narrower than informal uses of the same phrase.
+In scientific modeling, narrowing the claim is a strength: it separates
+what follows from the fitted prediction function from what would require
+an experimental intervention, a causal model, or external biological
+knowledge. When two analysts use different background distributions,
+resampling geometries, feature encodings or target probability classes,
+they can obtain different explanations without either software
+implementation being numerically wrong. The differences must therefore
+be part of the analysis record rather than hidden by a plotting default.
+
+### Predictive Functional
+
+In this vignette, **predictive functional** means the precise numerical
+quantity computed from the fitted prediction function, such as loss
+increase, average prediction or local prediction difference. The term
+should be reported with enough context that a reader can reconstruct the
+corresponding computation. Its meaning is intentionally narrower than
+informal uses of the same phrase. In scientific modeling, narrowing the
+claim is a strength: it separates what follows from the fitted
+prediction function from what would require an experimental
+intervention, a causal model, or external biological knowledge. When two
+analysts use different background distributions, resampling geometries,
+feature encodings or target probability classes, they can obtain
+different explanations without either software implementation being
+numerically wrong. The differences must therefore be part of the
+analysis record rather than hidden by a plotting default.
+
+### Stability
+
+In this vignette, **stability** means the persistence of an explanatory
+conclusion under defensible repetitions of sampling, fitting or
+perturbation. The term should be reported with enough context that a
+reader can reconstruct the corresponding computation. Its meaning is
+intentionally narrower than informal uses of the same phrase. In
+scientific modeling, narrowing the claim is a strength: it separates
+what follows from the fitted prediction function from what would require
+an experimental intervention, a causal model, or external biological
+knowledge. When two analysts use different background distributions,
+resampling geometries, feature encodings or target probability classes,
+they can obtain different explanations without either software
+implementation being numerically wrong. The differences must therefore
+be part of the analysis record rather than hidden by a plotting default.
+
+### Support
+
+In this vignette, **support** means the region of predictor space
+represented by the data used to train or evaluate the model. The term
+should be reported with enough context that a reader can reconstruct the
+corresponding computation. Its meaning is intentionally narrower than
+informal uses of the same phrase. In scientific modeling, narrowing the
+claim is a strength: it separates what follows from the fitted
+prediction function from what would require an experimental
+intervention, a causal model, or external biological knowledge. When two
+analysts use different background distributions, resampling geometries,
+feature encodings or target probability classes, they can obtain
+different explanations without either software implementation being
+numerically wrong. The differences must therefore be part of the
+analysis record rather than hidden by a plotting default.
+
+### Provenance
+
+In this vignette, **provenance** means the record connecting an
+explanation to its model, data, preprocessing state, resampling
+geometry, seed and optional backend. The term should be reported with
+enough context that a reader can reconstruct the corresponding
+computation. Its meaning is intentionally narrower than informal uses of
+the same phrase. In scientific modeling, narrowing the claim is a
+strength: it separates what follows from the fitted prediction function
+from what would require an experimental intervention, a causal model, or
+external biological knowledge. When two analysts use different
+background distributions, resampling geometries, feature encodings or
+target probability classes, they can obtain different explanations
+without either software implementation being numerically wrong. The
+differences must therefore be part of the analysis record rather than
+hidden by a plotting default.
+
+### Source Feature
+
+In this vignette, **source feature** means a scientifically named input
+variable before dummy expansion or latent representation. The term
+should be reported with enough context that a reader can reconstruct the
+corresponding computation. Its meaning is intentionally narrower than
+informal uses of the same phrase. In scientific modeling, narrowing the
+claim is a strength: it separates what follows from the fitted
+prediction function from what would require an experimental
+intervention, a causal model, or external biological knowledge. When two
+analysts use different background distributions, resampling geometries,
+feature encodings or target probability classes, they can obtain
+different explanations without either software implementation being
+numerically wrong. The differences must therefore be part of the
+analysis record rather than hidden by a plotting default.
+
+### Transformed Feature
+
+In this vignette, **transformed feature** means a column or component
+created by preprocessing or representation learning. The term should be
+reported with enough context that a reader can reconstruct the
+corresponding computation. Its meaning is intentionally narrower than
+informal uses of the same phrase. In scientific modeling, narrowing the
+claim is a strength: it separates what follows from the fitted
+prediction function from what would require an experimental
+intervention, a causal model, or external biological knowledge. When two
+analysts use different background distributions, resampling geometries,
+feature encodings or target probability classes, they can obtain
+different explanations without either software implementation being
+numerically wrong. The differences must therefore be part of the
+analysis record rather than hidden by a plotting default.
+
+### Rank Stability
+
+In this vignette, **rank stability** means the degree to which the
+ordering of explanatory magnitudes persists across repeated analyses.
+The term should be reported with enough context that a reader can
+reconstruct the corresponding computation. Its meaning is intentionally
+narrower than informal uses of the same phrase. In scientific modeling,
+narrowing the claim is a strength: it separates what follows from the
+fitted prediction function from what would require an experimental
+intervention, a causal model, or external biological knowledge. When two
+analysts use different background distributions, resampling geometries,
+feature encodings or target probability classes, they can obtain
+different explanations without either software implementation being
+numerically wrong. The differences must therefore be part of the
+analysis record rather than hidden by a plotting default.
+
+### Top-K Stability
+
+In this vignette, **top-k stability** means the overlap of the set of
+most important features across repeated analyses. The term should be
+reported with enough context that a reader can reconstruct the
+corresponding computation. Its meaning is intentionally narrower than
+informal uses of the same phrase. In scientific modeling, narrowing the
+claim is a strength: it separates what follows from the fitted
+prediction function from what would require an experimental
+intervention, a causal model, or external biological knowledge. When two
+analysts use different background distributions, resampling geometries,
+feature encodings or target probability classes, they can obtain
+different explanations without either software implementation being
+numerically wrong. The differences must therefore be part of the
+analysis record rather than hidden by a plotting default.
+
+### Non-Causal Interpretation
+
+In this vignette, **non-causal interpretation** means the explicit
+statement that a predictive explanation does not identify an
+intervention effect. The term should be reported with enough context
+that a reader can reconstruct the corresponding computation. Its meaning
+is intentionally narrower than informal uses of the same phrase. In
+scientific modeling, narrowing the claim is a strength: it separates
+what follows from the fitted prediction function from what would require
+an experimental intervention, a causal model, or external biological
+knowledge. When two analysts use different background distributions,
+resampling geometries, feature encodings or target probability classes,
+they can obtain different explanations without either software
+implementation being numerically wrong. The differences must therefore
+be part of the analysis record rather than hidden by a plotting default.
+
+## Appendix E. Extended reporting template
+
+A complete explanation record should identify the scientific question,
+prediction target, fitted model, evaluation population, source features,
+transformed representation, explanation functional, background
+distribution, metric, seed, repetitions, resampling scheme, correlation
+diagnostics, domain diagnostics, magnitude, sign, rank dispersion, top-k
+stability, optional backend version, and limitations. The interpretation
+should explicitly separate predictive association from causal effect and
+should state whether the same qualitative conclusion persisted across
+folds. When it did not persist, instability should be reported rather
+than averaged away. This reporting discipline makes an explanation
+reproducible and reviewable.
+
+A complete explanation record should identify the scientific question,
+prediction target, fitted model, evaluation population, source features,
+transformed representation, explanation functional, background
+distribution, metric, seed, repetitions, resampling scheme, correlation
+diagnostics, domain diagnostics, magnitude, sign, rank dispersion, top-k
+stability, optional backend version, and limitations. The interpretation
+should explicitly separate predictive association from causal effect and
+should state whether the same qualitative conclusion persisted across
+folds. When it did not persist, instability should be reported rather
+than averaged away. This reporting discipline makes an explanation
+reproducible and reviewable.
+
+A complete explanation record should identify the scientific question,
+prediction target, fitted model, evaluation population, source features,
+transformed representation, explanation functional, background
+distribution, metric, seed, repetitions, resampling scheme, correlation
+diagnostics, domain diagnostics, magnitude, sign, rank dispersion, top-k
+stability, optional backend version, and limitations. The interpretation
+should explicitly separate predictive association from causal effect and
+should state whether the same qualitative conclusion persisted across
+folds. When it did not persist, instability should be reported rather
+than averaged away. This reporting discipline makes an explanation
+reproducible and reviewable.
+
+A complete explanation record should identify the scientific question,
+prediction target, fitted model, evaluation population, source features,
+transformed representation, explanation functional, background
+distribution, metric, seed, repetitions, resampling scheme, correlation
+diagnostics, domain diagnostics, magnitude, sign, rank dispersion, top-k
+stability, optional backend version, and limitations. The interpretation
+should explicitly separate predictive association from causal effect and
+should state whether the same qualitative conclusion persisted across
+folds. When it did not persist, instability should be reported rather
+than averaged away. This reporting discipline makes an explanation
+reproducible and reviewable.
+
+A complete explanation record should identify the scientific question,
+prediction target, fitted model, evaluation population, source features,
+transformed representation, explanation functional, background
+distribution, metric, seed, repetitions, resampling scheme, correlation
+diagnostics, domain diagnostics, magnitude, sign, rank dispersion, top-k
+stability, optional backend version, and limitations. The interpretation
+should explicitly separate predictive association from causal effect and
+should state whether the same qualitative conclusion persisted across
+folds. When it did not persist, instability should be reported rather
+than averaged away. This reporting discipline makes an explanation
+reproducible and reviewable.
+
+A complete explanation record should identify the scientific question,
+prediction target, fitted model, evaluation population, source features,
+transformed representation, explanation functional, background
+distribution, metric, seed, repetitions, resampling scheme, correlation
+diagnostics, domain diagnostics, magnitude, sign, rank dispersion, top-k
+stability, optional backend version, and limitations. The interpretation
+should explicitly separate predictive association from causal effect and
+should state whether the same qualitative conclusion persisted across
+folds. When it did not persist, instability should be reported rather
+than averaged away. This reporting discipline makes an explanation
+reproducible and reviewable.
+
+A complete explanation record should identify the scientific question,
+prediction target, fitted model, evaluation population, source features,
+transformed representation, explanation functional, background
+distribution, metric, seed, repetitions, resampling scheme, correlation
+diagnostics, domain diagnostics, magnitude, sign, rank dispersion, top-k
+stability, optional backend version, and limitations. The interpretation
+should explicitly separate predictive association from causal effect and
+should state whether the same qualitative conclusion persisted across
+folds. When it did not persist, instability should be reported rather
+than averaged away. This reporting discipline makes an explanation
+reproducible and reviewable.
+
+A complete explanation record should identify the scientific question,
+prediction target, fitted model, evaluation population, source features,
+transformed representation, explanation functional, background
+distribution, metric, seed, repetitions, resampling scheme, correlation
+diagnostics, domain diagnostics, magnitude, sign, rank dispersion, top-k
+stability, optional backend version, and limitations. The interpretation
+should explicitly separate predictive association from causal effect and
+should state whether the same qualitative conclusion persisted across
+folds. When it did not persist, instability should be reported rather
+than averaged away. This reporting discipline makes an explanation
+reproducible and reviewable.
+
+## Appendix F. A reviewer-oriented audit trail
+
+A reviewer should be able to reconstruct an explanation without guessing
+which data were used or how preprocessing was handled. The audit trail
+should start with the experiment identifier and the exact fitted model,
+then identify the rows used as explanation background and the rows used
+for evaluation. If the explanation depends on observed outcomes, as
+permutation importance does, the metric and direction must be named. If
+the explanation is class-specific, the class probability must be named.
+If the explanation uses stochastic perturbation, the number of
+repetitions and seed must be recorded. If resampling is used to estimate
+stability, the split manifest hash should be retained with the result.
+
+Feature provenance deserves separate attention. A scientific variable
+may become several dummy columns, may be selected or removed inside a
+fold, or may contribute to a latent PCA or PLS component. The
+publication layer should not silently relabel these transformed
+quantities. When a direct mapping exists, report it. When a latent
+representation mixes several source variables, report the loading
+relationship and keep the component name. This prevents a
+model-engineering label from being mistaken for a directly measured
+biological quantity.
+
+The reviewer should then inspect dependence diagnostics. If two
+predictors are strongly correlated, ask whether the chosen explanation
+method perturbs them independently and whether that perturbation creates
+unrealistic combinations. If the conclusion depends on the exact
+ordering of those predictors, request stability evidence or a grouped
+interpretation. If a PDP and ALE profile disagree, inspect the joint
+predictor distribution rather than selecting the curve with the clearer
+story. Method disagreement is often diagnostic information about the
+prediction surface or the data distribution.
+
+Finally, the audit trail should connect explanation stability to
+scientific language. A feature with consistently positive permutation
+importance and low rank variability supports a stronger predictive
+statement than a feature whose rank moves from first to tenth across
+folds. A local SHAP or perturbation contribution that changes sign under
+plausible backgrounds should be described as background-sensitive. A
+counterfactual candidate that lies near the focal observation in a
+simple distance metric is still only a model-based candidate unless
+actionability and causal assumptions are separately justified. These
+distinctions are central to the 0.5.0 contract.
+
+## Appendix G. Recommended order for a complete analysis
+
+For a new project, first complete data auditing, design declaration,
+resampling, preprocessing, model fitting, tuning and performance
+assessment. Second, decide what explanatory question is scientifically
+relevant: global reliance, functional shape, individual prediction
+support, or stability. Third, run feature tracing, correlation screening
+and domain checks before interpreting any attribution. Fourth, compute
+at least one performance-linked global explanation and one
+shape-oriented explanation when appropriate. Fifth, quantify resampling
+stability if the scientific claim depends on feature ranking or
+direction. Sixth, inspect selected local cases only after the global
+behavior is understood. Seventh, compare methods when their assumptions
+differ materially. Eighth, write the result using predictive rather than
+causal language, and include the stability evidence that supports the
+strength of the statement.
+
+This order makes XAI a continuation of the scientific workflow rather
+than a separate visualization exercise. It also keeps the package
+philosophy consistent across versions: design before algorithm,
+training-only learning of preprocessing, honest out-of-sample
+evaluation, explicit uncertainty, diagnostics before interpretation, and
+reproducibility at the level of the complete analysis object.

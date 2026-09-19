@@ -34,8 +34,12 @@ smf_apply_preprocessor <- function(preprocessor, data) {
   out <- data.frame(row.names=seq_len(nrow(data)))
   for (nm in st$numeric) {
     z <- as.numeric(data[[nm]])
-    imp <- st$imputes[[nm]]
-    if (!is.na(imp)) z[is.na(z)] <- imp
+    # Tolerate states restored from portable bundles: the value may come back
+    # as text "NA" or NULL from older JSON encodings (1.0.2 fix). Coercion must
+    # happen before the subassignment, which would otherwise promote `z` to
+    # character and break the arithmetic below.
+    imp <- suppressWarnings(as.numeric(st$imputes[[nm]]))
+    if (length(imp)==1L && is.finite(imp)) z[is.na(z)] <- imp
     z <- (z - st$centers[[nm]]) / st$scales[[nm]]
     out[[nm]] <- z
   }

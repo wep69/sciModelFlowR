@@ -1,0 +1,997 @@
+# Bayesian Modeling: Priors, Posterior Inference, BART, and Gaussian Processes
+
+**Package:** `sciModelFlowR`\
+**Version targeted:** `0.7.0`\
+**Status:** implementation-complete; runtime and numerical validation
+deferred to the consolidated local validation campaign.
+
+> Examples use the public package API. Heavy Bayesian backends are
+> optional. Frozen Gold datasets are simulated validation material, not
+> empirical evidence.
+
+## 1 1. Why Bayesian modeling is a workflow
+
+Bayesian analysis in `sciModelFlowR` is not defined by the presence of a
+credible interval. It begins by stating the likelihood, prior
+information, inferential approximation, design, and predictive target.
+The workflow then moves through prior predictive assessment, fitting,
+posterior diagnostics, posterior predictive checking, predictive
+validation, and scientific reporting. This ordering matters because a
+posterior can be numerically precise while the model is scientifically
+inappropriate, computationally pathological, or dominated by implausible
+prior assumptions.
+
+Version 0.7.0 therefore treats Bayesian inference as one of the
+package’s first-class uncertainty paradigms. A Bayesian result keeps the
+approximation method explicit. Closed-form conjugate inference, MCMC
+through Stan, variational inference, Laplace approximation, BART
+sampling, and Gaussian-process conditioning are not silently presented
+as equivalent computational procedures.
+
+## 2 2. Learning objectives
+
+After this vignette, the reader should be able to:
+
+1.  declare a `BayesianSpec` and explain every computational field;
+2.  distinguish prior, likelihood, posterior, expected posterior
+    prediction, and posterior predictive prediction;
+3.  use the package-native conjugate Gaussian reference implementation
+    as a numerical validation anchor;
+4.  use the optional `brms` adapter without exposing a backend object as
+    the primary scientific result;
+5.  understand when BART or a Gaussian process solves a different
+    modeling problem from a parametric regression;
+6.  recognize that approximation method is part of the scientific
+    provenance;
+7.  preserve experimental design and validation geometry when Bayesian
+    models are introduced;
+8.  avoid interpreting posterior probability as causal evidence unless a
+    causal design and model justify that interpretation.
+
+## 3 3. Start with a Bayesian specification
+
+``` r
+
+library(sciModelFlowR)
+
+bayes_spec <- smf_bayesian_spec(
+  inference = "nuts",
+  priors = list(),
+  chains = 4L,
+  draws = 2000L,
+  warmup = 1000L,
+  target_accept = 0.95,
+  seed = 260917L
+)
+
+smf_bayes_prior(bayes_spec)
+```
+
+`inference` is not a decoration. The package records whether a posterior
+was obtained by an exact conjugate calculation, MCMC, variational
+approximation, or Laplace approximation. Scientific reporting should
+state this choice because approximation error and Monte Carlo error are
+different objects.
+
+## 4 4. A Gold Gaussian reference problem
+
+``` r
+
+d <- smf_load_dataset("gold_bayesian_linear")
+head(d)
+```
+
+The frozen generator has known coefficients and residual standard
+deviation. The truth columns are present only for numerical validation.
+They must not be used as predictors.
+
+``` r
+
+ref_spec <- smf_bayesian_spec(
+  priors = list(
+    beta_mean = c(0, 0, 0),
+    beta_sd = c(10, 10, 10),
+    sigma_shape = 2,
+    sigma_rate = 1
+  ),
+  draws = 4000L,
+  seed = 260917L
+)
+
+fit_ref <- smf_bayes_fit(
+  y ~ x1 + x2,
+  data = d,
+  bayesian = ref_spec,
+  backend = "conjugate_gaussian"
+)
+
+smf_bayes_summary(fit_ref)
+```
+
+The package-native model is intentionally limited. Its purpose is to
+provide an analytically tractable reference for testing posterior
+summaries, predictive draws, serialization, interval semantics, and Gold
+parameter recovery without requiring Stan. It is not intended to replace
+`brms` for general multilevel or non-Gaussian models.
+
+## 5 5. Prior meaning and parameterization
+
+The reference model uses a Normal-Inverse-Gamma structure. Conditional
+on residual variance, regression coefficients have a Normal prior.
+Residual variance has an inverse-gamma prior. The exact parameterization
+is part of the fixture and must be recorded because two packages can use
+the same distribution name with different scale or rate conventions.
+
+A scientifically useful prior should be evaluated on the scale of
+observables. Coefficient priors that appear weak on a standardized
+predictor may imply impossible responses after back-transformation.
+Prior predictive simulation makes this visible.
+
+``` r
+
+prior_y <- smf_bayes_prior_predictive(
+  y ~ x1 + x2,
+  data = d[1:100, ],
+  bayesian = ref_spec,
+  backend = "conjugate_gaussian",
+  ndraws = 500L
+)
+```
+
+Inspect ranges, quantiles, signs, impossible values, and domain limits
+before fitting. A prior that assigns substantial probability to
+impossible crop yields, negative concentrations where the response
+cannot be negative, or physiologically impossible temperatures should be
+revised rather than defended as merely “weakly informative.”
+
+## 6 6. Expected posterior prediction versus posterior predictive prediction
+
+Two functions deliberately answer different questions.
+
+``` r
+
+ep <- smf_bayes_epred(
+  fit_ref,
+  new_data = d[1:5, c("x1", "x2")],
+  ndraws = 1000L
+)
+
+pp <- smf_bayes_predict(
+  fit_ref,
+  new_data = d[1:5, c("x1", "x2")],
+  ndraws = 1000L
+)
+```
+
+[`smf_bayes_epred()`](https://wep69.github.io/sciModelFlowR/reference/bayesian-conformal-070.md)
+varies posterior uncertainty in the expected response.
+[`smf_bayes_predict()`](https://wep69.github.io/sciModelFlowR/reference/bayesian-conformal-070.md)
+also includes observation-level residual variation. Consequently,
+posterior predictive intervals for future observations should usually be
+wider than intervals for the conditional mean. Reporting one as the
+other is a semantic error, not just a plotting preference.
+
+## 7 7. brms and Stan as an optional general backend
+
+``` r
+
+if (requireNamespace("brms", quietly = TRUE)) {
+  fit_brms <- smf_bayes_fit(
+    y ~ x1 + x2,
+    data = d,
+    bayesian = bayes_spec,
+    family = "gaussian",
+    backend = "brms",
+    refresh = 0
+  )
+}
+```
+
+The adapter delegates general Bayesian modeling to `brms` while
+retaining package-native provenance. The underlying `brmsfit` remains
+accessible through an explicit backend escape hatch inside the result,
+but ordinary reporting should use the stable `sciModelFlowR` result
+grammar.
+
+`BayesianSpec` maps sampling-based requests to Stan sampling and
+approximation requests to the corresponding backend algorithm where
+supported. An analysis that used mean-field variational inference should
+not be described as though it were a NUTS posterior sample.
+
+## 8 8. Hierarchical models and design
+
+A Bayesian multilevel model does not erase experimental design. Blocks,
+subjects, plots, sites, seasons, or repeated units still define the
+scientific dependence structure. Partial pooling is useful precisely
+because the grouping structure has meaning. If the grouping variable was
+created after seeing the response, or if repeated observations are
+treated as independent units, Bayesian computation cannot repair the
+design error.
+
+When a hierarchical model is justified, priors on between-group standard
+deviations and correlations deserve the same attention as priors on
+fixed effects. A near-zero variance component may reflect genuine
+homogeneity or insufficient information. A very broad variance prior can
+also create unrealistic prior predictive behavior.
+
+## 9 9. BART for flexible nonlinear response surfaces
+
+``` r
+
+if (requireNamespace("dbarts", quietly = TRUE)) {
+  bart_fit <- smf_bart_fit(
+    x = d[c("x1", "x2")],
+    y = d$y,
+    task = "regression",
+    ndpost = 1000L,
+    nskip = 500L,
+    ntree = 200L
+  )
+}
+```
+
+BART is useful when nonlinearities and interactions are important but an
+explicit parametric surface is difficult to justify. Its flexibility
+does not remove the need for design-aware resampling or external
+validation. Posterior-looking uncertainty from a flexible model can
+still be optimistic under dataset shift or leakage.
+
+Use BART because the scientific prediction problem needs a flexible
+response surface, not because “Bayesian” is assumed to make a model
+automatically more defensible.
+
+## 10 10. Gaussian processes
+
+``` r
+
+gp <- smf_gp_fit(
+  x = d[1:200, c("x1", "x2")],
+  y = d$y[1:200],
+  backend = "native",
+  length_scale = 1,
+  noise_variance = 0.64,
+  optimize = FALSE
+)
+
+gp_pred <- smf_gp_predict(
+  gp,
+  new_data = d[201:220, c("x1", "x2")]
+)
+```
+
+The package-native GP provides exact Gaussian conditioning given fixed
+hyperparameters. If hyperparameters are estimated by maximum likelihood,
+the result is labeled as a plug-in approximation because hyperparameter
+uncertainty is not integrated out. This distinction is essential when
+interpreting an epistemic variance component.
+
+The optional `DiceKriging` adapter provides a mature backend for
+kriging-style GP estimation. Its backend-specific assumptions and
+hyperparameter estimation must remain visible in provenance.
+
+## 11 11. Kernel scale is scientific structure
+
+The length scale controls how quickly similarity decays in predictor
+space. A very short scale can fit local noise; a very long scale can
+oversmooth biologically meaningful variation. Predictor standardization
+changes the meaning of that scale. Therefore, the fitted preprocessing
+state must travel with the GP.
+
+For spatial problems, a generic predictor-space RBF kernel is not
+automatically a valid geostatistical covariance model. Coordinates,
+anisotropy, sampling design, and residual spatial structure should be
+considered explicitly.
+
+## 12 12. Posterior draws are not independent observations
+
+MCMC draws approximate a posterior distribution; they do not increase
+the experimental sample size. Reporting 4000 posterior draws as “n =
+4000” is incorrect when the study had 40 plots. Similarly, effective
+sample size is a computational diagnostic of the chain, not the
+biological replication count.
+
+## 13 13. Posterior probability statements
+
+A statement such as `Pr(beta > 0 | data, model, prior) = 0.97` is
+conditional on the declared model and prior. It is not the probability
+that a causal effect exists unless the design and causal assumptions
+identify that effect. The package intentionally stores those conditions
+in uncertainty descriptors and result provenance.
+
+## 14 14. Why Bayesian results still need held-out validation
+
+Posterior predictive checks ask whether replicated data from the fitted
+model reproduce relevant observed features. They do not replace external
+or design-aware predictive validation. A model can fit the observed
+distribution well while failing on a new season, location, genotype,
+sensor, or management regime.
+
+The correct workflow can therefore include both posterior predictive
+checking and external validation. These answer different questions.
+
+## 15 15. A compact agronomic example
+
+Suppose yield was measured in plots nested within fields across seasons.
+The scientific sequence is:
+
+1.  declare plot, field, and season roles;
+2.  decide whether season is a target of generalization or part of the
+    modeled hierarchy;
+3.  place priors on scientifically meaningful scales;
+4.  run prior predictive checks;
+5.  fit and diagnose the posterior;
+6.  evaluate posterior predictive adequacy;
+7.  validate on held-out fields or seasons according to the target
+    question;
+8.  report posterior summaries and prediction uncertainty with their
+    conditioning assumptions.
+
+The Bayesian model enters after the validation geometry is decided, not
+before it.
+
+## 16 16. Common errors
+
+**Using default priors without checking their predictive consequences.**
+Defaults can be sensible starting points but are not a substitute for
+domain-scale evaluation.
+
+**Calling a variational approximation an MCMC posterior.** Approximation
+method must be explicit.
+
+**Ignoring divergent transitions because posterior means look stable.**
+Divergences can indicate that important posterior geometry was not
+explored correctly.
+
+**Treating posterior intervals as external-validity guarantees.**
+Posterior uncertainty is conditional on the fitted model and its
+assumptions.
+
+**Comparing models only by in-sample posterior fit.** Predictive
+comparison requires appropriate out-of-sample logic such as PSIS-LOO,
+K-fold, or external validation, with diagnostics.
+
+## 17 17. Reporting template
+
+A reproducible Bayesian methods section should identify the likelihood
+and link, design structure, prior distributions with parameterization,
+prior predictive assessment, inference algorithm, chains and iterations
+or approximation budget, convergence diagnostics, posterior predictive
+checks, predictive validation, model-comparison criterion,
+software/backend versions, random seeds, and the exact interpretation of
+intervals or posterior probabilities.
+
+## 18 18. Minimum workflow
+
+``` r
+
+spec <- smf_bayesian_spec(
+  priors = list(
+    beta_mean = c(0, 0, 0),
+    beta_sd = c(10, 10, 10),
+    sigma_shape = 2,
+    sigma_rate = 1
+  ),
+  draws = 4000L,
+  seed = 260917L
+)
+
+prior_check <- smf_bayes_prior_predictive(
+  y ~ x1 + x2,
+  d[1:100, ],
+  bayesian = spec,
+  ndraws = 500L
+)
+
+fit <- smf_bayes_fit(
+  y ~ x1 + x2,
+  d,
+  bayesian = spec,
+  backend = "conjugate_gaussian"
+)
+
+post <- smf_bayes_summary(fit)
+diag <- smf_bayes_diagnose(fit)
+pred <- smf_bayes_predict(fit, d[1:20, c("x1", "x2")])
+```
+
+The sequence is intentionally longer than a one-line fit because the
+scientific argument is longer than a one-line fit.
+
+### 18.1 18.1 Guided case: Nitrogen response
+
+A field trial studies a quantitative nitrogen response. Put priors on
+intercept and slope on the yield scale, preserve blocks in the design,
+and distinguish posterior uncertainty in the mean response from
+prediction uncertainty for a future plot. If the curve is nonlinear, use
+a scientifically justified functional form or flexible model rather than
+interpreting a linear coefficient beyond the observed dose range.
+
+**Questions to document.** What is the experimental unit? Which
+parameters are directly interpretable? Which priors constrain them? What
+part of the uncertainty comes from future observation noise, posterior
+parameter uncertainty, or model structure? What held-out unit represents
+the intended generalization?
+
+### 18.2 18.2 Guided case: Genotype evaluation
+
+Genotypes are measured across environments. A multilevel formulation can
+partially pool genotype effects, but the target of prediction determines
+whether environment effects are conditional, random, or held out. Prior
+predictive checks should include plausible genotype differences and
+environment variability. External-environment validation remains
+necessary for claims about new environments.
+
+**Questions to document.** What is the experimental unit? Which
+parameters are directly interpretable? Which priors constrain them? What
+part of the uncertainty comes from future observation noise, posterior
+parameter uncertainty, or model structure? What held-out unit represents
+the intended generalization?
+
+### 18.3 18.3 Guided case: Repeated physiology
+
+Leaf gas-exchange measurements are repeated on the same plant. Plant
+identity must remain a repeated unit. More posterior draws cannot
+compensate for treating repeated measurements as independent biological
+replicates. Priors on plant-level heterogeneity should reflect realistic
+between-plant variation and the posterior should be checked for poorly
+identified covariance parameters.
+
+**Questions to document.** What is the experimental unit? Which
+parameters are directly interpretable? Which priors constrain them? What
+part of the uncertainty comes from future observation noise, posterior
+parameter uncertainty, or model structure? What held-out unit represents
+the intended generalization?
+
+### 18.4 18.4 Guided case: Spectroscopy
+
+High-dimensional spectra make flexible priors or dimension reduction
+attractive. Any supervised feature learning must occur inside the
+training partition. A Bayesian model fitted after global wavelength
+selection inherits leakage. Posterior uncertainty should not be
+interpreted as accounting for the selection process unless that process
+is represented in the inferential procedure.
+
+**Questions to document.** What is the experimental unit? Which
+parameters are directly interpretable? Which priors constrain them? What
+part of the uncertainty comes from future observation noise, posterior
+parameter uncertainty, or model structure? What held-out unit represents
+the intended generalization?
+
+### 18.5 18.5 Guided case: Remote sensing
+
+Pixels from the same field are spatially dependent. Bayesian computation
+can represent spatial structure, but ordinary random pixel splitting
+produces optimistic validation. Declare spatial units before fitting and
+use a validation geometry aligned with deployment to new fields,
+seasons, or regions.
+
+**Questions to document.** What is the experimental unit? Which
+parameters are directly interpretable? Which priors constrain them? What
+part of the uncertainty comes from future observation noise, posterior
+parameter uncertainty, or model structure? What held-out unit represents
+the intended generalization?
+
+### 18.6 18.6 Guided case: Disease incidence
+
+For binomial disease incidence, use a likelihood that respects numerator
+and denominator rather than treating a proportion as homoscedastic
+Gaussian data. Priors on the logit scale should be translated to
+probabilities to check whether they imply plausible disease rates.
+
+**Questions to document.** What is the experimental unit? Which
+parameters are directly interpretable? Which priors constrain them? What
+part of the uncertainty comes from future observation noise, posterior
+parameter uncertainty, or model structure? What held-out unit represents
+the intended generalization?
+
+### 18.7 18.7 Guided case: Pest counts
+
+Count responses may require Poisson, negative-binomial, hurdle, or
+zero-inflated structures. Bayesian flexibility does not justify adding a
+zero-inflation process without a biological mechanism or diagnostic
+reason. Compare posterior predictive zero frequencies, tails, and
+treatment patterns.
+
+**Questions to document.** What is the experimental unit? Which
+parameters are directly interpretable? Which priors constrain them? What
+part of the uncertainty comes from future observation noise, posterior
+parameter uncertainty, or model structure? What held-out unit represents
+the intended generalization?
+
+### 18.8 18.8 Guided case: Growth curves
+
+Nonlinear growth parameters often have direct biological meaning. Prior
+information about asymptote, inflection time, or growth rate can
+stabilize estimation, but priors must be expressed in the same
+parameterization as the implemented curve. Reparameterization can change
+what a seemingly identical prior means.
+
+**Questions to document.** What is the experimental unit? Which
+parameters are directly interpretable? Which priors constrain them? What
+part of the uncertainty comes from future observation noise, posterior
+parameter uncertainty, or model structure? What held-out unit represents
+the intended generalization?
+
+### 18.9 18.9 Guided case: Dose response
+
+ED50 or optimum-like quantities are derived parameters. Report posterior
+uncertainty for the derived estimand and avoid extrapolating beyond the
+tested dose range. A narrow posterior interval outside observed support
+can still be scientifically fragile.
+
+**Questions to document.** What is the experimental unit? Which
+parameters are directly interpretable? Which priors constrain them? What
+part of the uncertainty comes from future observation noise, posterior
+parameter uncertainty, or model structure? What held-out unit represents
+the intended generalization?
+
+### 18.10 18.10 Guided case: Soil mapping
+
+A Gaussian process can express smooth latent variation, but its
+covariance scale is tied to coordinate units and sampling support.
+Standardization, anisotropy, and nugget interpretation should be
+recorded. Cross-validation should be spatially blocked when the goal is
+prediction to unsampled areas.
+
+**Questions to document.** What is the experimental unit? Which
+parameters are directly interpretable? Which priors constrain them? What
+part of the uncertainty comes from future observation noise, posterior
+parameter uncertainty, or model structure? What held-out unit represents
+the intended generalization?
+
+### 18.11 18.11 Guided case: Climate models
+
+Temporal dependence and nonstationarity matter. A posterior conditional
+on a stationary model does not absorb structural change automatically.
+Hold out future periods when forecasting is the target and inspect
+whether prior or posterior predictive simulations reproduce persistence
+and seasonality.
+
+**Questions to document.** What is the experimental unit? Which
+parameters are directly interpretable? Which priors constrain them? What
+part of the uncertainty comes from future observation noise, posterior
+parameter uncertainty, or model structure? What held-out unit represents
+the intended generalization?
+
+### 18.12 18.12 Guided case: Multi-sensor fusion
+
+Different sensors can have different error processes. A single residual
+scale can conceal sensor-specific uncertainty. If a hierarchical
+measurement model is used, distinguish measurement uncertainty from
+latent-process uncertainty and validate cross-sensor transfer
+explicitly.
+
+**Questions to document.** What is the experimental unit? Which
+parameters are directly interpretable? Which priors constrain them? What
+part of the uncertainty comes from future observation noise, posterior
+parameter uncertainty, or model structure? What held-out unit represents
+the intended generalization?
+
+### 18.13 Extended practice note 1: Scientific target
+
+Write the estimand or predictive target before selecting an uncertainty
+procedure. A parameter, conditional mean, future observation, class set
+and model-performance score require different evidence. For version
+0.7.0, document the function call, data role, assumptions, warning
+records, and the local validation test that would falsify an incorrect
+implementation. This practice keeps teaching examples aligned with the
+production API and prevents an attractive plot from becoming evidence
+without a reproducible statistical contract.
+
+### 18.14 Extended practice note 2: Design boundary
+
+Record the experimental unit, grouping, time or space structure, and
+external domain. The uncertainty method inherits these design choices;
+it cannot repair pseudo-replication. For version 0.7.0, document the
+function call, data role, assumptions, warning records, and the local
+validation test that would falsify an incorrect implementation. This
+practice keeps teaching examples aligned with the production API and
+prevents an attractive plot from becoming evidence without a
+reproducible statistical contract.
+
+### 18.15 Extended practice note 3: Training boundary
+
+All learned preprocessing, feature selection, model fitting and tuning
+must be restricted to development data. Calibration is a learned step
+and therefore cannot use final test outcomes. For version 0.7.0,
+document the function call, data role, assumptions, warning records, and
+the local validation test that would falsify an incorrect
+implementation. This practice keeps teaching examples aligned with the
+production API and prevents an attractive plot from becoming evidence
+without a reproducible statistical contract.
+
+### 18.16 Extended practice note 4: Numerical validation
+
+Compare package-native calculations with analytical truth or an
+independent backend where feasible. Use tolerances for stochastic
+quantities and exact hashes for frozen metadata. For version 0.7.0,
+document the function call, data role, assumptions, warning records, and
+the local validation test that would falsify an incorrect
+implementation. This practice keeps teaching examples aligned with the
+production API and prevents an attractive plot from becoming evidence
+without a reproducible statistical contract.
+
+### 18.17 Extended practice note 5: Sensitivity analysis
+
+Vary consequential priors, kernels, calibration splits, resampling units
+or model structures when scientifically plausible. Report whether
+substantive conclusions change. For version 0.7.0, document the function
+call, data role, assumptions, warning records, and the local validation
+test that would falsify an incorrect implementation. This practice keeps
+teaching examples aligned with the production API and prevents an
+attractive plot from becoming evidence without a reproducible
+statistical contract.
+
+### 18.18 Extended practice note 6: Communication
+
+Name interval types directly in text, tables and figure legends. Avoid
+the generic phrase confidence band when the object is posterior
+predictive or conformal. For version 0.7.0, document the function call,
+data role, assumptions, warning records, and the local validation test
+that would falsify an incorrect implementation. This practice keeps
+teaching examples aligned with the production API and prevents an
+attractive plot from becoming evidence without a reproducible
+statistical contract.
+
+### 18.19 Extended practice note 7: Scientific target
+
+Write the estimand or predictive target before selecting an uncertainty
+procedure. A parameter, conditional mean, future observation, class set
+and model-performance score require different evidence. For version
+0.7.0, document the function call, data role, assumptions, warning
+records, and the local validation test that would falsify an incorrect
+implementation. This practice keeps teaching examples aligned with the
+production API and prevents an attractive plot from becoming evidence
+without a reproducible statistical contract.
+
+### 18.20 Extended practice note 8: Design boundary
+
+Record the experimental unit, grouping, time or space structure, and
+external domain. The uncertainty method inherits these design choices;
+it cannot repair pseudo-replication. For version 0.7.0, document the
+function call, data role, assumptions, warning records, and the local
+validation test that would falsify an incorrect implementation. This
+practice keeps teaching examples aligned with the production API and
+prevents an attractive plot from becoming evidence without a
+reproducible statistical contract.
+
+### 18.21 Extended practice note 9: Training boundary
+
+All learned preprocessing, feature selection, model fitting and tuning
+must be restricted to development data. Calibration is a learned step
+and therefore cannot use final test outcomes. For version 0.7.0,
+document the function call, data role, assumptions, warning records, and
+the local validation test that would falsify an incorrect
+implementation. This practice keeps teaching examples aligned with the
+production API and prevents an attractive plot from becoming evidence
+without a reproducible statistical contract.
+
+### 18.22 Extended practice note 10: Numerical validation
+
+Compare package-native calculations with analytical truth or an
+independent backend where feasible. Use tolerances for stochastic
+quantities and exact hashes for frozen metadata. For version 0.7.0,
+document the function call, data role, assumptions, warning records, and
+the local validation test that would falsify an incorrect
+implementation. This practice keeps teaching examples aligned with the
+production API and prevents an attractive plot from becoming evidence
+without a reproducible statistical contract.
+
+### 18.23 Extended practice note 11: Sensitivity analysis
+
+Vary consequential priors, kernels, calibration splits, resampling units
+or model structures when scientifically plausible. Report whether
+substantive conclusions change. For version 0.7.0, document the function
+call, data role, assumptions, warning records, and the local validation
+test that would falsify an incorrect implementation. This practice keeps
+teaching examples aligned with the production API and prevents an
+attractive plot from becoming evidence without a reproducible
+statistical contract.
+
+### 18.24 Extended practice note 12: Communication
+
+Name interval types directly in text, tables and figure legends. Avoid
+the generic phrase confidence band when the object is posterior
+predictive or conformal. For version 0.7.0, document the function call,
+data role, assumptions, warning records, and the local validation test
+that would falsify an incorrect implementation. This practice keeps
+teaching examples aligned with the production API and prevents an
+attractive plot from becoming evidence without a reproducible
+statistical contract.
+
+### 18.25 Extended practice note 13: Scientific target
+
+Write the estimand or predictive target before selecting an uncertainty
+procedure. A parameter, conditional mean, future observation, class set
+and model-performance score require different evidence. For version
+0.7.0, document the function call, data role, assumptions, warning
+records, and the local validation test that would falsify an incorrect
+implementation. This practice keeps teaching examples aligned with the
+production API and prevents an attractive plot from becoming evidence
+without a reproducible statistical contract.
+
+### 18.26 Extended practice note 14: Design boundary
+
+Record the experimental unit, grouping, time or space structure, and
+external domain. The uncertainty method inherits these design choices;
+it cannot repair pseudo-replication. For version 0.7.0, document the
+function call, data role, assumptions, warning records, and the local
+validation test that would falsify an incorrect implementation. This
+practice keeps teaching examples aligned with the production API and
+prevents an attractive plot from becoming evidence without a
+reproducible statistical contract.
+
+### 18.27 Extended practice note 15: Training boundary
+
+All learned preprocessing, feature selection, model fitting and tuning
+must be restricted to development data. Calibration is a learned step
+and therefore cannot use final test outcomes. For version 0.7.0,
+document the function call, data role, assumptions, warning records, and
+the local validation test that would falsify an incorrect
+implementation. This practice keeps teaching examples aligned with the
+production API and prevents an attractive plot from becoming evidence
+without a reproducible statistical contract.
+
+### 18.28 Extended practice note 16: Numerical validation
+
+Compare package-native calculations with analytical truth or an
+independent backend where feasible. Use tolerances for stochastic
+quantities and exact hashes for frozen metadata. For version 0.7.0,
+document the function call, data role, assumptions, warning records, and
+the local validation test that would falsify an incorrect
+implementation. This practice keeps teaching examples aligned with the
+production API and prevents an attractive plot from becoming evidence
+without a reproducible statistical contract.
+
+### 18.29 Extended practice note 17: Sensitivity analysis
+
+Vary consequential priors, kernels, calibration splits, resampling units
+or model structures when scientifically plausible. Report whether
+substantive conclusions change. For version 0.7.0, document the function
+call, data role, assumptions, warning records, and the local validation
+test that would falsify an incorrect implementation. This practice keeps
+teaching examples aligned with the production API and prevents an
+attractive plot from becoming evidence without a reproducible
+statistical contract.
+
+### 18.30 Extended practice note 18: Communication
+
+Name interval types directly in text, tables and figure legends. Avoid
+the generic phrase confidence band when the object is posterior
+predictive or conformal. For version 0.7.0, document the function call,
+data role, assumptions, warning records, and the local validation test
+that would falsify an incorrect implementation. This practice keeps
+teaching examples aligned with the production API and prevents an
+attractive plot from becoming evidence without a reproducible
+statistical contract.
+
+### 18.31 Extended practice note 19: Scientific target
+
+Write the estimand or predictive target before selecting an uncertainty
+procedure. A parameter, conditional mean, future observation, class set
+and model-performance score require different evidence. For version
+0.7.0, document the function call, data role, assumptions, warning
+records, and the local validation test that would falsify an incorrect
+implementation. This practice keeps teaching examples aligned with the
+production API and prevents an attractive plot from becoming evidence
+without a reproducible statistical contract.
+
+### 18.32 Extended practice note 20: Design boundary
+
+Record the experimental unit, grouping, time or space structure, and
+external domain. The uncertainty method inherits these design choices;
+it cannot repair pseudo-replication. For version 0.7.0, document the
+function call, data role, assumptions, warning records, and the local
+validation test that would falsify an incorrect implementation. This
+practice keeps teaching examples aligned with the production API and
+prevents an attractive plot from becoming evidence without a
+reproducible statistical contract.
+
+### 18.33 Extended practice note 21: Training boundary
+
+All learned preprocessing, feature selection, model fitting and tuning
+must be restricted to development data. Calibration is a learned step
+and therefore cannot use final test outcomes. For version 0.7.0,
+document the function call, data role, assumptions, warning records, and
+the local validation test that would falsify an incorrect
+implementation. This practice keeps teaching examples aligned with the
+production API and prevents an attractive plot from becoming evidence
+without a reproducible statistical contract.
+
+### 18.34 Extended practice note 22: Numerical validation
+
+Compare package-native calculations with analytical truth or an
+independent backend where feasible. Use tolerances for stochastic
+quantities and exact hashes for frozen metadata. For version 0.7.0,
+document the function call, data role, assumptions, warning records, and
+the local validation test that would falsify an incorrect
+implementation. This practice keeps teaching examples aligned with the
+production API and prevents an attractive plot from becoming evidence
+without a reproducible statistical contract.
+
+### 18.35 Extended practice note 23: Sensitivity analysis
+
+Vary consequential priors, kernels, calibration splits, resampling units
+or model structures when scientifically plausible. Report whether
+substantive conclusions change. For version 0.7.0, document the function
+call, data role, assumptions, warning records, and the local validation
+test that would falsify an incorrect implementation. This practice keeps
+teaching examples aligned with the production API and prevents an
+attractive plot from becoming evidence without a reproducible
+statistical contract.
+
+### 18.36 Extended practice note 24: Communication
+
+Name interval types directly in text, tables and figure legends. Avoid
+the generic phrase confidence band when the object is posterior
+predictive or conformal. For version 0.7.0, document the function call,
+data role, assumptions, warning records, and the local validation test
+that would falsify an incorrect implementation. This practice keeps
+teaching examples aligned with the production API and prevents an
+attractive plot from becoming evidence without a reproducible
+statistical contract.
+
+### 18.37 Extended practice note 25: Scientific target
+
+Write the estimand or predictive target before selecting an uncertainty
+procedure. A parameter, conditional mean, future observation, class set
+and model-performance score require different evidence. For version
+0.7.0, document the function call, data role, assumptions, warning
+records, and the local validation test that would falsify an incorrect
+implementation. This practice keeps teaching examples aligned with the
+production API and prevents an attractive plot from becoming evidence
+without a reproducible statistical contract.
+
+### 18.38 Extended practice note 26: Design boundary
+
+Record the experimental unit, grouping, time or space structure, and
+external domain. The uncertainty method inherits these design choices;
+it cannot repair pseudo-replication. For version 0.7.0, document the
+function call, data role, assumptions, warning records, and the local
+validation test that would falsify an incorrect implementation. This
+practice keeps teaching examples aligned with the production API and
+prevents an attractive plot from becoming evidence without a
+reproducible statistical contract.
+
+### 18.39 Extended practice note 27: Training boundary
+
+All learned preprocessing, feature selection, model fitting and tuning
+must be restricted to development data. Calibration is a learned step
+and therefore cannot use final test outcomes. For version 0.7.0,
+document the function call, data role, assumptions, warning records, and
+the local validation test that would falsify an incorrect
+implementation. This practice keeps teaching examples aligned with the
+production API and prevents an attractive plot from becoming evidence
+without a reproducible statistical contract.
+
+### 18.40 Extended practice note 28: Numerical validation
+
+Compare package-native calculations with analytical truth or an
+independent backend where feasible. Use tolerances for stochastic
+quantities and exact hashes for frozen metadata. For version 0.7.0,
+document the function call, data role, assumptions, warning records, and
+the local validation test that would falsify an incorrect
+implementation. This practice keeps teaching examples aligned with the
+production API and prevents an attractive plot from becoming evidence
+without a reproducible statistical contract.
+
+### 18.41 Extended practice note 29: Sensitivity analysis
+
+Vary consequential priors, kernels, calibration splits, resampling units
+or model structures when scientifically plausible. Report whether
+substantive conclusions change. For version 0.7.0, document the function
+call, data role, assumptions, warning records, and the local validation
+test that would falsify an incorrect implementation. This practice keeps
+teaching examples aligned with the production API and prevents an
+attractive plot from becoming evidence without a reproducible
+statistical contract.
+
+### 18.42 Extended practice note 30: Communication
+
+Name interval types directly in text, tables and figure legends. Avoid
+the generic phrase confidence band when the object is posterior
+predictive or conformal. For version 0.7.0, document the function call,
+data role, assumptions, warning records, and the local validation test
+that would falsify an incorrect implementation. This practice keeps
+teaching examples aligned with the production API and prevents an
+attractive plot from becoming evidence without a reproducible
+statistical contract.
+
+### 18.43 Extended practice note 31: Scientific target
+
+Write the estimand or predictive target before selecting an uncertainty
+procedure. A parameter, conditional mean, future observation, class set
+and model-performance score require different evidence. For version
+0.7.0, document the function call, data role, assumptions, warning
+records, and the local validation test that would falsify an incorrect
+implementation. This practice keeps teaching examples aligned with the
+production API and prevents an attractive plot from becoming evidence
+without a reproducible statistical contract.
+
+### 18.44 Extended practice note 32: Design boundary
+
+Record the experimental unit, grouping, time or space structure, and
+external domain. The uncertainty method inherits these design choices;
+it cannot repair pseudo-replication. For version 0.7.0, document the
+function call, data role, assumptions, warning records, and the local
+validation test that would falsify an incorrect implementation. This
+practice keeps teaching examples aligned with the production API and
+prevents an attractive plot from becoming evidence without a
+reproducible statistical contract.
+
+### 18.45 Extended practice note 33: Training boundary
+
+All learned preprocessing, feature selection, model fitting and tuning
+must be restricted to development data. Calibration is a learned step
+and therefore cannot use final test outcomes. For version 0.7.0,
+document the function call, data role, assumptions, warning records, and
+the local validation test that would falsify an incorrect
+implementation. This practice keeps teaching examples aligned with the
+production API and prevents an attractive plot from becoming evidence
+without a reproducible statistical contract.
+
+### 18.46 Extended practice note 34: Numerical validation
+
+Compare package-native calculations with analytical truth or an
+independent backend where feasible. Use tolerances for stochastic
+quantities and exact hashes for frozen metadata. For version 0.7.0,
+document the function call, data role, assumptions, warning records, and
+the local validation test that would falsify an incorrect
+implementation. This practice keeps teaching examples aligned with the
+production API and prevents an attractive plot from becoming evidence
+without a reproducible statistical contract.
+
+### 18.47 Extended practice note 35: Sensitivity analysis
+
+Vary consequential priors, kernels, calibration splits, resampling units
+or model structures when scientifically plausible. Report whether
+substantive conclusions change. For version 0.7.0, document the function
+call, data role, assumptions, warning records, and the local validation
+test that would falsify an incorrect implementation. This practice keeps
+teaching examples aligned with the production API and prevents an
+attractive plot from becoming evidence without a reproducible
+statistical contract.
+
+### 18.48 Extended practice note 36: Communication
+
+Name interval types directly in text, tables and figure legends. Avoid
+the generic phrase confidence band when the object is posterior
+predictive or conformal. For version 0.7.0, document the function call,
+data role, assumptions, warning records, and the local validation test
+that would falsify an incorrect implementation. This practice keeps
+teaching examples aligned with the production API and prevents an
+attractive plot from becoming evidence without a reproducible
+statistical contract.
+
+### 18.49 Extended practice note 37: Scientific target
+
+Write the estimand or predictive target before selecting an uncertainty
+procedure. A parameter, conditional mean, future observation, class set
+and model-performance score require different evidence. For version
+0.7.0, document the function call, data role, assumptions, warning
+records, and the local validation test that would falsify an incorrect
+implementation. This practice keeps teaching examples aligned with the
+production API and prevents an attractive plot from becoming evidence
+without a reproducible statistical contract.
+
+### 18.50 Extended practice note 38: Design boundary
+
+Record the experimental unit, grouping, time or space structure, and
+external domain. The uncertainty method inherits these design choices;
+it cannot repair pseudo-replication. For version 0.7.0, document the
+function call, data role, assumptions, warning records, and the local
+validation test that would falsify an incorrect implementation. This
+practice keeps teaching examples aligned with the production API and
+prevents an attractive plot from becoming evidence without a
+reproducible statistical contract.
+
+### 18.51 Extended practice note 39: Training boundary
+
+All learned preprocessing, feature selection, model fitting and tuning
+must be restricted to development data. Calibration is a learned step
+and therefore cannot use final test outcomes. For version 0.7.0,
+document the function call, data role, assumptions, warning records, and
+the local validation test that would falsify an incorrect
+implementation. This practice keeps teaching examples aligned with the
+production API and prevents an attractive plot from becoming evidence
+without a reproducible statistical contract.

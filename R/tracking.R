@@ -11,7 +11,7 @@
 }
 
 .smf_atomic_write_json <- function(x, file, pretty=TRUE) {
-  txt <- jsonlite::toJSON(x, auto_unbox=TRUE, null="null", digits=NA, pretty=pretty, dataframe="columns")
+  txt <- jsonlite::toJSON(x, auto_unbox=TRUE, null="null", na="null", digits=NA, pretty=pretty, dataframe="columns")
   .smf_atomic_write_text(txt, file)
 }
 

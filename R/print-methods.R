@@ -83,7 +83,14 @@ S7::method(print, TuningResult) <- function(x, ...) {
   cat("  method: ", x@spec@method, "\n", sep="")
   cat("  trials: ", if(is.data.frame(x@archive)) nrow(x@archive) else 0L, "\n", sep="")
   cat("  objectives: ", paste(vapply(x@spec@objectives, function(m) m@name, character(1)), collapse=", "), "\n", sep="")
-  cat("  selected: ", if(is.null(x@selected)) "none (explicit compromise required for multi-objective tuning)" else x@selected$config_id[[1]], "\n", sep="")
+  sel_txt <- if(!is.null(x@selected)) {
+    x@selected$config_id[[1]]
+  } else if(.smf_tuning_archive_all_na(x@archive, x@spec@objectives)) {
+    "none (no trial produced finite objective values)"
+  } else {
+    "none (explicit compromise required for multi-objective tuning)"
+  }
+  cat("  selected: ", sel_txt, "\n", sep="")
   invisible(x)
 }
 

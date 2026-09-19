@@ -1,10 +1,10 @@
 # sciModelFlowR
 
-**Version 1.0.1 - patch release of the Consolidated Scientific Release**
+**Version 1.0.2 - patch release of the Consolidated Scientific Release**
 
 `sciModelFlowR` is a design-aware scientific modeling framework for explicit data/design declarations, leakage-safe preprocessing and resampling, deterministic and probabilistic ML, tuning, benchmarking, explainability, Deep Learning, Bayesian and conformal inference, typed uncertainty, experiment tracking, safe persistence, scalable inference, protected external validation, and scientific reporting.
 
-Version 1.0.1 releases the 22 documented corrections from the local validation campaign of the frozen 1.0.0 source tree (see `DERIVED_PATCH_NOTES.md`). The **246-symbol public API** is unchanged; the 1.0.0 freeze, hashes and release metadata remain the historical reference.
+Version 1.0.2 releases the five corrections reported by the audited tutorial of the 1.0.1 installed library (`NEWS.md`; regression tests in `tests/testthat/test-regressions-102.R`), on top of the 22 documented corrections of 1.0.1 from the local validation campaign of the frozen 1.0.0 source tree (see `DERIVED_PATCH_NOTES.md`). The **246-symbol public API** is unchanged; the 1.0.0 freeze, hashes and release metadata remain the historical reference.
 
 ## Installation
 
@@ -30,7 +30,7 @@ The distributed Gold datasets are synthetic software-validation and teaching fix
 ## Certification status
 
 Local validation campaign (Windows 11, R 4.6.0, Quarto 1.11.0, 2026-09-18):
-`testthat` 61 files / 299 pass / 0 fail, Gold 25/25, cross-language 25/25,
+`testthat` 62 files / 322 pass / 0 fail, Gold 25/25, cross-language 25/25,
 reference tolerances ~1e-15, 28/28 vignettes rendered, 27/27 notebooks executed
 in clean IR kernels, and `R CMD build` + `R CMD check --as-cran` completed with
 **0 ERROR / 0 WARNING / 2 NOTEs** (new-submission metadata; intentional
@@ -40,7 +40,7 @@ The package is **not claimed CRAN-ready**. Optional backends are exercised by
 the frozen test suite where installed but are not formally certified; GPU/CUDA
 was unavailable (`SKIP`); ONNX remains `QUARANTINED`; the historical 0.1.0–0.9.0
 campaigns require their own snapshots and remain `NOT RUN` in this environment.
-Full evidence: `outputs/final-reports/VALIDATION_RECORD_1.0.1.md`.
+Full evidence: `outputs/final-reports/VALIDATION_RECORD_1.0.2.md`.
 
 ## Stable API
 
@@ -54,6 +54,6 @@ deprecation follows `DEPRECATION_POLICY.md`.
 
 Key release evidence is stored under `inst/metadata/`: final compatibility
 matrix, Gold release manifest, benchmark baselines, security review, API
-freeze/diff, bibliography ledger, and the 1.0.0/1.0.1 release manifests.
-`inst/metadata/RELEASE_MANIFEST_1.0.1.json` records the patch-release
+freeze/diff, bibliography ledger, and the 1.0.0/1.0.1/1.0.2 release manifests.
+`inst/metadata/RELEASE_MANIFEST_1.0.2.json` records the audited-tutorial
 corrections and validation outcomes without redefining scientific semantics.

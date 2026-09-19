@@ -18,7 +18,7 @@ smf_backend_matrix <- function() {
 #' @export
 smf_deprecation_policy <- function() list(
   api_freeze="1.0.0",
-  stable_release="1.0.1",
+  stable_release="1.0.2",
   policy="No public symbol stable at 1.0.0 is removed or changes scientific meaning in 1.x without an explicit lifecycle, migration path, and validation evidence.",
   source="DEPRECATION_POLICY.md")
 

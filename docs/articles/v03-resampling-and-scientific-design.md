@@ -1,0 +1,1110 @@
+# Resampling and Scientific Design: Validation Geometry Before Model Ranking
+
+## Resampling and Scientific Design
+
+This vignette develops the validation layer introduced in
+`sciModelFlowR` 0.2.0. The central idea is that resampling is not a
+generic computational convenience. A split represents a scientific claim
+about what information is available during model development and what
+kind of future, external, grouped, temporal, or spatial prediction the
+assessment set is meant to approximate.
+
+The most important decision is therefore not whether to use five or ten
+folds. It is **what must remain independent across analysis and
+assessment partitions**.
+
+The examples use frozen synthetic Gold datasets distributed with the
+package. They are instructional and validation assets, not empirical
+agronomic evidence.
+
+### 1. Learning objectives
+
+After completing this vignette, the reader should be able to:
+
+1.  identify the independent unit that must not cross a validation
+    boundary;
+2.  distinguish ordinary, stratified, grouped, blocked, temporal,
+    spatial, external, Monte Carlo, and nested resampling;
+3.  explain why repeated observations, neighboring samples, and future
+    time points invalidate an ordinary random split in many scientific
+    settings;
+4.  create package-native `SplitRecord` and `ResampleCollection`
+    objects;
+5.  export stable ID-based manifests for cross-language parity;
+6.  diagnose whether groups, time ordering, and spatial separation are
+    preserved;
+7.  fit preprocessing and feature selection only within each analysis
+    fold;
+8.  separate inner model-selection evidence from outer generalization
+    evidence;
+9.  describe the prediction domain represented by each validation
+    design;
+10. report validation geometry with enough detail for independent
+    reconstruction.
+
+### 2. Functions used
+
+The main 0.2.0 functions are:
+
+``` r
+
+smf_resampling_spec()
+smf_make_resampler()
+smf_vfold_cv()
+smf_group_vfold_cv()
+smf_blocked_cv()
+smf_time_cv()
+smf_spatial_cv()
+smf_external_split()
+smf_monte_carlo_cv()
+smf_nested_resampler()
+smf_validate_resampling_design()
+smf_resample_manifest()
+smf_resample_experiment()
+```
+
+The low-level constructors are useful for teaching and explicit
+workflows.
+[`smf_make_resampler()`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+is the managed entry point when a `ResamplingSpec` and `DesignSpec` have
+already been declared.
+
+### 3. Start with the estimand and prediction domain
+
+A resampling design should approximate the situation in which the final
+model will be used. If the practical question is prediction for another
+plot in the same field, a within-field split may be defensible. If the
+question is prediction in a new field, the field must be withheld as a
+unit. If the goal is forecasting, the model must not learn from
+observations that occur after the assessment period. If the goal is
+transfer to a new region, nearby soil samples cannot be randomly mixed
+across folds and then presented as evidence of geographic
+transferability.
+
+This distinction is easy to miss because all of these workflows can
+produce an RMSE. The numerical metric does not identify the validation
+target. The split geometry does.
+
+Before creating folds, write a sentence such as:
+
+> The assessment sets represent fields not used during model fitting, so
+> the reported RMSE estimates transfer to a new field sampled under the
+> same broader population and measurement protocol.
+
+That sentence is more scientifically informative than “five-fold
+cross-validation was used.”
+
+### 4. Split records are scientific objects
+
+Every partition produced by the package becomes a `SplitRecord`. It
+records analysis indices, assessment indices, stable row IDs, method,
+seed, a hash, and design-specific summary information.
+
+``` r
+
+#| eval: false
+library(sciModelFlowR)
+
+d <- smf_load_dataset("gold_linear_regression")
+
+s <- smf_holdout_split(
+  d,
+  train_prop = 0.80,
+  id_column = "obs_id",
+  seed = 260915L
+)
+
+smf_split_manifest(s)
+```
+
+The indices are convenient inside one R session. The IDs are the
+portable scientific contract. A Python implementation does not need to
+reproduce R’s random-number generator. It only needs to ingest the same
+frozen membership manifest and evaluate the same observations.
+
+### 5. Ordinary V-fold cross-validation
+
+Ordinary V-fold cross-validation is appropriate only when rows are
+exchangeable at the level relevant to the scientific question. Each row
+is assessed once per repeat, and the remaining rows form the analysis
+set.
+
+``` r
+
+#| eval: false
+r <- smf_vfold_cv(
+  d,
+  v = 5,
+  repeats = 1,
+  id_column = "obs_id",
+  seed = 260915L
+)
+
+length(r@splits)
+smf_resample_manifest(r)
+```
+
+Increasing the number of folds changes the training fraction and
+computational burden. It does not repair a wrong independence
+assumption. Ten-fold random CV remains inappropriate when images from
+the same plant, measurements from the same plot, or pixels from the same
+hyperspectral object appear in multiple folds.
+
+### 6. Stratification preserves support, not independence
+
+Stratification can preserve the approximate distribution of a class or
+categorical stratum across folds. It is useful when rare classes might
+disappear from an assessment fold. It does not create independence when
+dependence exists within subjects, fields, sites, seasons, or spatial
+neighborhoods.
+
+``` r
+
+#| eval: false
+r <- smf_vfold_cv(
+  classification_data,
+  v = 5,
+  strata = "class",
+  id_column = "sample_id",
+  seed = 260915L
+)
+```
+
+A common error is to treat stratified random CV as a remedy for repeated
+measures because treatment balance looks better. Balance and
+independence are different properties. The package therefore checks
+`DesignSpec` before managed row-wise resampling.
+
+### 7. Grouped cross-validation
+
+Use grouped validation when observations share an independent sampling
+or experimental unit that must remain intact.
+
+``` r
+
+#| eval: false
+g <- smf_load_dataset("gold_grouped_fields")
+
+design <- smf_design_spec(
+  id_column = "obs_id",
+  group_columns = "field"
+)
+
+spec <- smf_resampling_spec(
+  method = "group",
+  n_splits = 5,
+  seed = 260915L,
+  parameters = list(groups = "field")
+)
+
+r <- smf_make_resampler(g, spec, design)
+```
+
+For every split, the set of fields in analysis and assessment must be
+disjoint. That invariant is tested directly. A row-level split of the
+same dataset can be easier computationally and may produce a smaller
+error, but it answers a less demanding question because field-specific
+information is shared across partitions.
+
+Grouped validation is often the correct starting point for repeated
+plants, experimental plots, animals, farms, subjects, sensors, image
+acquisition sessions, and other clustered data.
+
+### 8. Blocked cross-validation
+
+A block is not always the same thing as a random group. Blocks may be
+predefined by experimental design, sampling campaign, batch,
+environmental stratum, or a deterministic partition of the domain.
+[`smf_blocked_cv()`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+preserves these declared blocks.
+
+``` r
+
+#| eval: false
+r <- smf_blocked_cv(
+  data,
+  blocks = c("site", "season"),
+  v = 4,
+  id_column = "obs_id",
+  shuffle = FALSE
+)
+```
+
+Leaving `shuffle = FALSE` is useful when block identity itself has
+scientific meaning. Random assignment of blocks to folds can be
+requested, but it should not be used to conceal a structured
+external-validation problem.
+
+### 9. Temporal validation has an information direction
+
+Forecasting is asymmetric. The past may inform the future; the future
+must not inform the past. Random V-fold CV violates this direction by
+allowing later observations into an analysis set for an earlier
+assessment observation.
+
+The 0.2.0 temporal engine forms windows from unique time values, so all
+observations at the same declared time remain together.
+
+``` r
+
+#| eval: false
+clim <- smf_load_dataset("gold_time_climate")
+
+r <- smf_time_cv(
+  clim,
+  time = "time",
+  initial = 60,
+  assess = 12,
+  skip = 0,
+  cumulative = TRUE,
+  id_column = "obs_id"
+)
+```
+
+With `cumulative = TRUE`, the analysis window expands. With
+`cumulative = FALSE`, it slides with a fixed historical width. In either
+case, the largest analysis time should be earlier than the smallest
+assessment time.
+
+The choice between expanding and sliding windows depends on the
+scientific process. An expanding window uses all accumulated history and
+is natural when old information remains relevant. A sliding window can
+be more defensible under strong nonstationarity, but it intentionally
+discards older observations and should be justified.
+
+### 10. Spatial block validation
+
+Spatially close observations often share environmental information.
+Randomly separating neighboring soil samples or adjacent pixels can make
+a model appear transferable when it is mainly interpolating local
+structure.
+
+``` r
+
+#| eval: false
+soil <- smf_load_dataset("gold_spatial_soil")
+
+r <- smf_spatial_cv(
+  soil,
+  coords = c("x", "y"),
+  v = 5,
+  scheme = "block",
+  n_x = 4,
+  n_y = 4,
+  id_column = "obs_id",
+  seed = 260915L
+)
+```
+
+The rectangular grid is defined by the coordinate ranges and requested
+grid dimensions. Block-to-fold assignment is reproducible from
+configuration and seed. The grid is a validation device, not a claim
+that the underlying spatial process is rectangular.
+
+Block size matters. Blocks that are much smaller than the correlation
+range may still allow leakage. Blocks that are extremely large may yield
+very few effective assessment units and high metric uncertainty.
+Scientific interpretation therefore requires sensitivity to plausible
+spatial scales.
+
+### 11. Spatial clustering
+
+Spatial clusters provide an alternative geometry when a regular grid is
+poorly matched to the sample layout.
+
+``` r
+
+#| eval: false
+r <- smf_spatial_cv(
+  soil,
+  coords = c("x", "y"),
+  v = 5,
+  scheme = "cluster",
+  id_column = "obs_id",
+  seed = 260915L
+)
+```
+
+The clustering step uses coordinates rather than the response. It
+defines geographic partitions, not predictive features. Cluster geometry
+should still be inspected because an algorithmic partition can create
+folds that are scientifically awkward, such as narrow interleaved
+regions.
+
+### 12. Buffered spatial validation
+
+A spatial block can be supplemented with an exclusion buffer around the
+assessment observations. Training observations closer than the specified
+distance are removed from that fold.
+
+``` r
+
+#| eval: false
+r <- smf_spatial_cv(
+  soil,
+  coords = c("x", "y"),
+  v = 5,
+  scheme = "buffered",
+  n_x = 4,
+  n_y = 4,
+  buffer = 250,
+  id_column = "obs_id"
+)
+```
+
+The buffer uses the units of the coordinates. A value of `250` therefore
+has no universal meaning. It might represent metres in a projected
+coordinate system, but it is not 250 metres if the coordinates are
+longitude and latitude in degrees. Coordinate reference and units belong
+in the scientific report.
+
+### 13. Leave-location-out validation
+
+When the scientific question concerns new farms, sites, stations, or
+locations, leaving complete locations out can be more interpretable than
+geometric blocks.
+
+``` r
+
+#| eval: false
+r <- smf_spatial_cv(
+  regional_data,
+  coords = c("x", "y"),
+  scheme = "leave_location_out",
+  location_column = "site",
+  id_column = "obs_id"
+)
+```
+
+This is conceptually a grouped design whose grouping variable has
+geographic meaning. The package records it as a spatial validation
+scheme so reports preserve that meaning.
+
+### 14. External validation
+
+External validation is not another random fold. The assessment domain is
+defined independently, often by site, year, region, instrument,
+institution, management regime, or acquisition campaign.
+
+``` r
+
+#| eval: false
+s <- smf_external_split(
+  data,
+  domain = "region",
+  assessment_values = "Region_B",
+  id_column = "obs_id"
+)
+```
+
+The development and external domains must both be nonempty. The external
+labels must never be recycled into feature selection, hyperparameter
+tuning, probability calibration, or model choice. Once that occurs, the
+dataset is no longer a final external test for the decisions informed by
+it.
+
+### 15. Monte Carlo cross-validation
+
+Monte Carlo CV repeats random holdouts rather than partitioning the data
+into a fixed set of folds.
+
+``` r
+
+#| eval: false
+r <- smf_monte_carlo_cv(
+  d,
+  times = 20,
+  train_prop = 0.80,
+  id_column = "obs_id",
+  seed = 260915L
+)
+```
+
+Repeated holdouts can describe sensitivity to a random partition. They
+do not make an invalid row-level split valid. The same design guards
+apply before Monte Carlo resampling is created.
+
+### 16. Nested resampling separates selection from evaluation
+
+Nested validation is needed when model or hyperparameter selection would
+otherwise reuse the same resamples that are reported as generalization
+evidence. The outer resamples estimate performance. Inner resamples
+guide selection using only the corresponding outer analysis set.
+
+``` r
+
+#| eval: false
+outer <- smf_resampling_spec(
+  "group",
+  n_splits = 5,
+  parameters = list(groups = "field")
+)
+
+inner <- smf_resampling_spec(
+  "group",
+  n_splits = 4,
+  parameters = list(groups = "field")
+)
+
+nested <- smf_nested_resampler(
+  g,
+  outer = outer,
+  inner = inner,
+  design = design
+)
+```
+
+The inner fold indices are mapped back to global row IDs in the
+package-native object. This makes it possible to audit whether any outer
+assessment row entered inner model development.
+
+A nested design does not automatically make model comparison unbiased.
+All model-dependent preprocessing, feature selection, imbalance
+handling, and tuning must also occur inside the inner analysis
+partitions.
+
+### 17. Managed guards
+
+A `DesignSpec` changes what the package permits. Once `repeated_unit`,
+`group_columns`, `time_column`, or `coordinate_columns` are declared,
+ordinary random resampling is no longer treated as a neutral default.
+
+``` r
+
+#| eval: false
+smf_validate_resampling_design(
+  data,
+  smf_resampling_spec("kfold"),
+  smf_design_spec(repeated_unit = "plant_id")
+)
+```
+
+By default, a structurally incompatible managed split is blocking. An
+expert override can be recorded for a justified methodological
+experiment, but the override does not erase the warning or convert the
+design into an appropriate one.
+
+This policy is deliberately stricter than many modeling interfaces. The
+purpose is to prevent a convenience default from silently changing the
+scientific question.
+
+### 18. Fit the workflow across resamples
+
+[`smf_resample_experiment()`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md)
+executes the reference-model pathway independently within each analysis
+fold. Preprocessing is fitted on each fold’s analysis rows, then applied
+to its assessment rows.
+
+``` r
+
+#| eval: false
+spec <- smf_experiment_spec(
+  task = smf_task_spec("regression", "yield"),
+  data = smf_data_spec(
+    "yield",
+    predictors = c("nitrogen", "soil_n"),
+    id_column = "obs_id"
+  ),
+  design = design,
+  preprocessing = smf_preprocess_spec("median", center = TRUE, scale = TRUE),
+  resampling = smf_resampling_spec(
+    "group",
+    n_splits = 5,
+    parameters = list(groups = "field")
+  ),
+  model = smf_model_spec("linear_regression", "stats"),
+  metrics = list(smf_metric_spec("rmse"))
+)
+
+rr <- smf_resample_experiment(spec, g)
+rr@aggregate
+```
+
+The aggregate table is a summary of fold results, not a substitute for
+examining the fold distribution. A similar average can arise from stable
+folds or from one excellent and one disastrous domain.
+
+### 19. A scientifically inappropriate workflow
+
+Consider hyperspectral pixels extracted from 40 leaves. Randomly
+assigning pixels to five folds may produce thousands of apparently
+independent assessment observations. In reality, pixels from the same
+leaf share tissue, illumination, acquisition conditions, preprocessing,
+and often local spatial information.
+
+The tempting workflow is:
+
+``` text
+pixels -> random CV -> high accuracy -> claim transfer to new leaves
+```
+
+The defensible workflow is:
+
+``` text
+leaf IDs -> grouped CV -> all pixels from a leaf remain together -> assess new-leaf transfer
+```
+
+If the eventual use case is a new acquisition date or instrument, the
+grouping may need to be even broader than leaf identity.
+
+### 20. Cross-language parity
+
+R and Python have different random-number implementations and may change
+low-level algorithms across library versions. Requiring the same integer
+seed to generate the same fold indices is therefore fragile.
+
+`sciModelFlowR` instead freezes manifests containing stable row IDs. The
+R and Python implementations then consume identical analysis and
+assessment membership.
+
+Cross-language tests should compare:
+
+- membership by ID;
+- absence of prohibited overlap;
+- group/time/space invariants;
+- metric definitions;
+- model outputs within documented numerical tolerances.
+
+They should not treat a different RNG stream as a scientific defect.
+
+### 21. Diagnostics for resampling itself
+
+Resampling deserves diagnostics before any model is fit. At minimum
+inspect:
+
+- number of independent units per fold;
+- outcome and class support;
+- group overlap;
+- temporal bounds;
+- spatial geometry and separation;
+- external-domain identity;
+- analysis and assessment sizes;
+- whether the same unit is repeatedly overrepresented;
+- whether some folds extrapolate far beyond the support of others.
+
+The package stores design-specific information in each split summary.
+These geometries can be inspected directly through
+[`smf_resample_manifest()`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md);
+dedicated visualization helpers remain a later presentation-layer
+enhancement rather than a validation requirement.
+
+### 22. What the metric distribution means
+
+Fold-to-fold variability is not merely noise to average away. It may
+reflect genuine domain heterogeneity. A high RMSE in one environment can
+indicate covariate shift, a difficult season, a rare class composition,
+an instrument difference, or a geographic area outside the main training
+support.
+
+For grouped and external validation, report the individual domain
+results when the number of domains is scientifically interpretable. For
+temporal validation, preserve chronological identity. For spatial
+validation, retain fold geometry. This allows readers to distinguish
+random computational variability from systematic transfer failure.
+
+### 23. Choosing the number of folds
+
+There is no universal optimum number of folds. With grouped data, the
+effective sample size is the number of independent groups, not the row
+count. Five folds may be impossible when only four farms exist. With
+leave-one-location-out validation, the number of folds is determined by
+locations. With temporal windows, fold count follows the series length
+and window definition.
+
+Choose a design that leaves enough independent information for fitting
+while preserving the intended assessment challenge. Computational
+convenience comes after this constraint.
+
+### 24. Reporting checklist
+
+Before reporting a resampling analysis, document:
+
+scientific prediction target;
+
+observational and experimental unit;
+
+variables defining groups, blocks, time, space, or external domains;
+
+resampling method and exact parameters;
+
+number of independent units in each partition;
+
+whether folds were shuffled;
+
+temporal window definition, if used;
+
+spatial coordinate system, units, block dimensions, clustering method,
+or buffer, if used;
+
+external assessment-domain definition;
+
+preprocessing and feature selection location relative to folds;
+
+inner and outer roles for nested validation;
+
+metrics by fold and aggregation rule;
+
+seeds and split-manifest hashes;
+
+overrides of design safeguards;
+
+limitations on extrapolation.
+
+### 25. Function-selection guide
+
+| Scientific situation | Recommended starting function |
+|----|----|
+| Exchangeable independent rows | [`smf_vfold_cv()`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md) |
+| Rare classes need support | `smf_vfold_cv(..., strata=)` |
+| Repeated subjects, fields, farms | [`smf_group_vfold_cv()`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md) |
+| Predefined sampling/design blocks | [`smf_blocked_cv()`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md) |
+| Forecasting or ordered monitoring | [`smf_time_cv()`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md) |
+| Spatial transfer | [`smf_spatial_cv()`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md) |
+| Independent region/year/instrument | [`smf_external_split()`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md) |
+| Partition sensitivity | [`smf_monte_carlo_cv()`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md) |
+| Model selection plus unbiased outer evaluation | [`smf_nested_resampler()`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md) |
+| Spec-driven workflow | [`smf_make_resampler()`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md) |
+| Fit reference workflow over folds | [`smf_resample_experiment()`](https://wep69.github.io/sciModelFlowR/reference/additional-api-070.md) |
+
+## Applied review cases
+
+### Case A. Repeated leaf measurements
+
+A plant-physiology study records stomatal conductance every hour from
+the same leaves. A row-level split would allow measurements from one
+leaf to train a model that is assessed on another hour from that same
+leaf. If the intended prediction target is a new leaf, the leaf
+identifier is the independent grouping unit. If the target is
+forecasting later measurements from the same monitored leaf, a temporal
+design within leaf is needed instead. The correct geometry follows the
+prediction target, not the physical appearance of the data frame.
+
+### Case B. Multi-season crop yield
+
+A yield model is developed from several fields observed over three
+seasons. Holding out rows at random mainly evaluates interpolation among
+known field-season combinations. Holding out complete fields asks
+whether the model transfers across fields. Holding out the most recent
+season asks whether historical data predict a future season. Holding out
+a field-season interaction can represent a new combination while
+retaining some information about each component. These are different
+scientific questions and should not be compared as if they were
+alternative parameter settings of the same validation design.
+
+### Case C. Soil spectroscopy
+
+A laboratory dataset contains multiple spectra from each soil specimen.
+Spectra can differ because of replicate scans, preprocessing, instrument
+noise, or sample presentation. Randomly splitting scans can leak
+specimen identity. The specimen, not the scan, is the usual independent
+unit for evaluating a new soil sample. If the goal is transfer to
+another spectrometer, instrument or acquisition campaign should define
+an external domain in addition to specimen grouping.
+
+### Case D. Hyperspectral imaging
+
+A hyperspectral cube yields thousands of pixels from one biological
+object. The row count can create the illusion of enormous sample size.
+Pixel-level CV can produce nearly identical train and assessment spectra
+from neighboring tissue. A defensible workflow groups pixels by leaf,
+fruit, plot, or image acquisition unit. For field deployment, spatially
+separated plots or dates may be needed. The split should represent the
+unit on which the model is expected to generalize.
+
+### Case E. UAV field imagery
+
+Orthomosaic pixels are spatially autocorrelated and may also share plot
+labels. A random pixel split can exaggerate performance even if
+treatment labels are balanced. Plot-level grouping protects the
+experimental unit, while spatial blocking assesses geographic
+separation. When plots are adjacent, both constraints may matter. One
+strategy is to define assessment folds from plot groups that are
+themselves spatially separated, rather than choosing between
+experimental design and spatial structure.
+
+### Case F. Pest monitoring over time
+
+Weekly insect counts are collected from traps throughout a season. If
+the goal is nowcasting another trap in the same week, grouped or spatial
+validation may be relevant. If the goal is forecasting future weeks,
+time ordering is essential. A shuffled CV design trains on future
+population peaks and then evaluates earlier weeks, which is
+operationally impossible. Expanding windows better reproduce the
+information available at each forecasting origin.
+
+### Case G. Regional pedotransfer function
+
+A pedotransfer model uses soil profiles from multiple regions. Random
+profile-level CV estimates interpolation within the sampled regional
+mixture. A regional external split asks whether the relation transfers
+under different parent material, climate, or management. If horizons
+from the same profile are treated as independent rows, profile grouping
+is also required. The strictest relevant constraint should determine the
+validation boundary.
+
+### Case H. Genotype-by-environment prediction
+
+Rows represent genotype observations within environments. The
+appropriate split depends on the breeding decision. Predicting missing
+genotype records in environments already observed differs from
+predicting a new environment or a new genotype. A random row split can
+mix both identities across folds and answer neither question cleanly.
+Validation should be defined in terms of the missingness pattern or
+deployment scenario the model is expected to address.
+
+### Case I. Instrument calibration transfer
+
+A chemometric model is trained on measurements from two instruments and
+intended for a third. If all instruments are randomly mixed across
+folds, performance mostly reflects within-instrument prediction. The
+third instrument should remain external until the workflow is frozen. If
+calibration-transfer parameters are estimated from that instrument, it
+becomes part of model development and must be distinguished from a truly
+untouched external test.
+
+### Case J. Disease classification with class imbalance
+
+Stratification can prevent folds with no diseased samples, but disease
+observations from the same plant or plot may still be dependent.
+Grouping takes priority over row-level class balancing. Within the
+available groups, one can examine whether folds have sufficient class
+support and possibly change the group assignment. The solution is not to
+split a biological unit merely to achieve prettier class proportions.
+
+### Case K. Climate model evaluation
+
+Monthly climate observations combine trend, seasonality, and serial
+dependence. Random folds destroy the forecasting direction and
+distribute the same climatic regimes across training and assessment. A
+rolling-origin design reveals whether performance changes through time.
+If the target is transfer between stations, station grouping or
+external-site validation is needed in addition to time ordering.
+Multi-axis dependence may require a custom design rather than a single
+generic CV method.
+
+### Case L. Remote-sensing domain shift
+
+A satellite model trained in one biome is applied in another. Spatial CV
+within the source biome estimates local transfer under the same broad
+domain. It does not establish transfer to the new biome. The target
+biome should be represented by an external domain. Covariate-shift
+diagnostics can later describe how feature distributions differ, but
+they do not replace independent external assessment.
+
+### Case M. Repeated greenhouse experiments
+
+The same treatments are repeated in several greenhouse runs. Plants
+within a run share environmental conditions and management. If the
+practical aim is a future run, run identity should be held out. If the
+aim is a new plant within a known run, a different split may be
+acceptable. Reporting only “cross-validation” hides this distinction and
+makes results difficult to interpret biologically.
+
+### Case N. Multi-location fertilizer response
+
+A model predicts yield response to nitrogen across locations. Grouped
+site CV asks whether the response function transfers to a new site.
+Random row CV can exploit site-specific intercepts or soil
+characteristics indirectly. Spatial leave-location-out validation can
+provide a clearer transfer estimate. If recommendations will be issued
+to unsampled regions, even site CV may be optimistic unless the sampled
+sites cover the intended environmental domain.
+
+### Case O. Small number of independent farms
+
+A dataset may contain ten thousand observations but only six farms. Six
+farms, not ten thousand rows, determine the number of independent
+geographic units available for farm-level validation. Five-fold group CV
+would leave very few farms for assessment and create unstable fold
+estimates. Leave-one-farm-out or a smaller number of grouped folds may
+be more transparent. The uncertainty caused by having only six
+independent farms should be reported rather than hidden behind the row
+count.
+
+### Case P. Model selection under grouped data
+
+Suppose several feature sets and model settings are compared using
+grouped CV. Selecting the best setting and reporting the same grouped-CV
+score as final performance reuses assessment information. Nested grouped
+resampling separates these roles. Each outer assessment group remains
+untouched while inner grouped folds choose the configuration. The final
+outer distribution estimates the performance of the complete selection
+procedure rather than the performance of a single preselected model.
+
+### Case Q. Buffered spatial validation sensitivity
+
+A 100 m buffer may be reasonable for one soil property and inadequate
+for another. Rather than presenting one buffer as universally correct,
+evaluate scientifically plausible distances informed by sampling support
+and spatial correlation. Report how assessment size and performance
+change. If the conclusion depends strongly on a narrow buffer choice,
+that sensitivity is part of the evidence and should appear in the
+limitations.
+
+### Case R. Temporal nonstationarity
+
+An expanding-window model may perform well early and degrade after a
+management or climate regime change. A sliding window can adapt more
+rapidly, but it intentionally discards older data. Comparing both
+designs can illuminate whether historical observations remain useful.
+The decision should be motivated by the process and deployment setting,
+not by selecting whichever window yields the smallest retrospective
+error.
+
+### Case S. Cross-language package validation
+
+When the same scientific package exists in R and Python, each language
+may generate different random folds from the same seed. A frozen
+manifest solves the problem. Both implementations read the same IDs, fit
+independently, and compare outputs within defined tolerances. This tests
+the algorithms and contracts that matter scientifically without imposing
+an artificial requirement that two RNG ecosystems behave identically.
+
+### Case T. Reviewer reconstruction
+
+A reviewer receives a manuscript reporting “five-fold CV.” Without group
+variables, seeds, fold IDs, time bounds, or spatial separation, the
+analysis cannot be reconstructed and leakage cannot be excluded. A
+`sciModelFlowR` manifest makes these design decisions explicit.
+Reproducibility is not only rerunning code; it is preserving enough
+scientific metadata to understand what the validation score actually
+represents.
+
+## Final perspective
+
+Resampling is a model of future use. Ordinary random folds are only one
+special case. The scientifically appropriate geometry may be defined by
+experimental units, clusters, chronology, distance, external domains, or
+combinations of these structures. `sciModelFlowR` 0.2.0 makes those
+choices visible and testable before model comparison begins.
+
+The recommended sequence is:
+
+**prediction target -\> independent unit -\> declared design -\>
+resampling geometry -\> split diagnostics -\> fold-local preprocessing
+and feature selection -\> model fitting -\> fold-level evidence -\>
+aggregation with uncertainty -\> external validation when available -\>
+reproducibility manifest.**
+
+## Additional methodological guidance
+
+### Resampling variance is part of the result
+
+Performance estimated from resampling is itself variable. Two sources
+are often mixed in discussion. The first is ordinary statistical
+variation caused by which independent units happen to appear in an
+assessment fold. The second is systematic heterogeneity among domains,
+such as one field, season, region, or acquisition batch being genuinely
+harder than another. Averaging fold metrics hides both unless the fold
+distribution is retained.
+
+For scientific reporting, show the fold-level values before reducing
+them to a mean. When the number of folds is small because the number of
+independent units is small, a standard deviation based on those folds
+should not be presented as if there were hundreds of independent
+replications. If each fold corresponds to a named site or year, preserve
+that identity in the table. A difficult fold may contain more scientific
+information than a small change in the overall mean RMSE.
+
+Repeated cross-validation can describe sensitivity to random partition
+assignment when the design permits random assignment. It should not be
+used to manufacture a large number of pseudo-independent performance
+estimates. Repeats share observations and therefore are correlated.
+Their purpose is stability assessment, not inflation of the effective
+sample size.
+
+### Nested validation in more detail
+
+The logic of nested validation is easier to understand by following one
+outer fold. First, the outer assessment units are removed and kept
+untouched. Second, only the outer analysis data are divided into inner
+folds. Third, preprocessing, feature selection, model configuration, and
+any threshold or tuning decision are estimated using those inner folds.
+Fourth, the selected complete workflow is refitted using all outer
+analysis data. Finally, that fitted workflow predicts the outer
+assessment units exactly once.
+
+This sequence means that the outer score evaluates a procedure, not just
+a set of coefficients. The procedure includes all data-dependent choices
+made inside the inner loop. If feature selection was performed globally
+before the outer split, nesting has already been compromised. If a
+probability threshold was optimized after looking at outer predictions,
+the reported outer classification metric is no longer an untouched
+estimate of that decision rule.
+
+For grouped data, the same grouping constraint generally belongs in both
+loops unless the scientific targets differ intentionally. A field used
+as the outer assessment unit must not reappear in an inner fold because
+inner folds are constructed only from the remaining outer analysis
+fields. The package maps inner memberships back to stable global IDs so
+this invariant can be tested directly.
+
+### Multiple dependence structures
+
+Real scientific datasets can have more than one dependency axis. A plant
+may be observed repeatedly through time inside a plot; plots may be
+located inside fields; fields may be distributed across sites. A simple
+choice between “grouped CV” and “time-series CV” may therefore be
+insufficient.
+
+The first question is which axis defines the intended transfer. If the
+final model predicts a new site using measurements collected up to the
+present, site may define the outer split while time-aware resampling is
+used inside each development site. If the final model forecasts future
+observations at known sites, time may define the outer assessment period
+while site remains a grouping constraint that must be preserved in
+preprocessing and model structure.
+
+`sciModelFlowR` treats the standard resamplers as composable building
+blocks rather than claiming that one function solves every crossed
+design. When multiple constraints matter simultaneously, construct the
+scientifically strongest partition explicitly, freeze it as a manifest,
+and verify the relevant invariants. A custom split with documented IDs
+is preferable to an automatic split that violates the study design.
+
+### Class support under group constraints
+
+Classification studies create a common tension between class balance and
+group integrity. Suppose a rare disease is observed in only three farms.
+Perfectly balanced five-fold grouped CV is impossible because
+disease-positive farms cannot be distributed across five independent
+assessment folds. Splitting farms to improve class proportions would
+destroy the independence that the grouped validation was meant to
+protect.
+
+The correct response is to acknowledge the limited support. Options
+include fewer folds, leave-one-positive-group-out sensitivity analysis,
+repeated assignment of whole groups where scientifically defensible, or
+a separate external study. The package should not silently trade group
+integrity for stratification. A warning about a fold with one class is
+scientifically preferable to a cosmetically balanced but invalid split.
+
+This example also illustrates why the number of rows is a poor measure
+of validation information. Thousands of diseased leaves from one farm do
+not provide the same evidence for farm-to-farm transfer as diseased
+leaves sampled from many independent farms.
+
+### Spatial scale and support
+
+Spatial validation depends on the support of both predictors and
+response. Soil laboratory measurements represent samples collected over
+a small support, while remote-sensing covariates may summarize pixels,
+kernels, or grid cells of different sizes. A block geometry should
+therefore be interpreted in relation to the measurement support and the
+expected correlation range.
+
+When blocks are defined in projected coordinates, report the projection
+and units. When longitude and latitude are used directly, Euclidean
+buffers are only approximate and can be misleading over large extents.
+For production spatial workflows, transform coordinates to an
+appropriate projected system or use a distance calculation consistent
+with the coordinate reference system before interpreting a numeric
+buffer as metres or kilometres.
+
+Block sensitivity is informative. If performance remains stable as
+separation increases, the model has stronger evidence of spatial
+transfer. If performance collapses as soon as nearby training
+observations are removed, the apparent predictive ability may depend
+heavily on local interpolation. That does not make the model useless,
+but it changes the claim that can be supported.
+
+### Temporal scale and forecast horizon
+
+The `assess` argument in temporal validation is not merely a
+computational setting. It defines a forecast horizon on the scale of
+unique time points. A one-step-ahead model and a twelve-month-ahead
+model can have very different errors and scientific uses. Combining all
+horizons into one metric can obscure this distinction.
+
+For multi-step assessment windows, consider storing metrics by horizon
+as well as by fold. A model may be accurate for the first month and
+progressively degrade thereafter. If operational decisions are made at a
+specific horizon, that horizon should be visible in the evaluation
+rather than averaged with easier predictions.
+
+Temporal preprocessing also needs discipline. Seasonal normalization,
+lag construction, interpolation, and feature engineering must use only
+information available at each forecast origin. A time-respecting split
+can still leak if a centered moving average was calculated using future
+observations before the split.
+
+### Minimum resampling invariants for automated tests
+
+A scientifically oriented resampling engine should test more than object
+dimensions. Useful invariants include:
+
+- analysis and assessment row IDs are disjoint;
+- stable row IDs reconstruct identical membership after row reordering;
+- a declared group never appears on both sides of a group split;
+- temporal assessment times are strictly later than analysis times under
+  forward validation;
+- external-domain values are absent from development partitions when
+  declared external;
+- spatial configuration and seed reproduce the same block membership;
+- nested inner splits are subsets of their corresponding outer analysis
+  set;
+- no outer assessment ID occurs in an inner split;
+- preprocessing hashes differ when training data differ but remain
+  identical when the same training membership and specification are
+  reused;
+- manifest hashes change when scientifically meaningful split parameters
+  change.
+
+These are property-level tests. They remain valuable even when the exact
+random assignment changes because an upstream algorithm is updated.
+
+### Suggested classroom exercise
+
+Give students the same grouped agronomic dataset and ask three teams to
+evaluate it differently: ordinary random V-fold CV, grouped field CV,
+and external-season validation. Before fitting any model, each team must
+write the scientific question its split answers. After fitting the same
+reference model, compare the errors and ask why they differ.
+
+The educational objective is not to prove that the strictest design
+always has the largest error. The objective is to show that performance
+belongs to a validation scenario. A smaller error from random CV may
+simply reflect an easier interpolation task. Students should finish by
+deciding which result is relevant to a farmer asking about a new field,
+a breeder asking about a new season, or a data analyst debugging the
+model within the existing sample.
+
+A second exercise can use `gold_time_climate`. Ask students to compare
+shuffled V-fold CV with an expanding temporal window. They should
+identify which workflow violates the information set available at
+prediction time and explain why a sophisticated algorithm cannot correct
+that violation after the fact.
+
+### Reviewer checklist for validation claims
+
+When reviewing a manuscript or analysis, ask the following questions
+before accepting a performance claim:
+
+1.  What is the independent unit represented by an assessment fold?
+2.  Can records from the same biological, experimental, spatial,
+    temporal, or acquisition unit occur in both partitions?
+3.  Does the split reproduce the intended deployment or scientific
+    transfer scenario?
+4.  Were all learned transformations fitted separately in each analysis
+    partition?
+5.  Was feature selection performed before or inside the folds?
+6.  Were hyperparameters selected using the same folds later reported as
+    final performance?
+7.  Was an external dataset touched during model development?
+8.  Are fold metrics identifiable by domain, time, or location when
+    those identities matter?
+9.  Are the number of independent units and the row count both reported?
+10. Is the split membership reproducible through stable IDs or an
+    equivalent manifest?
+
+A model-comparison table is difficult to interpret when these questions
+are unanswered. Validation geometry is part of the method, not
+supplementary implementation detail.
+
+### 1.0.0 consolidation note
+
+In the 1.0.0 Consolidated Scientific Release, this workflow keeps the
+same scientific semantics established during development. The public
+function contract is frozen from 0.9.0; final certification changes
+evidence and backend status, not the design, leakage, uncertainty, or
+provenance rules taught in this vignette.

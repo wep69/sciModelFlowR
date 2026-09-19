@@ -114,7 +114,10 @@ smf_from_list <- function(x) {
 #' Serialize to JSON
 #' @export
 smf_to_json <- function(x, pretty=TRUE) {
-  jsonlite::toJSON(.smf_sort_list(smf_to_list(x)), auto_unbox=TRUE, null="null", digits=NA, pretty=pretty, dataframe="columns")
+  # `na = "null"` keeps NA_real_ numeric across the round-trip; without it the
+  # jsonlite default encodes NA as the string "NA", which broke portable
+  # bundle prediction under the default preprocessing state (1.0.2 fix).
+  jsonlite::toJSON(.smf_sort_list(smf_to_list(x)), auto_unbox=TRUE, null="null", na="null", digits=NA, pretty=pretty, dataframe="columns")
 }
 
 #' Serialize to YAML

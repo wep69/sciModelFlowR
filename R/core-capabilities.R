@@ -71,7 +71,10 @@ smf_capabilities <- function() {
 #' @export
 smf_backend_capabilities <- function(name) {
   .smf_register_builtin_backends()
-  if (!exists(name, envir=.smf_backend_registry, inherits=FALSE)) .smf_abort("BACKEND_UNKNOWN", paste0("Unknown backend: ", name), class="smf_capability_error")
+  if (!exists(name, envir=.smf_backend_registry, inherits=FALSE)) {
+    aceitos <- ls(.smf_backend_registry)
+    .smf_abort("BACKEND_UNKNOWN", paste0("Unknown backend: ", name, ". Accepted engines: ", paste(aceitos, collapse=", "), ". See smf_available_model_adapters() for packages and validation tiers."), evidence=list(engine=name, accepted=aceitos), class="smf_capability_error")
+  }
   get(name, envir=.smf_backend_registry, inherits=FALSE)
 }
 

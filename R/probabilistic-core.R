@@ -57,6 +57,10 @@ smf_dist_quantile <- function(dist, probs) {
 #' Central distribution interval
 #' @export
 smf_dist_interval <- function(dist, level=0.95) {
+  # A point mass has a degenerate interval, but returning [m, m] silently
+  # suggests an uncertainty that does not exist; align with smf_dist_cdf(),
+  # which refuses the same representation (1.0.2 fix).
+  if(dist@representation=="point") .smf_dist_fail("interval",dist)
   a<-(1-level)/2; q<-smf_dist_quantile(dist,c(a,1-a)); colnames(q)<-c("lower","upper"); q
 }
 
