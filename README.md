@@ -27,6 +27,21 @@ Recommended scientific sequence:
 
 The distributed Gold datasets are synthetic software-validation and teaching fixtures. They are not empirical field evidence.
 
+## Complete tutorial (PT-BR + EN)
+
+A six-part teaching tutorial walks a new user from the first command to the
+full scientific flow, using **simulated data with planted discrepancies and
+known truth** (outliers, MCAR/MAR missingness, heteroscedasticity, imbalance,
+label noise, clustering, time series, spatial autocorrelation, high dimension,
+superdispersion, nonlinearity). Every chapter runs real code, shows numbered
+figures and tables with interpretation boxes, and ends with exercises and
+collapsible solutions.
+
+- Sources: `tutorial-completo-1.0.2/` (simulation script, `pt/` and `en/` qmds)
+- Rendered self-contained HTML + PDF: `outputs/rendered-docs/tutorial-completo/`
+  (`pt/` and `en/`, 6 parts each; ~115 pages per language)
+- API coverage appendix: 112 of 246 exports called, gaps declared with reasons
+
 ## Certification status
 
 Local validation campaign (Windows 11, R 4.6.0, Quarto 1.11.0, 2026-09-18):
